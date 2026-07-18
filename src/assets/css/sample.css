@@ -1,0 +1,53 @@
+:root {
+  /* Orange */
+  --color-tangerine: #ff8000;
+  --color-tangerine-dark: #e67300;
+  --color-tangerine-darker: #cc6600;
+  --color-apricot: #fff4e8;
+
+  /* Teal */
+  --color-aqua: #37cbb8;
+  --color-aqua-dark: #2db7a6;
+  --color-aqua-deep: #249989;
+  --color-mint: #eefbf9;
+
+  /* Neutrals */
+  --color-snow: #ffffff;
+  --color-cloud: #f5f7fb;
+  --color-frost: #f8fafc;
+  --color-pearl: #f1f5f9;
+  --color-smoke: #e2e8f0;
+
+  /* Text */
+  --color-onyx: #1f2937;
+  --color-slate: #64748b;
+  --color-ash: #94a3b8;
+
+  /* Status */
+  --color-emerald: #16a34a;
+  --color-emerald-light: #dcfce7;
+
+  --color-amber: #f59e0b;
+  --color-amber-light: #fef3c7;
+
+  --color-ruby: #ef4444;
+  --color-ruby-light: #fee2e2;
+
+  --color-sky: #0ea5e9;
+  --color-sky-light: #e0f2fe;
+
+  /* Focus */
+  --color-focus-ring: rgba(55, 203, 184, 0.25);
+
+  /* Shadows */
+  --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 8px 20px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.12);
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+}

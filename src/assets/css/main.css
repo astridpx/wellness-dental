@@ -1,0 +1,142 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap');
+@import 'tailwindcss';
+
+@layer base {
+  html {
+    @apply bg-[#f5f7fb];
+  }
+
+  body {
+    font-family: 'Lato', sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Inter', sans-serif;
+  }
+
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* ========================================
+   * SELECT INPUT
+   * ======================================== */
+
+  select {
+    @apply w-full rounded-md border border-gray-200 px-4 py-3 bg-white text-slate-800;
+    @apply appearance-none outline-none transition-all duration-200;
+    @apply focus:border-orange-500 focus:ring-4 focus:ring-orange-100;
+  }
+
+  select.opaque {
+    @apply text-[#87867d] bg-[#dfdacd] border-[#dfdacd];
+  }
+
+  /* ========================================
+   * SCROLLBAR
+   * ======================================== */
+  .scrollbar {
+    scrollbar-width: thin;
+    /* Firefox */
+    scrollbar-color: #cbd5e1 transparent;
+  }
+
+  .scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+}
+
+@theme {
+  /* ========================================
+   * Blue
+   * ======================================== */
+
+  --color-sapphire: #1e40af;
+  --color-sapphire-dark: #1e3a8a;
+  --color-sapphire-light: #eef4ff;
+
+  /* ========================================
+   * Orange
+   * ======================================== */
+
+  --color-tangerine: #ff8000;
+  --color-tangerine-dark: #ea7300;
+  --color-tangerine-light: #fff4e8;
+  --color-apricot: #fff9f2;
+
+  /* ========================================
+   * Neutral
+   * ======================================== */
+
+  --color-snow: #ffffff;
+  --color-cloud: #fafbfc;
+  --color-mist: #f5f7fb;
+  --color-fog: #f1f5f9;
+  --color-pebble: #e5e7eb;
+
+  /* ========================================
+   * Text
+   * ======================================== */
+
+  --color-onyx: #1f2937;
+  --color-slate: #64748b;
+  --color-smoke: #94a3b8;
+
+  /* ========================================
+   * Status
+   * ======================================== */
+
+  --color-emerald: #10b981;
+  --color-emerald-light: #ecfdf5;
+
+  --color-amber: #f59e0b;
+  --color-amber-light: #fff7e6;
+
+  --color-ruby: #ef4444;
+  --color-ruby-light: #fef2f2;
+
+  --color-sky: #3b82f6;
+  --color-sky-light: #eff6ff;
+
+  /* ========================================
+   * Focus
+   * ======================================== */
+
+  --color-focus-ring: rgba(255, 128, 0, 0.25);
+
+  /* ========================================
+   * Shadows
+   * ======================================== */
+
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
+
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+
+  --shadow-lg: 0 18px 48px rgba(15, 23, 42, 0.12);
+
+  /* ========================================
+   * Radius
+   * ======================================== */
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.5rem;
+}
