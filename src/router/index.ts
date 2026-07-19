@@ -135,7 +135,7 @@ const router = createRouter({
       component: SystemLogsView,
       meta: {
         title: 'System Logs',
-        icon: 'tabler:box',
+        icon: 'feather:activity',
         navItem: [true, { visibleTo: ['superAdmin'] }],
       },
     },
