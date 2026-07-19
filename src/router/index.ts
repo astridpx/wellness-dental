@@ -12,6 +12,7 @@ import SingleDentistView from '@/views/dentists/SingleDentistView.vue'
 import SingleUserView from '@/views/users/SingleUserView.vue'
 import TransactionView from '@/views/transactions/TransactionView.vue'
 import SingleTransactionView from '@/views/transactions/SingleTransactionView.vue'
+import OptionsView from '@/views/OptionsView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -107,6 +108,16 @@ const router = createRouter({
       name: 'editTransaction',
       component: SingleTransactionView,
       meta: { title: 'Edit Transaction', navItem: [false, { visibleTo: ['superAdmin', 'admin'] }] },
+    },
+    {
+      path: '/options',
+      name: 'options',
+      component: OptionsView,
+      meta: {
+        title: 'Options',
+        icon: 'feather:sliders',
+        navItem: [true, { visibleTo: ['superAdmin', 'admin'] }],
+      },
     },
     {
       path: '/userlogs',
