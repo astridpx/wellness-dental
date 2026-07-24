@@ -1,13 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import 'tailwindcss';
 
 @layer base {
   html {
-    @apply bg-[#f5f7fb];
+    @apply bg-[#edf6f7];
   }
 
   body {
-    font-family: 'Lato', sans-serif;
+    font-family: 'Manrope', sans-serif;
+    @apply text-onyx;
   }
 
   h1,
@@ -16,7 +17,7 @@
   h4,
   h5,
   h6 {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
   }
 
   button:not(:disabled),
@@ -24,27 +25,22 @@
     cursor: pointer;
   }
 
-  /* ========================================
-   * SELECT INPUT
-   * ======================================== */
-
   select {
-    @apply w-full rounded-md border border-gray-200 px-4 py-3 bg-white text-slate-800;
-    @apply appearance-none outline-none transition-all duration-200;
-    @apply focus:border-orange-500 focus:ring-4 focus:ring-orange-100;
+    @apply w-full appearance-none rounded-md border border-gray-200 bg-white px-4 py-3 text-slate-800 outline-none transition-all duration-200;
+    @apply focus:border-tangerine focus:ring-4 focus:ring-focus-ring;
   }
 
   select.opaque {
-    @apply text-[#87867d] bg-[#dfdacd] border-[#dfdacd];
+    @apply border-[#d9eced] bg-[#d9eced] text-[#5f6d75];
   }
 
-  /* ========================================
-   * SCROLLBAR
-   * ======================================== */
+  textarea {
+    @apply focus:border-tangerine focus:ring-4 focus:ring-focus-ring;
+  }
+
   .scrollbar {
     scrollbar-width: thin;
-    /* Firefox */
-    scrollbar-color: #cbd5e1 transparent;
+    scrollbar-color: #97b9bd transparent;
   }
 
   .scrollbar::-webkit-scrollbar {
@@ -56,7 +52,7 @@
   }
 
   .scrollbar::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: #97b9bd;
     border-radius: 9999px;
     border: 2px solid transparent;
     background-clip: content-box;
@@ -64,76 +60,43 @@
 }
 
 @theme {
-  /* ========================================
-   * Blue
-   * ======================================== */
+  --color-sapphire: #1d4f63;
+  --color-sapphire-dark: #133a4a;
+  --color-sapphire-light: #e7f4f6;
 
-  --color-sapphire: #1e40af;
-  --color-sapphire-dark: #1e3a8a;
-  --color-sapphire-light: #eef4ff;
-
-  /* ========================================
-   * Orange
-   * ======================================== */
-
-  --color-tangerine: #ff8000;
-  --color-tangerine-dark: #ea7300;
-  --color-tangerine-light: #fff4e8;
-  --color-apricot: #fff9f2;
-
-  /* ========================================
-   * Neutral
-   * ======================================== */
+  --color-tangerine: #1ea7a0;
+  --color-tangerine-dark: #157d78;
+  --color-tangerine-light: #e7faf8;
+  --color-apricot: #f1fcfb;
 
   --color-snow: #ffffff;
-  --color-cloud: #fafbfc;
-  --color-mist: #f5f7fb;
-  --color-fog: #f1f5f9;
-  --color-pebble: #e5e7eb;
+  --color-cloud: #f8fbfb;
+  --color-mist: #edf6f7;
+  --color-fog: #eef4f5;
+  --color-pebble: #d7e4e6;
 
-  /* ========================================
-   * Text
-   * ======================================== */
+  --color-onyx: #16313d;
+  --color-slate: #56707a;
+  --color-smoke: #86a1ab;
+  --color-ash: #99a9b0;
 
-  --color-onyx: #1f2937;
-  --color-slate: #64748b;
-  --color-smoke: #94a3b8;
+  --color-emerald: #1f9d68;
+  --color-emerald-light: #ecfaf3;
 
-  /* ========================================
-   * Status
-   * ======================================== */
+  --color-amber: #d59b16;
+  --color-amber-light: #fff7df;
 
-  --color-emerald: #10b981;
-  --color-emerald-light: #ecfdf5;
+  --color-ruby: #d45555;
+  --color-ruby-light: #fff0f0;
 
-  --color-amber: #f59e0b;
-  --color-amber-light: #fff7e6;
+  --color-sky: #3386c9;
+  --color-sky-light: #ebf5ff;
 
-  --color-ruby: #ef4444;
-  --color-ruby-light: #fef2f2;
+  --color-focus-ring: rgba(30, 167, 160, 0.22);
 
-  --color-sky: #3b82f6;
-  --color-sky-light: #eff6ff;
-
-  /* ========================================
-   * Focus
-   * ======================================== */
-
-  --color-focus-ring: rgba(255, 128, 0, 0.25);
-
-  /* ========================================
-   * Shadows
-   * ======================================== */
-
-  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
-
-  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
-
-  --shadow-lg: 0 18px 48px rgba(15, 23, 42, 0.12);
-
-  /* ========================================
-   * Radius
-   * ======================================== */
+  --shadow-sm: 0 4px 12px rgba(22, 49, 61, 0.05);
+  --shadow-md: 0 12px 28px rgba(22, 49, 61, 0.09);
+  --shadow-lg: 0 24px 56px rgba(22, 49, 61, 0.14);
 
   --radius-sm: 0.5rem;
   --radius-md: 0.875rem;

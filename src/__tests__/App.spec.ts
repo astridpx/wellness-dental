@@ -1,11 +1,17 @@
-import { describe, it, expect } from 'vitest'
-
+import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
-import App from '../App.vue'
+import AppInput from '@/components/app/AppInput.vue'
 
-describe('App', () => {
-  it('mounts renders properly', () => {
-    const wrapper = mount(App)
-    expect(wrapper.text()).toContain('You did it!')
+describe('AppInput', () => {
+  it('renders the provided label and placeholder', () => {
+    const wrapper = mount(AppInput, {
+      props: {
+        label: 'Clinic Name',
+        placeholder: 'Enter clinic name',
+      },
+    })
+
+    expect(wrapper.text()).toContain('Clinic Name')
+    expect(wrapper.find('input').attributes('placeholder')).toBe('Enter clinic name')
   })
 })

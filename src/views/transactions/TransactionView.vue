@@ -67,20 +67,20 @@ const paidCount = transactions.filter((transaction) => transaction.status === 'P
   ></AppDialog>
   <div class="space-y-6">
     <section
-      class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#fff7ed_0%,#ffffff_45%,#f8fbff_100%)] shadow-sm"
+      class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#f6fffe_0%,#ffffff_45%,#ebf8fa_100%)] shadow-sm"
     >
       <div class="grid gap-6 p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div class="space-y-4">
           <div
             class="inline-flex items-center rounded-full border border-tangerine/20 bg-tangerine-light px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-tangerine"
           >
-            Payments & Records
+            Billing & Collections
           </div>
           <div>
-            <h1 class="text-3xl font-black tracking-tight text-onyx">Transactions</h1>
+            <h1 class="text-3xl font-black tracking-tight text-onyx">Dental Billing</h1>
             <p class="mt-3 max-w-2xl text-sm leading-6 text-slate">
-              Review payment records, track service charges, and keep your clinic’s transaction
-              history organized.
+              Track treatment charges, payment status, and same-day collections for the dental
+              clinic.
             </p>
           </div>
         </div>
@@ -107,17 +107,17 @@ const paidCount = transactions.filter((transaction) => transaction.status === 'P
           <p class="mt-2 text-3xl font-black text-onyx">{{ paidCount }}</p>
         </div>
         <div class="bg-white px-6 py-5">
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Coverage</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Billing Focus</p>
           <p class="mt-2 text-sm font-medium leading-6 text-onyx">
-            Transaction records combine patient details, service charges, and payment status.
+            Each billing record links the patient, dental service, amount due, and payment state.
           </p>
         </div>
       </div>
     </section>
     <section class="rounded-[1.5rem] border border-pebble bg-white p-5 shadow-sm">
       <div class="mb-5">
-        <h2 class="text-xl font-black text-onyx">Transaction List</h2>
-        <p class="mt-1 text-sm text-slate">Browse and manage payment records below.</p>
+        <h2 class="text-xl font-black text-onyx">Billing Ledger</h2>
+        <p class="mt-1 text-sm text-slate">Browse and manage clinic payment records below.</p>
       </div>
       <div class="overflow-hidden rounded-[1.5rem] border border-pebble">
         <AppTable

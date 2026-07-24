@@ -34,13 +34,15 @@ async function handleLogin() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[linear-gradient(135deg,#f8fafc_0%,#f5f7fb_55%,#eef4ff_100%)]">
+  <div class="min-h-screen bg-[linear-gradient(135deg,#f6fffe_0%,#edf6f7_55%,#e5f3f5_100%)]">
     <div class="grid min-h-screen lg:grid-cols-[38%_62%]">
       <div
         class="relative hidden overflow-hidden bg-sapphire lg:flex flex-col justify-between p-14 text-snow xl:p-16"
       >
         <div class="absolute -right-24 -top-24 h-72 w-72 rounded-full border border-white/10" />
         <div class="absolute -bottom-36 -left-24 h-80 w-80 rounded-full border border-white/10" />
+        <div class="absolute right-12 top-24 h-28 w-28 rounded-4xl bg-white/8" />
+        <div class="absolute bottom-24 left-18 h-18 w-18 rounded-full bg-tangerine/20 blur-xl" />
 
         <div class="relative z-10">
           <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10">
@@ -60,23 +62,24 @@ async function handleLogin() {
           </div>
 
           <p class="mt-7 text-xs font-bold uppercase tracking-[0.28em] text-tangerine-light">
-            PPSTA
+            IMS Dental
           </p>
-          <h1 class="mt-3 text-4xl font-black tracking-tight">Admin Portal</h1>
+          <h1 class="mt-3 text-4xl font-black tracking-tight">Clinic Command Center</h1>
 
           <p class="mt-5 max-w-sm text-sm leading-7 text-white/70">
-            A focused workspace for enrollment records, clinic profiles, and team access.
+            Keep dentists, treatment setup, payments, and front-desk operations aligned from one
+            secure dental workspace.
           </p>
         </div>
 
-        <p class="relative z-10 text-xs text-white/55">Secure administration workspace</p>
+        <p class="relative z-10 text-xs text-white/55">Secure dental operations workspace</p>
       </div>
 
       <div class="flex items-center justify-center px-6 py-10 sm:px-10">
         <div class="w-full max-w-md">
           <div class="mb-10 lg:hidden">
-            <p class="text-xs font-bold uppercase tracking-[0.24em] text-tangerine">PPSTA</p>
-            <p class="mt-2 text-xl font-black text-onyx">Admin Portal</p>
+            <p class="text-xs font-bold uppercase tracking-[0.24em] text-tangerine">IMS Dental</p>
+            <p class="mt-2 text-xl font-black text-onyx">Clinic Command Center</p>
           </div>
           <div class="rounded-[1.5rem] border border-pebble bg-snow p-7 shadow-sm sm:p-9">
             <div>
@@ -99,7 +102,9 @@ async function handleLogin() {
               </div>
 
               <h2 class="mt-5 text-2xl font-black tracking-tight text-onyx">Sign in</h2>
-              <p class="mt-2 text-sm text-slate">Use your account credentials to continue.</p>
+              <p class="mt-2 text-sm text-slate">
+                Sign in to manage dentist setup, billing, and clinic operations.
+              </p>
             </div>
 
             <form class="mt-8 space-y-5" @submit.prevent="handleLogin">
@@ -136,7 +141,7 @@ async function handleLogin() {
             </form>
 
             <p class="mt-7 border-t border-pebble pt-5 text-center text-xs text-smoke">
-              Secure access • Integrated Management Services
+              Secure access • Integrated Management Services Dental Suite
             </p>
           </div>
         </div>

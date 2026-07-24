@@ -19,12 +19,12 @@ const categories: Array<{ name: OptionCategory; icon: string; description: strin
   {
     name: 'Procedures',
     icon: 'streamline-ultimate:dentistry-tooth-shield',
-    description: 'Services available for treatment and billing.',
+    description: 'Procedures and treatments available for scheduling and billing.',
   },
   {
     name: 'Benefits',
     icon: 'boxicons:bookmark-heart',
-    description: 'Services available for treatment and billing.',
+    description: 'Coverage items, inclusions, and treatment entitlements.',
   },
   {
     name: 'Payment Modes',
@@ -88,17 +88,17 @@ const options = ref<OptionItem[]>([
   {
     id: 7,
     category: 'Benefits',
-    name: 'Oral Prophylaxis',
-    code: 'OP',
-    description: 'First visit for a new patient.',
+    name: 'Preventive Cleaning Benefit',
+    code: 'PCB',
+    description: 'Member benefit for routine cleaning coverage.',
     active: true,
   },
   {
     id: 8,
     category: 'Benefits',
-    name: 'Simple tooth extractions; except surgery for impaction',
-    code: 'ABC',
-    description: 'Recommended by another patient or provider.',
+    name: 'Simple Extraction Benefit',
+    code: 'SEB',
+    description: 'Coverage for non-surgical extraction procedures.',
     active: true,
   },
 ])
@@ -222,25 +222,25 @@ function formatPrice(price?: number) {
           <div
             class="inline-flex items-center gap-2 rounded-full border border-tangerine/20 bg-tangerine-light px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-tangerine"
           >
-            <Icon icon="feather:sliders" class="size-3.5" /> Option Directory
+            <Icon icon="feather:sliders" class="size-3.5" /> Dental Setup Library
           </div>
-          <h1 class="mt-4 text-3xl font-black tracking-tight text-onyx">Options</h1>
+          <h1 class="mt-4 text-3xl font-black tracking-tight text-onyx">Clinic Setup Options</h1>
           <p class="mt-3 max-w-2xl text-sm leading-6 text-slate">
-            Maintain the reusable choices that appear across your clinic records, from procedures
-            and payment modes to appointment and patient details.
+            Maintain reusable dental setup choices such as procedures, payment modes, and benefit
+            mappings used across the clinic.
           </p>
         </div>
         <AppButton btn-theme="primary" class="px-5 py-3 normal-case" @click="openCreateForm">
-          <Icon icon="feather:plus" class="size-4" /> Add option
+          <Icon icon="feather:plus" class="size-4" /> Add setup item
         </AppButton>
       </div>
       <div class="grid gap-px border-t border-pebble bg-pebble sm:grid-cols-3">
         <div class="bg-white px-6 py-5">
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Option groups</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Setup groups</p>
           <p class="mt-2 text-3xl font-black text-onyx">{{ categories.length }}</p>
         </div>
         <div class="bg-white px-6 py-5">
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Active options</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Active items</p>
           <p class="mt-2 text-3xl font-black text-onyx">{{ totalActiveOptions }}</p>
         </div>
         <div class="bg-white px-6 py-5">
@@ -253,7 +253,7 @@ function formatPrice(price?: number) {
     <section class="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
       <aside class="rounded-[1.5rem] border border-pebble bg-white p-4 shadow-sm">
         <p class="px-3 pb-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate">
-          Option groups
+          Setup groups
         </p>
         <div class="space-y-2">
           <button
@@ -309,12 +309,12 @@ function formatPrice(price?: number) {
         <div class="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <p class="text-sm text-slate">
             {{ filteredOptions.length }}
-            {{ filteredOptions.length === 1 ? 'option' : 'options' }} shown
+            {{ filteredOptions.length === 1 ? 'item' : 'items' }} shown
           </p>
           <AppInput
             v-model="search"
             icon="feather:search"
-            placeholder="Search options"
+            placeholder="Search setup items"
             class="sm:max-w-xs"
           />
         </div>
@@ -441,10 +441,10 @@ function formatPrice(price?: number) {
         <div class="flex items-start justify-between border-b border-pebble px-6 py-5">
           <div>
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-tangerine">
-              Option details
+              Setup item details
             </p>
             <h2 class="mt-1 text-xl font-black text-onyx">
-              {{ editingId ? 'Edit option' : 'Add option' }}
+              {{ editingId ? 'Edit setup item' : 'Add setup item' }}
             </h2>
           </div>
           <button type="button" class="rounded-lg p-2 text-slate hover:bg-fog" @click="closeForm">
@@ -453,7 +453,7 @@ function formatPrice(price?: number) {
         </div>
         <form class="space-y-5 p-6" @submit.prevent="saveOption">
           <div>
-            <label class="mb-2 block text-sm font-medium text-onyx">Option group</label>
+            <label class="mb-2 block text-sm font-medium text-onyx">Setup group</label>
             <select v-model="form.category">
               <option v-for="category in categories" :key="category.name" :value="category.name">
                 {{ category.name }}
@@ -461,7 +461,7 @@ function formatPrice(price?: number) {
             </select>
           </div>
           <div class="grid gap-5 sm:grid-cols-2">
-            <AppInput v-model="form.name" label="Option name" placeholder="e.g. Dental X-ray" />
+            <AppInput v-model="form.name" label="Item name" placeholder="e.g. Dental X-ray" />
             <AppInput v-model="form.code" label="Code" placeholder="e.g. XRAY" />
           </div>
           <AppInput
@@ -476,7 +476,7 @@ function formatPrice(price?: number) {
             <textarea
               v-model="form.description"
               rows="3"
-              placeholder="Briefly describe when this option should be used."
+              placeholder="Briefly describe when this setup item should be used."
               class="w-full resize-y rounded-md border border-gray-200 bg-white px-4 py-3 text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
             ></textarea>
           </div>
@@ -497,7 +497,7 @@ function formatPrice(price?: number) {
               :disabled="!form.name.trim()"
             >
               <Icon icon="feather:save" class="size-4" />
-              {{ editingId ? 'Save changes' : 'Add option' }}
+              {{ editingId ? 'Save changes' : 'Add setup item' }}
             </AppButton>
           </div>
         </form>

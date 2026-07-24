@@ -1,169 +1,318 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { AppButton, AppDialog, AppTable } from '@/components/app'
-import { Icon } from '@iconify/vue'
 import QRCode from 'qrcode'
 import { saveAs } from 'file-saver'
+import { AppButton, AppDialog, AppTable } from '@/components/app'
 
 const baseURL = import.meta.env.VITE_APP_MAIN_API_BASE_URL
 
-const teachers = Array.from({ length: 24 }, (_, i) => ({
-  id: i + 1,
-  name: `Teacher ${i + 1}`,
-  school: `School ${(i % 5) + 1}`,
-  status: i % 2 === 0 ? 'Active' : 'Inactive',
-}))
-
 const showDialog = ref(false)
 const currentPage = ref(1)
-const perPage = ref(8)
+const perPage = ref(5)
+const qrCanvas = ref<HTMLCanvasElement | null>(null)
+const clinicCode = ref('IMS-DENTAL-CHECKIN')
+const qrCodeUrl = computed(() => `${baseURL}/${clinicCode.value}`)
 
-const paginatedTeachers = computed(() => {
+const readinessCards = [
+  {
+    label: 'Provider setup',
+    value: '92%',
+    note: 'Licenses and specialties verified for active roster.',
+  },
+  {
+    label: 'Chair utilization',
+    value: '14/18',
+    note: 'Chairs reserved across morning and afternoon blocks.',
+  },
+  {
+    label: 'Pending collections',
+    value: '₱12,450',
+    note: 'Open balances waiting for front-desk follow-up.',
+  },
+]
+
+const workflowBoard = [
+  {
+    title: 'Credential review',
+    count: 3,
+    tone: 'bg-amber-light text-amber',
+    note: 'Dentists waiting for final compliance checks.',
+  },
+  {
+    title: 'Ready to schedule',
+    count: 21,
+    tone: 'bg-emerald-light text-emerald',
+    note: 'Providers fully mapped to rooms and treatment types.',
+  },
+  {
+    title: 'Front desk escalations',
+    count: 4,
+    tone: 'bg-sky-light text-sky',
+    note: 'Cases needing payment coding or schedule clarification.',
+  },
+]
+
+const todaySchedule = [
+  {
+    id: 1,
+    patient: 'Ariana Torres',
+    dentist: 'Dr. Maria Santos',
+    chair: 'Chair 2',
+    service: 'Prophylaxis',
+    status: 'Confirmed',
+  },
+  {
+    id: 2,
+    patient: 'Liam Reyes',
+    dentist: 'Dr. James Lim',
+    chair: 'Chair 5',
+    service: 'Ortho Adjustment',
+    status: 'In Chair',
+  },
+  {
+    id: 3,
+    patient: 'Nina Cruz',
+    dentist: 'Dr. Angela Cruz',
+    chair: 'Chair 1',
+    service: 'Extraction',
+    status: 'Pending',
+  },
+  {
+    id: 4,
+    patient: 'Evan Tan',
+    dentist: 'Dr. Patricia Tan',
+    chair: 'Imaging',
+    service: 'Dental X-ray',
+    status: 'Confirmed',
+  },
+  {
+    id: 5,
+    patient: 'Mika Santos',
+    dentist: 'Dr. Carlo Reyes',
+    chair: 'Chair 4',
+    service: 'Consultation',
+    status: 'Pending',
+  },
+  {
+    id: 6,
+    patient: 'Rico Valdez',
+    dentist: 'Dr. Maria Santos',
+    chair: 'Chair 2',
+    service: 'Restoration',
+    status: 'Confirmed',
+  },
+  {
+    id: 7,
+    patient: 'Aly Gomez',
+    dentist: 'Dr. Angela Cruz',
+    chair: 'Pediatric',
+    service: 'Cleaning',
+    status: 'In Chair',
+  },
+]
+
+const actionRail = [
+  'Lock dentist specialties before publishing next week schedules.',
+  'Map every treatment code to payment modes in options.',
+  'Refresh reception QR handoff if intake routing changed.',
+]
+
+const paginatedSchedule = computed(() => {
   const start = (currentPage.value - 1) * perPage.value
-  const end = start + perPage.value
-
-  return teachers.slice(start, end)
+  return todaySchedule.slice(start, start + perPage.value)
 })
 
-const totalEntries = teachers.length
-const totalPages = Math.ceil(totalEntries / perPage.value)
-
-const statCards = computed(() => [
-  {
-    title: 'Total Teachers',
-    value: totalEntries,
-    tone: 'from-tangerine-light to-white',
-    text: 'text-tangerine-dark',
-  },
-  {
-    title: 'Active Profiles',
-    value: teachers.filter((teacher) => teacher.status === 'Active').length,
-    tone: 'from-sky-light to-white',
-    text: 'text-sky',
-  },
-  {
-    title: 'Pending Review',
-    value: 6,
-    tone: 'from-amber-light to-white',
-    text: 'text-amber',
-  },
-])
-
-// QR CODE
-const DUMMY_ID = ref('123456789')
-const qrCanvas = ref<HTMLCanvasElement | null>(null)
-const qrCodeUrl = computed(() => `${baseURL}/${DUMMY_ID.value}`)
-// Handle Generate QR
 async function generateQRCode() {
   if (!qrCanvas.value) return
   await QRCode.toCanvas(qrCanvas.value, qrCodeUrl.value, {
     width: 180,
     margin: 2,
+    color: { dark: '#122833', light: '#ffffff' },
   })
 }
 
-// Handle Download QR
-async function downloadQR() {
+function downloadQR() {
   if (!qrCanvas.value) return
 
   qrCanvas.value.toBlob((blob) => {
     if (!blob) return
-
-    saveAs(blob, `ppsta-qr-${DUMMY_ID.value}.png`)
+    saveAs(blob, `ims-dental-checkin-${clinicCode.value}.png`)
   }, 'image/png')
 }
 
-onMounted(() => {
-  generateQRCode()
-})
+onMounted(generateQRCode)
 </script>
 
 <template>
   <div class="space-y-6">
-    <section
-      class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#fff7ed_0%,#ffffff_45%,#f8fbff_100%)] shadow-sm"
-    >
-      <div class="grid gap-6 p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-        <div class="space-y-4">
-          <div
-            class="inline-flex items-center rounded-full border border-tangerine/20 bg-tangerine-light px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-tangerine"
-          >
-            Enrollment Overview
-          </div>
-          <div>
-            <h1 class="text-3xl font-black tracking-tight text-onyx">Teacher Enrollment</h1>
-            <p class="mt-3 max-w-2xl text-sm leading-6 text-slate">
-              Review teacher records, keep enrollment activity visible, and give your team a cleaner
-              workspace for day-to-day administration.
-            </p>
-          </div>
-        </div>
+    <section class="grid gap-6 xl:grid-cols-[1.35fr_0.9fr]">
+      <div class="overflow-hidden rounded-4xl bg-[#122833] p-6 text-white shadow-lg lg:p-8">
+        <div class="flex flex-col gap-8">
+          <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div class="max-w-2xl">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.34em] text-tangerine-light">
+                Dentist Setup Board
+              </p>
+              <h1 class="mt-3 text-4xl font-black tracking-tight">A new clinic command layout</h1>
+              <p class="mt-4 text-sm leading-7 text-white/68">
+                This dashboard is now structured like an operations room: readiness signals up top,
+                workflow lanes in the middle, and daily clinical movement below.
+              </p>
+            </div>
 
-        <div class="flex flex-wrap gap-3">
-          <AppButton
-            btnTheme="primary"
-            class="px-6 py-3 normal-case shadow-sm"
-            @click="showDialog = true"
-          >
-            Enroll Teacher
-          </AppButton>
-          <button
-            class="rounded-2xl border border-pebble bg-white px-5 py-3 text-sm font-semibold text-onyx transition hover:border-slate/40 hover:bg-fog"
-          >
-            Export Report
-          </button>
+            <div class="flex flex-wrap gap-3">
+              <AppButton
+                btn-theme="primary"
+                class="px-6 py-3 normal-case shadow-sm"
+                @click="showDialog = true"
+              >
+                Check-In QR
+              </AppButton>
+              <button
+                class="rounded-2xl border border-white/14 bg-white/6 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/12"
+              >
+                Export Shift Summary
+              </button>
+            </div>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-3">
+            <article
+              v-for="card in readinessCards"
+              :key="card.label"
+              class="rounded-[1.5rem] border border-white/10 bg-white/6 p-5"
+            >
+              <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/55">
+                {{ card.label }}
+              </p>
+              <p class="mt-3 text-3xl font-black">{{ card.value }}</p>
+              <p class="mt-3 text-sm leading-6 text-white/62">{{ card.note }}</p>
+            </article>
+          </div>
         </div>
       </div>
 
-      <div class="grid gap-px border-t border-pebble bg-pebble lg:grid-cols-3">
-        <article
-          v-for="card in statCards"
-          :key="card.title"
-          class="bg-linear-to-br p-5"
-          :class="card.tone"
+      <div class="grid gap-4">
+        <div class="rounded-4xl border border-pebble bg-white p-6 shadow-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
+                Today’s focus
+              </p>
+              <h2 class="mt-2 text-2xl font-black text-onyx">Action rail</h2>
+            </div>
+            <Icon icon="feather:target" class="h-6 w-6 text-tangerine" />
+          </div>
+          <div class="mt-5 space-y-3">
+            <div
+              v-for="item in actionRail"
+              :key="item"
+              class="rounded-2xl border border-pebble bg-cloud px-4 py-4 text-sm leading-6 text-onyx"
+            >
+              {{ item }}
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="rounded-4xl border border-pebble bg-[linear-gradient(135deg,#e8faf7_0%,#ffffff_100%)] p-6 shadow-sm"
         >
-          <p class="text-sm font-semibold text-slate">{{ card.title }}</p>
-          <p class="mt-3 text-3xl font-black" :class="card.text">{{ card.value }}</p>
-        </article>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
+            Clinic signal
+          </p>
+          <h2 class="mt-2 text-2xl font-black text-onyx">Patient intake gateway</h2>
+          <p class="mt-3 text-sm leading-6 text-slate">
+            Keep this QR ready at reception so the redesigned flow also has a clear physical entry
+            point.
+          </p>
+          <div class="mt-5 flex items-center gap-4">
+            <div class="rounded-[1.5rem] bg-white p-3 shadow-sm">
+              <canvas ref="qrCanvas" />
+            </div>
+            <button
+              class="rounded-2xl bg-onyx px-4 py-3 text-sm font-semibold text-white transition hover:bg-sapphire"
+              @click="downloadQR"
+            >
+              Download QR
+            </button>
+          </div>
+        </div>
       </div>
     </section>
 
-    <section class="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
-      <div class="rounded-[1.5rem] border border-pebble bg-white p-5 shadow-sm lg:p-6">
-        <div class="flex items-center justify-between gap-4">
+    <section class="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
+      <div class="rounded-4xl border border-pebble bg-white p-6 shadow-sm">
+        <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-xl font-bold text-onyx">Recent Enrollments</h2>
-            <p class="mt-1 text-sm text-slate">
-              A quick look at the latest submitted teacher records.
+            <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
+              Workflow lanes
+            </p>
+            <h2 class="mt-2 text-2xl font-black text-onyx">Provider pipeline</h2>
+          </div>
+          <Icon icon="feather:git-branch" class="h-5 w-5 text-slate" />
+        </div>
+
+        <div class="mt-5 space-y-4">
+          <article
+            v-for="lane in workflowBoard"
+            :key="lane.title"
+            class="rounded-[1.5rem] border border-pebble bg-cloud p-5"
+          >
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="text-lg font-black text-onyx">{{ lane.title }}</h3>
+                <p class="mt-2 text-sm leading-6 text-slate">{{ lane.note }}</p>
+              </div>
+              <span :class="lane.tone" class="rounded-full px-3 py-1 text-sm font-bold">
+                {{ lane.count }}
+              </span>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="rounded-4xl border border-pebble bg-white p-6 shadow-sm">
+        <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
+              Live clinic flow
+            </p>
+            <h2 class="mt-2 text-2xl font-black text-onyx">Chairside schedule</h2>
+            <p class="mt-2 text-sm text-slate">
+              A denser operational view instead of the old generic dashboard table.
             </p>
           </div>
           <button class="text-sm font-semibold text-sapphire transition hover:text-tangerine">
-            View all
+            Open full schedule
           </button>
         </div>
 
-        <div class="mt-5 overflow-hidden rounded-lg border border-pebble">
+        <div class="mt-5 overflow-hidden rounded-[1.5rem] border border-pebble">
           <AppTable
-            :theads="['Name', 'School', 'Status']"
-            :total-entries="totalEntries"
-            :total-pages="totalPages"
+            :theads="['Patient', 'Dentist', 'Chair', 'Service', 'Status']"
+            :total-entries="todaySchedule.length"
+            :total-pages="Math.ceil(todaySchedule.length / perPage)"
             :current-page="currentPage"
             @update-pg-num="currentPage = $event"
           >
             <template #trs>
-              <tr v-for="teacher in paginatedTeachers" :key="teacher.id">
-                <td class="font-medium text-onyx">{{ teacher.name }}</td>
-                <td>{{ teacher.school }}</td>
+              <tr v-for="schedule in paginatedSchedule" :key="schedule.id">
+                <td class="font-medium text-onyx">{{ schedule.patient }}</td>
+                <td>{{ schedule.dentist }}</td>
+                <td>{{ schedule.chair }}</td>
+                <td>{{ schedule.service }}</td>
                 <td>
                   <span
                     class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
                     :class="
-                      teacher.status === 'Active'
+                      schedule.status === 'Confirmed'
                         ? 'bg-emerald-light text-emerald'
-                        : 'bg-ruby-light text-ruby'
+                        : schedule.status === 'In Chair'
+                          ? 'bg-sky-light text-sky'
+                          : 'bg-amber-light text-amber'
                     "
                   >
-                    {{ teacher.status }}
+                    {{ schedule.status }}
                   </span>
                 </td>
               </tr>
@@ -171,35 +320,24 @@ onMounted(() => {
           </AppTable>
         </div>
       </div>
-
-      <div class="space-y-6">
-        <div class="rounded-[1.5rem] border border-pebble bg-white p-5 shadow-sm lg:p-6">
-          <h2 class="text-xl font-bold text-onyx">Today’s Focus</h2>
-          <ul class="mt-4 space-y-3 text-sm text-slate">
-            <li class="rounded-2xl bg-fog px-4 py-3">
-              Verify newly submitted profiles before approval.
-            </li>
-            <li class="rounded-2xl bg-fog px-4 py-3">
-              Follow up incomplete teacher enrollment records.
-            </li>
-            <li class="rounded-2xl bg-fog px-4 py-3">
-              Monitor image uploads and consent capture status.
-            </li>
-          </ul>
-        </div>
-
-        <div class="rounded-[1.5rem] border border-pebble bg-white p-5 shadow-sm lg:p-6">
-          <h2 class="text-xl font-bold text-onyx">System Notes</h2>
-          <p class="mt-3 text-sm leading-7 text-slate">
-            This panel can later show announcements, reminders, or operational notes for IMS admins
-            and PPSTA staff.
-          </p>
-        </div>
-      </div>
     </section>
 
-    <AppDialog :show="showDialog" title="Enroll Teacher" @close="showDialog = false">
-      <template #dialog-content> Teacher enrollment form UI can be connected here next. </template>
+    <AppDialog :show="showDialog" title="Clinic Check-In QR" @close="showDialog = false">
+      <template #dialog-content>
+        <div class="space-y-4 text-center">
+          <p class="text-sm leading-6 text-slate">
+            Display this code at reception so patients can open the clinic intake or check-in flow.
+          </p>
+          <div class="flex justify-center rounded-[1.5rem] bg-fog p-5">
+            <canvas ref="qrCanvas" />
+          </div>
+          <div class="flex justify-center">
+            <AppButton btn-theme="primary" class="px-5 py-3 normal-case" @click="downloadQR">
+              Download QR
+            </AppButton>
+          </div>
+        </div>
+      </template>
     </AppDialog>
   </div>
 </template>

@@ -42,11 +42,10 @@ function save() {
     <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div>
         <h2 class="text-2xl font-black text-onyx">
-          {{ isEditMode ? 'Edit Transaction' : 'Create Transaction' }}
+          {{ isEditMode ? 'Edit Billing Record' : 'Create Billing Record' }}
         </h2>
         <p class="mt-1 max-w-2xl text-sm leading-6 text-slate">
-          Manage patient payment details, service charges, and transaction status from one organized
-          form.
+          Capture treatment charges, payment method, and collection notes in one billing form.
         </p>
       </div>
       <AppButton
@@ -63,7 +62,7 @@ function save() {
       </div>
       <div class="rounded-lg border border-pebble bg-mist px-5 py-4">
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Record Type</p>
-        <p class="mt-2 text-sm font-medium leading-6 text-onyx">Patient payment record</p>
+        <p class="mt-2 text-sm font-medium leading-6 text-onyx">Dental service billing record</p>
       </div>
       <div class="rounded-lg border border-pebble bg-mist px-5 py-4">
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Status</p>
@@ -86,12 +85,12 @@ function save() {
           <p class="mt-4 text-sm font-semibold text-onyx">
             {{ transactionData.patient || 'New Transaction' }}
           </p>
-          <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate">Payment Record</p>
+          <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate">Clinic Billing Record</p>
         </div>
       </div>
       <div class="space-y-6">
         <div class="rounded-[1.5rem] border border-pebble bg-snow p-6">
-          <h2 class="text-xl font-black text-onyx">Patient & Service Information</h2>
+          <h2 class="text-xl font-black text-onyx">Patient & Treatment Information</h2>
           <div class="mt-5 grid gap-5 md:grid-cols-2">
             <div class="md:col-span-2">
               <label class="mb-2 block text-sm font-medium text-slate">Reference Number</label

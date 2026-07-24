@@ -40,10 +40,10 @@ function save() {
     <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div>
         <h2 class="text-2xl font-black text-onyx">
-          {{ isEditMode ? 'Edit User' : 'Create User' }}
+          {{ isEditMode ? 'Edit Team Member' : 'Create Team Member' }}
         </h2>
         <p class="mt-1 max-w-2xl text-sm leading-6 text-slate">
-          Manage user information, team roles, and account details from one organized form.
+          Set up staff access, role coverage, and department ownership for the dental clinic.
         </p>
       </div>
       <AppButton btn-theme="outline" class="px-5 py-3 normal-case" @click="router.push('/users')"
@@ -57,7 +57,7 @@ function save() {
       </div>
       <div class="rounded-lg border border-pebble bg-mist px-5 py-4">
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Record Type</p>
-        <p class="mt-2 text-sm font-medium leading-6 text-onyx">System user account</p>
+        <p class="mt-2 text-sm font-medium leading-6 text-onyx">Dental clinic system account</p>
       </div>
       <div class="rounded-lg border border-pebble bg-mist px-5 py-4">
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Status</p>
@@ -80,7 +80,7 @@ function save() {
           <p class="mt-4 text-sm font-semibold text-onyx">
             {{ userData.firstname || 'New' }} {{ userData.lastname || 'User' }}
           </p>
-          <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate">User Account</p>
+          <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate">Clinic Team Account</p>
         </div>
       </div>
       <div class="space-y-6">
@@ -110,7 +110,7 @@ function save() {
           </div>
         </div>
         <div class="rounded-[1.5rem] border border-pebble bg-snow p-6">
-          <h2 class="text-xl font-black text-onyx">Access Details</h2>
+          <h2 class="text-xl font-black text-onyx">Access Setup</h2>
           <div class="mt-5 grid gap-5 md:grid-cols-2">
             <div>
               <label class="mb-2 block text-sm font-medium text-slate">Role</label

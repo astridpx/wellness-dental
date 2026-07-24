@@ -57,20 +57,20 @@ const totalPages = Math.ceil(totalEntries / perPage.value)
   ></AppDialog>
   <div class="space-y-6">
     <section
-      class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#fff7ed_0%,#ffffff_45%,#f8fbff_100%)] shadow-sm"
+      class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#f6fffe_0%,#ffffff_45%,#ebf8fa_100%)] shadow-sm"
     >
       <div class="grid gap-6 p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div class="space-y-4">
           <div
             class="inline-flex items-center rounded-full border border-tangerine/20 bg-tangerine-light px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-tangerine"
           >
-            User Directory
+            Team Access Control
           </div>
           <div>
-            <h1 class="text-3xl font-black tracking-tight text-onyx">Users</h1>
+            <h1 class="text-3xl font-black tracking-tight text-onyx">Clinic Team</h1>
             <p class="mt-3 max-w-2xl text-sm leading-6 text-slate">
-              Review user accounts, keep access details organized, and prepare records for
-              operational follow-ups.
+              Organize front-desk, dental assistant, billing, and administrator access across the
+              clinic.
             </p>
           </div>
         </div>
@@ -91,21 +91,23 @@ const totalPages = Math.ceil(totalEntries / perPage.value)
           <p class="mt-2 text-3xl font-black text-onyx">{{ totalEntries }}</p>
         </div>
         <div class="bg-white px-6 py-5">
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Per Page</p>
-          <p class="mt-2 text-3xl font-black text-onyx">{{ perPage }}</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Access Roles</p>
+          <p class="mt-2 text-3xl font-black text-onyx">
+            {{ new Set(users.map((user) => user.role)).size }}
+          </p>
         </div>
         <div class="bg-white px-6 py-5">
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Coverage</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Setup Focus</p>
           <p class="mt-2 text-sm font-medium leading-6 text-onyx">
-            User records combine personal details, team roles, and contact information.
+            Staff profiles combine role assignment, clinic responsibility, and contact coverage.
           </p>
         </div>
       </div>
     </section>
     <section class="rounded-[1.5rem] border border-pebble bg-white p-5 shadow-sm">
       <div class="mb-5">
-        <h2 class="text-xl font-black text-onyx">User List</h2>
-        <p class="mt-1 text-sm text-slate">Browse and manage user accounts below.</p>
+        <h2 class="text-xl font-black text-onyx">Clinic Staff Directory</h2>
+        <p class="mt-1 text-sm text-slate">Browse and manage staff access records below.</p>
       </div>
       <div class="overflow-hidden rounded-[1.5rem] border border-pebble">
         <AppTable

@@ -35,20 +35,17 @@ const currentRole = computed(() => {
   if (!isExtOrg) return 'superAdmin'
   return getRoleFromToken(localStorage.getItem(lsTokenKey)) || ''
 })
+
 const navigation = computed<NavItem[]>(() => {
   const filteredRoutes = routes.filter((n) => Array.isArray(n?.meta?.navItem) && n.meta.navItem[0])
-  const navItems = useNavigation().getNav(
-    filteredRoutes,
-    [currentRole.value].filter(Boolean),
-  ) as NavItem[]
-
-  return navItems
+  return useNavigation().getNav(filteredRoutes, [currentRole.value].filter(Boolean)) as NavItem[]
 })
 
 const userEmail = computed(() => {
   authStateVersion.value
   return localStorage.getItem(lsEmailKey) || ''
 })
+
 const userName = computed(() => {
   const email = userEmail.value.trim()
   if (!email) return 'Signed-in User'
@@ -62,6 +59,16 @@ const userName = computed(() => {
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ')
 })
+
+const routeTitle = computed(() => String(route.meta.title || 'Workspace'))
+const todayLabel = computed(() =>
+  new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date('2026-07-24T09:00:00')),
+)
 
 function isActiveLink(href: string) {
   return href === '/' ? route.path === href : route.path.startsWith(href)
@@ -79,12 +86,9 @@ watch(
 <template>
   <RouterView v-if="route.name === 'login'" />
 
-  <div
-    v-else
-    class="min-h-screen bg-[radial-gradient(circle_at_top_left,#fff4e8,#f5f7fb_28%,#eef4ff_100%)]"
-  >
+  <div v-else class="min-h-screen bg-[linear-gradient(180deg,#f7fbfc_0%,#eef6f7_36%,#e7eff2_100%)]">
     <TransitionRoot as="template" :show="sidebarOpen">
-      <Dialog as="div" class="relative z-50 lg:hidden" @close="sidebarOpen = false">
+      <Dialog as="div" class="relative z-50 xl:hidden" @close="sidebarOpen = false">
         <TransitionChild
           as="template"
           enter="transition-opacity ease-linear duration-300"
@@ -94,7 +98,7 @@ watch(
           leave-from="opacity-100"
           leave-to="opacity-0"
         >
-          <div class="fixed inset-0 bg-onyx/30 backdrop-blur-sm" />
+          <div class="fixed inset-0 bg-onyx/35 backdrop-blur-sm" />
         </TransitionChild>
 
         <div class="fixed inset-0 flex">
@@ -107,73 +111,70 @@ watch(
             leave-from="translate-x-0"
             leave-to="-translate-x-full"
           >
-            <DialogPanel class="relative mr-10 flex w-full max-w-xs flex-1">
+            <DialogPanel class="flex h-full w-full max-w-sm flex-1">
               <div
-                class="flex min-h-full w-full flex-col rounded-r-4xl bg-snow px-5 py-6 shadow-2xl"
+                class="scrollbar flex h-full w-full flex-col overflow-y-auto bg-[#122833] px-5 py-6 text-white shadow-2xl"
               >
-                <div class="mb-6 flex items-center justify-between">
+                <div class="mb-6 flex items-start justify-between">
                   <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.25em] text-tangerine">
-                      PPSTA
+                    <p
+                      class="text-[11px] font-semibold uppercase tracking-[0.32em] text-tangerine-light"
+                    >
+                      IMS Dental
                     </p>
-                    <h2 class="mt-1 text-lg font-bold text-onyx">Admin Portal</h2>
+                    <h2 class="mt-2 text-2xl font-black">Clinic OS</h2>
                   </div>
                   <button
                     type="button"
-                    class="rounded-full p-2 text-slate"
+                    class="rounded-2xl bg-white/10 p-2.5"
                     @click="sidebarOpen = false"
                   >
                     <Icon icon="feather:x" class="h-5 w-5" />
                   </button>
                 </div>
 
-                <div
-                  class="rounded-2xl bg-[linear-gradient(135deg,#37CBB8_0%,#2ea89b_65%,#1f7f77_100%)] px-4 py-4 text-white shadow-md"
-                >
-                  <div class="flex items-center gap-3">
+                <div class="rounded-[1.75rem] border border-white/10 bg-white/6 p-4">
+                  <p class="text-xs uppercase tracking-[0.2em] text-white/55">Current operator</p>
+                  <div class="mt-4 flex items-center gap-3">
                     <div
-                      class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/18 ring-1 ring-white/20"
+                      class="flex h-12 w-12 items-center justify-center rounded-2xl bg-tangerine text-white"
                     >
-                      <Icon icon="feather:user" class="h-6 w-6" />
+                      <Icon icon="feather:user" class="h-5 w-5" />
                     </div>
                     <div class="min-w-0">
                       <p class="truncate text-sm font-semibold">{{ userName }}</p>
-                      <p class="truncate text-xs text-white/75">
+                      <p class="truncate text-xs text-white/65">
                         {{ userEmail || 'No email available' }}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <nav class="mt-6 flex-1">
-                  <ul class="space-y-2">
-                    <li v-for="item in navigation" :key="item.name">
-                      <RouterLink
-                        :to="item.href"
-                        class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-200"
-                        :class="
-                          isActiveLink(item.href)
-                            ? 'bg-tangerine-light text-tangerine-dark shadow-sm'
-                            : 'text-onyx hover:bg-fog'
-                        "
-                        @click="sidebarOpen = false"
-                      >
-                        <Icon :icon="item.icon || 'feather:circle'" class="h-5 w-5 shrink-0" />
-                        {{ item.name }}
-                      </RouterLink>
-                    </li>
-                  </ul>
+                <nav class="mt-6 flex-1 space-y-2">
+                  <RouterLink
+                    v-for="item in navigation"
+                    :key="item.name"
+                    :to="item.href"
+                    class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition"
+                    :class="
+                      isActiveLink(item.href)
+                        ? 'bg-white text-onyx'
+                        : 'text-white/78 hover:bg-white/10 hover:text-white'
+                    "
+                    @click="sidebarOpen = false"
+                  >
+                    <Icon :icon="item.icon || 'feather:circle'" class="h-5 w-5 shrink-0" />
+                    {{ item.name }}
+                  </RouterLink>
                 </nav>
 
-                <div class="border-t border-pebble pt-4">
-                  <button
-                    class="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-onyx transition hover:bg-fog"
-                    @click="logout()"
-                  >
-                    <Icon icon="feather:log-out" class="h-5 w-5" />
-                    Logout
-                  </button>
-                </div>
+                <button
+                  class="mt-6 flex w-full items-center gap-3 rounded-2xl border border-white/12 px-4 py-3 text-sm font-semibold text-white/85 transition hover:bg-white/10"
+                  @click="logout()"
+                >
+                  <Icon icon="feather:log-out" class="h-5 w-5" />
+                  Logout
+                </button>
               </div>
             </DialogPanel>
           </TransitionChild>
@@ -181,104 +182,115 @@ watch(
       </Dialog>
     </TransitionRoot>
 
-    <div class="flex min-h-screen flex-col lg:flex-row">
-      <aside class="hidden lg:flex lg:w-72 lg:shrink-0 lg:flex-col lg:p-5">
+    <div class="mx-auto flex h-screen max-w-[1680px] gap-4 overflow-hidden p-4 lg:p-6">
+      <aside class="hidden h-full xl:flex xl:w-75 xl:shrink-0 xl:flex-col">
         <div
-          class="flex h-full flex-col rounded-4xl border border-white/70 bg-white/80 p-5 shadow-lg backdrop-blur"
+          class="scrollbar flex h-full flex-col overflow-y-auto rounded-4xl bg-[#122833] p-5 text-white shadow-lg"
         >
-          <div class="border-b border-pebble pb-5">
-            <div class="space-y-3">
-              <div
-                class="rounded-[1.5rem] border border-dashed border-pebble bg-linear-to-br from-fog to-white px-4 py-4 text-center shadow-sm"
-              >
-                <p class="text-[10px] font-semibold uppercase tracking-[0.24em] text-smoke">
-                  IMS Logo
-                </p>
-                <div
-                  class="mt-3 flex h-20 items-center justify-center rounded-lg bg-white text-sm font-semibold text-slate"
+          <div class="rounded-[1.6rem] border border-white/10 bg-white/5 p-5">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p
+                  class="text-[11px] font-semibold uppercase tracking-[0.32em] text-tangerine-light"
                 >
-                  Place IMS Logo
-                </div>
+                  IMS Dental
+                </p>
+                <h1 class="mt-2 text-3xl font-black leading-none">Clinic OS</h1>
+              </div>
+              <div class="rounded-2xl bg-white/8 p-3 text-white/75">
+                <Icon icon="streamline-ultimate:dentistry-tooth-shield" class="h-6 w-6" />
               </div>
             </div>
-            <h1 class="mt-5 text-2xl font-black tracking-tight text-onyx">Admin Portal</h1>
-            <p class="mt-2 text-sm leading-6 text-slate">
-              Teacher enrollment and records management.
+            <p class="mt-4 text-sm leading-6 text-white/65">
+              A dental control room for provider setup, treatment flow, billing, and team
+              operations.
             </p>
           </div>
 
-          <div
-            class="mt-5 rounded-[1.5rem] bg-[linear-gradient(135deg,#37CBB8_0%,#2ea89b_65%,#1f7f77_100%)] p-4 text-white shadow-md"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/18 ring-1 ring-white/20"
-              >
-                <Icon icon="feather:user" class="h-6 w-6" />
-              </div>
-              <div class="min-w-0">
-                <p class="truncate text-sm font-semibold">{{ userName }}</p>
-                <p class="truncate text-xs text-white/75">
-                  {{ userEmail || 'No email available' }}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <nav class="mt-6 flex-1">
-            <ul class="space-y-2">
-              <li v-for="item in navigation" :key="item.name">
-                <RouterLink
-                  :to="item.href"
-                  class="group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-200"
-                  :class="
-                    isActiveLink(item.href)
-                      ? 'bg-tangerine-light text-tangerine-dark shadow-sm'
-                      : 'text-onyx hover:bg-fog'
-                  "
-                >
-                  <Icon :icon="item.icon || 'feather:circle'" class="h-5 w-5 shrink-0" />
-                  {{ item.name }}
-                </RouterLink>
-              </li>
-            </ul>
+          <nav class="mt-6 flex-1 space-y-2">
+            <RouterLink
+              v-for="item in navigation"
+              :key="item.name"
+              :to="item.href"
+              class="group flex items-center justify-between rounded-2xl px-4 py-3 transition"
+              :class="
+                isActiveLink(item.href)
+                  ? 'bg-white text-onyx'
+                  : 'text-white/76 hover:bg-white/8 hover:text-white'
+              "
+            >
+              <span class="flex items-center gap-3">
+                <Icon :icon="item.icon || 'feather:circle'" class="h-5 w-5 shrink-0" />
+                <span class="text-sm font-semibold">{{ item.name }}</span>
+              </span>
+              <Icon
+                icon="feather:arrow-up-right"
+                class="h-4 w-4 opacity-40 transition group-hover:opacity-100"
+              />
+            </RouterLink>
           </nav>
 
-          <div class="mt-6 border-t border-pebble pt-4">
+          <div class="mt-6 rounded-[1.6rem] border border-white/10 bg-white/5 p-4">
+            <p class="text-xs uppercase tracking-[0.22em] text-white/55">Signed in</p>
+            <p class="mt-3 text-sm font-semibold">{{ userName }}</p>
+            <p class="mt-1 text-xs text-white/55">{{ userEmail || 'No email available' }}</p>
             <button
-              class="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-onyx transition hover:bg-fog"
+              class="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-onyx transition hover:bg-tangerine-light"
               @click="logout()"
             >
-              <Icon icon="feather:log-out" class="h-5 w-5" />
+              <Icon icon="feather:log-out" class="h-4 w-4" />
               Logout
             </button>
           </div>
 
-          <p class="mt-6 text-center text-xs leading-5 text-smoke">
-            <strong class="block pb-1 font-bold uppercase tracking-[0.2em] text-slate">{{
-              appTitle
-            }}</strong>
-            Version {{ appVer || 'dev' }}
-          </p>
+          <p class="mt-5 text-center text-xs text-white/35">{{ appTitle }}</p>
         </div>
       </aside>
 
-      <div class="flex min-h-screen min-w-0 flex-1 flex-col p-4 lg:p-5 lg:pl-0">
-        <section
-          class="min-h-0 flex-1 overflow-hidden rounded-4xl border border-white/70 bg-white/85 shadow-lg backdrop-blur"
+      <main class="min-w-0 flex-1">
+        <div
+          class="flex h-full min-h-[calc(100vh-2rem)] flex-col rounded-4xl border border-white/70 bg-white/80 shadow-lg backdrop-blur"
         >
-          <div class="h-full overflow-y-auto p-5 lg:p-7">
-            <button
-              type="button"
-              class="mb-4 inline-flex rounded-2xl bg-fog p-3 text-onyx lg:hidden"
-              @click="sidebarOpen = true"
-            >
-              <Icon icon="feather:menu" class="h-5 w-5" />
-            </button>
+          <header class="border-b border-pebble/80 px-4 py-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div class="flex items-start gap-3">
+                <button
+                  type="button"
+                  class="inline-flex rounded-2xl bg-fog p-3 text-onyx xl:hidden"
+                  @click="sidebarOpen = true"
+                >
+                  <Icon icon="feather:menu" class="h-5 w-5" />
+                </button>
+                <div>
+                  <p class="text-[11px] font-semibold uppercase tracking-[0.28em] text-smoke">
+                    Control Room
+                  </p>
+                  <h2 class="mt-1 text-2xl font-black text-onyx">{{ routeTitle }}</h2>
+                </div>
+              </div>
+
+              <div class="grid gap-3 sm:grid-cols-2 lg:flex lg:items-center">
+                <div class="rounded-2xl border border-pebble bg-cloud px-4 py-3">
+                  <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-smoke">
+                    Today
+                  </p>
+                  <p class="mt-1 text-sm font-semibold text-onyx">{{ todayLabel }}</p>
+                </div>
+                <div class="rounded-2xl border border-pebble bg-white px-4 py-3">
+                  <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-smoke">
+                    Operator
+                  </p>
+                  <p class="mt-1 text-sm font-semibold text-onyx">{{ userName }}</p>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <section class="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
             <RouterView />
-          </div>
-        </section>
-      </div>
+          </section>
+        </div>
+      </main>
     </div>
   </div>
 </template>
