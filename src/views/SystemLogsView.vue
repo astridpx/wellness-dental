@@ -1,45 +1,109 @@
 <script lang="ts" setup>
 import { Icon } from '@iconify/vue'
-import { AppTable, AppButton, AppDialog, AppInput } from '@/components/app'
-import { ref } from 'vue'
+import { AppTable, AppButton, AppDialog, AppInput, AppLoadingScreen } from '@/components/app'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useAuth } from '@/composables'
 
-const systemLogs = [
-  {
-    date: '2026-07-15 09:15 AM',
-    activity: 'User logged in',
-    status: 'Success',
-  },
-  {
-    date: '2026-07-15 09:42 AM',
-    activity: 'Updated profile information',
-    status: 'Success',
-  },
-  {
-    date: '2026-07-15 10:05 AM',
-    activity: 'Password change attempt',
-    status: 'Failed',
-  },
-  {
-    date: '2026-07-15 10:20 AM',
-    activity: 'Exported employee list',
-    status: 'Success',
-  },
-  {
-    date: '2026-07-15 11:08 AM',
-    activity: 'Session expired',
-    status: 'Info',
-  },
-]
+type SystemLogRow = {
+  id: number
+  createdAt: string
+  activity: string
+  success: boolean
+}
 
+const { getAuthHeaders, logout } = useAuth()
+const baseURL = import.meta.env.VITE_APP_MAIN_API_BASE_URL
+
+const logs = ref<SystemLogRow[]>([])
 const showDialog = ref(false)
+const loading = ref(true)
+const errorMessage = ref('')
 const currentPage = ref(1)
 const perPage = ref(10)
-const totalEntries = 200
-const totalPages = Math.ceil(totalEntries / perPage.value)
+const totalEntries = ref(0)
+const totalPages = ref(1)
+
+const filters = reactive({
+  activity: '',
+})
+
+const successCount = computed(() => logs.value.filter((log) => log.success).length)
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
+}
+
+async function handleApiError(response: Response) {
+  if (response.status === 401 || response.status === 403) {
+    await logout(true)
+    return true
+  }
+
+  return false
+}
+
+async function fetchLogs() {
+  loading.value = true
+  errorMessage.value = ''
+
+  const params = new URLSearchParams({
+    page: String(currentPage.value),
+    perPage: String(perPage.value),
+  })
+
+  if (filters.activity) params.set('activity', filters.activity)
+
+  try {
+    const res = await fetch(`${baseURL}/wellness/logs/system?${params.toString()}`, {
+      headers: getAuthHeaders(false),
+    })
+
+    if (await handleApiError(res)) return
+
+    const obj = await res.json()
+    if (!res.ok) {
+      errorMessage.value = obj.error || 'Unable to load system logs.'
+      return
+    }
+
+    logs.value = Array.isArray(obj.data) ? obj.data : []
+    totalEntries.value = Number(obj.metadata?.totalEntries || 0)
+    totalPages.value = Number(obj.metadata?.totalPages || 1)
+  } catch {
+    errorMessage.value = 'Unable to connect to the server.'
+  } finally {
+    loading.value = false
+  }
+}
+
+function applyFilters() {
+  currentPage.value = 1
+  showDialog.value = false
+  void fetchLogs()
+}
+
+watch(currentPage, () => {
+  void fetchLogs()
+})
+
+onMounted(async () => {
+  await fetchLogs()
+})
 </script>
 
 <template>
-  <AppDialog title="Filter System Logs" :show="showDialog" @close="showDialog = false">
+  <AppDialog
+    title="Filter System Logs"
+    :show="showDialog"
+    @close="showDialog = false"
+    @confirm="applyFilters"
+  >
     <template #dialog-content>
       <div class="space-y-5">
         <div
@@ -53,7 +117,7 @@ const totalPages = Math.ceil(totalEntries / perPage.value)
 
         <div>
           <label class="mb-2 block text-sm font-medium text-slate">Activity</label>
-          <AppInput placeholder="Search system logs..." />
+          <AppInput v-model="filters.activity" placeholder="Search system logs..." />
         </div>
       </div>
     </template>
@@ -77,9 +141,6 @@ const totalPages = Math.ceil(totalEntries / perPage.value)
           </p>
         </div>
         <div class="flex flex-wrap gap-3">
-          <AppButton btn-theme="outline" class="px-5 py-3 normal-case">
-            <Icon icon="feather:download" class="size-4" /> Export
-          </AppButton>
           <AppButton btn-theme="primary" class="px-5 py-3 normal-case" @click="showDialog = true">
             <Icon icon="feather:filter" class="size-4" /> Filter logs
           </AppButton>
@@ -88,17 +149,17 @@ const totalPages = Math.ceil(totalEntries / perPage.value)
       <div class="grid gap-px border-t border-pebble bg-pebble md:grid-cols-3">
         <div class="bg-white px-6 py-5">
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Visible records</p>
-          <p class="mt-2 text-3xl font-black text-onyx">{{ systemLogs.length }}</p>
+          <p class="mt-2 text-3xl font-black text-onyx">{{ logs.length }}</p>
         </div>
         <div class="bg-white px-6 py-5">
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Total entries</p>
           <p class="mt-2 text-3xl font-black text-onyx">{{ totalEntries }}</p>
         </div>
         <div class="bg-white px-6 py-5">
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Review focus</p>
-          <p class="mt-2 text-sm font-medium leading-6 text-onyx">
-            Platform health and background events.
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">
+            Successful events
           </p>
+          <p class="mt-2 text-3xl font-black text-onyx">{{ successCount }}</p>
         </div>
       </div>
     </section>
@@ -113,7 +174,19 @@ const totalPages = Math.ceil(totalEntries / perPage.value)
         </div>
         <p class="text-sm font-medium text-slate">Showing recent entries</p>
       </div>
-      <div class="overflow-hidden rounded-[1.5rem] border border-pebble">
+
+      <p v-if="errorMessage" class="mb-4 rounded-xl bg-ruby-light px-4 py-3 text-sm text-ruby">
+        {{ errorMessage }}
+      </p>
+
+      <div v-if="loading">
+        <AppLoadingScreen
+          title="Loading system logs"
+          message="Please wait while we gather platform events, technical activity, and audit trail entries."
+        />
+      </div>
+
+      <div v-else class="overflow-hidden rounded-[1.5rem] border border-pebble">
         <AppTable
           :theads="['Date', 'Activity', 'Status']"
           :total-entries="totalEntries"
@@ -122,21 +195,18 @@ const totalPages = Math.ceil(totalEntries / perPage.value)
           @update-pg-num="currentPage = $event"
         >
           <template #trs>
-            <tr v-for="(log, i) in systemLogs" :key="i">
-              <td class="whitespace-nowrap text-sm text-slate">{{ log.date }}</td>
+            <tr v-if="!logs.length">
+              <td colspan="3" class="text-center text-slate">No system logs found.</td>
+            </tr>
+            <tr v-for="log in logs" v-else :key="log.id">
+              <td class="whitespace-nowrap text-sm text-slate">{{ formatDate(log.createdAt) }}</td>
               <td class="font-medium text-onyx">{{ log.activity }}</td>
               <td>
                 <span
                   class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
-                  :class="
-                    log.status === 'Success'
-                      ? 'bg-emerald-light text-emerald'
-                      : log.status === 'Failed'
-                        ? 'bg-ruby-light text-ruby'
-                        : 'bg-sky-light text-sky'
-                  "
+                  :class="log.success ? 'bg-emerald-light text-emerald' : 'bg-ruby-light text-ruby'"
                 >
-                  {{ log.status }}
+                  {{ log.success ? 'Success' : 'Failed' }}
                 </span>
               </td>
             </tr>

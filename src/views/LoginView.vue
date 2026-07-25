@@ -39,10 +39,14 @@ async function handleLogin() {
     class="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#f7f9ff_0%,#eef2fb_44%,#e4ebf8_100%)]"
   >
     <div class="pointer-events-none absolute inset-0">
-      <div class="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent_0%,rgba(176,138,52,0.4)_50%,transparent_100%)]" />
+      <div
+        class="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent_0%,rgba(176,138,52,0.4)_50%,transparent_100%)]"
+      />
       <div class="absolute -left-16 top-12 h-64 w-64 rounded-full bg-tangerine/12 blur-3xl" />
       <div class="absolute right-0 top-18 h-80 w-80 rounded-full bg-sapphire/8 blur-3xl" />
-      <div class="absolute bottom-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-white/60 blur-3xl" />
+      <div
+        class="absolute bottom-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-white/60 blur-3xl"
+      />
     </div>
 
     <div class="relative grid min-h-screen lg:grid-cols-[46%_54%]">
@@ -51,9 +55,11 @@ async function handleLogin() {
       >
         <div class="absolute -right-24 -top-24 h-72 w-72 rounded-full border border-white/10" />
         <div class="absolute -bottom-28 -left-20 h-80 w-80 rounded-full border border-white/10" />
-        <div class="absolute right-14 top-28 h-24 w-24 rounded-[2rem] bg-white/7" />
+        <div class="absolute right-14 top-28 h-24 w-24 rounded-4xl bg-white/7" />
         <div class="absolute bottom-28 left-18 h-18 w-18 rounded-full bg-tangerine/25 blur-xl" />
-        <div class="absolute inset-y-0 right-10 w-px bg-[linear-gradient(180deg,transparent_0%,rgba(255,255,255,0.14)_20%,rgba(255,255,255,0.04)_80%,transparent_100%)]" />
+        <div
+          class="absolute inset-y-0 right-10 w-px bg-[linear-gradient(180deg,transparent_0%,rgba(255,255,255,0.14)_20%,rgba(255,255,255,0.04)_80%,transparent_100%)]"
+        />
 
         <div class="relative z-10 max-w-md text-white">
           <div
@@ -131,14 +137,18 @@ async function handleLogin() {
       <div class="flex items-center justify-center px-6 py-10 sm:px-10">
         <div class="w-full max-w-md">
           <div class="mb-8 lg:hidden">
-            <p class="text-xs font-bold uppercase tracking-[0.24em] text-tangerine">WPC Dental Suite</p>
+            <p class="text-xs font-bold uppercase tracking-[0.24em] text-tangerine">
+              WPC Dental Suite
+            </p>
             <p class="mt-2 text-2xl font-black text-onyx">Employee Access</p>
           </div>
 
           <div
-            class="relative overflow-hidden rounded-[2rem] border border-white/80 bg-white/88 p-7 shadow-[0_30px_70px_rgba(21,42,78,0.16)] backdrop-blur sm:p-8"
+            class="relative overflow-hidden rounded-4xl border border-white/80 bg-white/88 p-7 shadow-[0_30px_70px_rgba(21,42,78,0.16)] backdrop-blur sm:p-8"
           >
-            <div class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#153a78_0%,#b08a34_55%,#e0c06b_100%)]" />
+            <div
+              class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#153a78_0%,#b08a34_55%,#e0c06b_100%)]"
+            />
 
             <div
               class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[linear-gradient(145deg,#eef3ff_0%,#fbf4e4_100%)] text-tangerine shadow-sm"
