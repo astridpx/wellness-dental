@@ -4,7 +4,6 @@ import { Icon } from '@iconify/vue'
 import { computed, inject, ref, watch } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuth, useNavigation } from '@/composables'
-import { getRoleFromToken } from '@/utils'
 
 type NavItem = {
   name: string
@@ -15,49 +14,34 @@ type NavItem = {
 
 const route = useRoute()
 const router = useRouter()
-const { logout } = useAuth()
+const { logout, getStoredRoles, getStoredUser } = useAuth()
 
 const sidebarOpen = ref(false)
 const appVer = inject('appVer') as string
 const appTitle = import.meta.env.VITE_APP_TITLE
-const isExtOrg = import.meta.env.VITE_APP_IS_EXTERNAL_ORG === 'true'
-const lsEmailKey = isExtOrg
-  ? import.meta.env.VITE_APP_LOCAL_STORAGE_EMAIL_EXTORG
-  : import.meta.env.VITE_APP_LOCAL_STORAGE_EMAIL
-const lsTokenKey = isExtOrg
-  ? import.meta.env.VITE_APP_LOCAL_STORAGE_TOKEN_KEY_EXTORG
-  : import.meta.env.VITE_APP_LOCAL_STORAGE_TOKEN_KEY
-
 const authStateVersion = ref(0)
 const routes = router.options.routes
-const currentRole = computed(() => {
+const currentRoles = computed(() => {
   authStateVersion.value
-  if (!isExtOrg) return 'superAdmin'
-  return getRoleFromToken(localStorage.getItem(lsTokenKey)) || ''
+  return getStoredRoles()
 })
 
 const navigation = computed<NavItem[]>(() => {
   const filteredRoutes = routes.filter((n) => Array.isArray(n?.meta?.navItem) && n.meta.navItem[0])
-  return useNavigation().getNav(filteredRoutes, [currentRole.value].filter(Boolean)) as NavItem[]
+  return useNavigation().getNav(filteredRoutes, currentRoles.value) as NavItem[]
+})
+
+const currentUser = computed(() => {
+  authStateVersion.value
+  return getStoredUser()
 })
 
 const userEmail = computed(() => {
-  authStateVersion.value
-  return localStorage.getItem(lsEmailKey) || ''
+  return currentUser.value?.email || ''
 })
 
 const userName = computed(() => {
-  const email = userEmail.value.trim()
-  if (!email) return 'Signed-in User'
-
-  const baseName = (email.split('@')[0] ?? email).replace(/[._-]+/g, ' ').trim()
-  if (!baseName) return email
-
-  return baseName
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ')
+  return currentUser.value?.displayName?.trim() || 'Signed-in User'
 })
 
 const routeTitle = computed(() => String(route.meta.title || 'Workspace'))

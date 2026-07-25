@@ -5,7 +5,6 @@ import SystemLogsView from '@/views/SystemLogsView.vue'
 import UserLogsView from '@/views/UserLogsView.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuth } from '@/composables'
-import { getRoleFromToken } from '@/utils'
 import DentistView from '@/views/dentists/DentistView.vue'
 import UserView from '@/views/users/UserView.vue'
 import SingleDentistView from '@/views/dentists/SingleDentistView.vue'
@@ -13,6 +12,23 @@ import SingleUserView from '@/views/users/SingleUserView.vue'
 import TransactionView from '@/views/transactions/TransactionView.vue'
 import SingleTransactionView from '@/views/transactions/SingleTransactionView.vue'
 import OptionsView from '@/views/OptionsView.vue'
+
+type RouteNavItem = [boolean, { visibleTo: string[] }]
+
+function getVisibleRoles(metaNavItem: unknown): string[] {
+  if (!Array.isArray(metaNavItem) || !metaNavItem[1]?.visibleTo) return []
+  return metaNavItem[1].visibleTo
+}
+
+function findFirstAccessiblePath(userRoles: string[]) {
+  const accessibleRoute = router.options.routes.find((route) => {
+    const visibleTo = getVisibleRoles(route.meta?.navItem)
+    if (!visibleTo.length) return false
+    return visibleTo.some((role) => userRoles.includes(role))
+  })
+
+  return accessibleRoute?.path || null
+}
 
 const router = createRouter({
   history: createWebHistory(),
@@ -24,7 +40,7 @@ const router = createRouter({
       meta: {
         title: 'Dashboard',
         icon: 'feather:home',
-        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
     {
@@ -34,7 +50,7 @@ const router = createRouter({
       meta: {
         title: 'Dentists',
         icon: 'streamline-ultimate:dentistry-tooth-shield',
-        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
     {
@@ -94,7 +110,7 @@ const router = createRouter({
       meta: {
         title: 'Transactions',
         icon: 'feather:credit-card',
-        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
     {
@@ -146,7 +162,7 @@ const router = createRouter({
       meta: {
         title: 'Account Settings',
         icon: 'feather:settings',
-        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
     {
@@ -164,23 +180,33 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   document.title = `${to.meta.title} - ${import.meta.env.VITE_APP_TITLE}`
 
-  // const { getToken, logout } = useAuth()
-  // const token = getToken()
+  const { getToken, getStoredRoles, fetchCurrentUser, logout } = useAuth()
+  const token = getToken()
 
-  // if (!token && to.path !== '/login') return router.push('/login')
+  if (!token && to.path !== '/login') return router.push('/login')
+  if (token && to.path === '/login') return router.push('/')
 
-  // if (token) {
-  //   const currentRole = isExtOrg ? getRoleFromToken(localStorage.getItem(lsTokenKey)) : 'superAdmin'
+  const visibleTo = getVisibleRoles(to.meta?.navItem)
+  if (!token || !visibleTo.length) return
 
-  //   if (to.path === '/login') return router.push('/')
+  let currentRoles = getStoredRoles()
 
-  //   if (to.meta?.navItem && !Array.isArray(to.meta.navItem)) return logout(true)
+  if (!currentRoles.length) {
+    const currentUser = await fetchCurrentUser()
+    currentRoles = currentUser?.roles || []
+  }
 
-  //   if (isExtOrg && !canAccessExternalRoute(currentRole, String(to.name || ''))) {
-  //     if (currentRole === 'auditor') return router.push('/')
-  //     return router.push('/')
-  //   }
-  // }
+  const canAccess = visibleTo.some((role) => currentRoles.includes(role))
+
+  if (!canAccess) {
+    const fallbackPath = findFirstAccessiblePath(currentRoles)
+
+    if (fallbackPath && fallbackPath !== to.path) {
+      return router.push(fallbackPath)
+    }
+
+    await logout(true)
+  }
 })
 
 export default router

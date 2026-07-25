@@ -8,7 +8,7 @@ const router = useRouter()
 const route = useRoute()
 const { login } = useAuth()
 
-const email = ref('')
+const identifier = ref('')
 const password = ref('')
 const loginError = ref('')
 const pleaseWait = ref(false)
@@ -19,7 +19,7 @@ async function handleLogin() {
   pleaseWait.value = true
   loginError.value = ''
 
-  const loginResult = await login(email.value, password.value)
+  const loginResult = await login(identifier.value, password.value)
 
   pleaseWait.value = false
 
@@ -109,8 +109,14 @@ async function handleLogin() {
 
             <form class="mt-8 space-y-5" @submit.prevent="handleLogin">
               <div>
-                <label class="mb-2 block text-sm font-semibold text-onyx">Email Address</label>
-                <AppInput v-model="email" type="email" placeholder="name@example.com" />
+                <label class="mb-2 block text-sm font-semibold text-onyx">
+                  Email Address or Username
+                </label>
+                <AppInput
+                  v-model="identifier"
+                  type="text"
+                  placeholder="name@example.com or username"
+                />
               </div>
 
               <div>
