@@ -1,12 +1,28 @@
 <script lang="ts" setup>
 import { Icon } from '@iconify/vue'
-import { AppTable, AppButton, AppDialog, AppInput, AppLoadingScreen } from '@/components/app'
+import {
+  AppTable,
+  AppButton,
+  AppDialog,
+  AppInput,
+  AppLoadingScreen,
+  AppStatValue,
+} from '@/components/app'
 import { ref } from 'vue'
 import { useSystemLogs } from '@/composables'
 
 const showDialog = ref(false)
-const { applyFilters, currentPage, errorMessage, filters, loading, logs, successCount, totalEntries, totalPages } =
-  useSystemLogs()
+const {
+  applyFilters,
+  currentPage,
+  errorMessage,
+  filters,
+  loading,
+  logs,
+  successCount,
+  totalEntries,
+  totalPages,
+} = useSystemLogs()
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('en-US', {
@@ -76,17 +92,17 @@ function confirmFilters() {
       <div class="grid gap-px border-t border-pebble bg-pebble md:grid-cols-3">
         <div class="bg-white px-6 py-5">
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Visible records</p>
-          <p class="mt-2 text-3xl font-black text-onyx">{{ logs.length }}</p>
+          <AppStatValue :loading="loading" :value="logs.length" />
         </div>
         <div class="bg-white px-6 py-5">
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Total entries</p>
-          <p class="mt-2 text-3xl font-black text-onyx">{{ totalEntries }}</p>
+          <AppStatValue :loading="loading" :value="totalEntries" />
         </div>
         <div class="bg-white px-6 py-5">
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">
             Successful events
           </p>
-          <p class="mt-2 text-3xl font-black text-onyx">{{ successCount }}</p>
+          <AppStatValue :loading="loading" :value="successCount" />
         </div>
       </div>
     </section>

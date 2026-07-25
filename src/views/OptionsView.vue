@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
-import { AppButton, AppDialog, AppInput, AppLoadingScreen, AppModal } from '@/components/app'
+import {
+  AppButton,
+  AppDialog,
+  AppInput,
+  AppLoadingScreen,
+  AppModal,
+  AppStatValue,
+} from '@/components/app'
 import { useAuth, usePaymentModes, useProcedures } from '@/composables'
 import type { PaymentModeOption, ProcedureOption } from '@/composables'
 
-type OptionCategory = 'Procedures' | 'Payment Modes' | 'Benefits'
+type OptionCategory = 'Procedures' | 'Payment Modes'
 
 type OptionItem = {
   id: number
@@ -26,35 +33,11 @@ const categories: Array<{ name: OptionCategory; icon: string; description: strin
     description: 'Procedures and treatments available for scheduling and billing.',
   },
   {
-    name: 'Benefits',
-    icon: 'boxicons:bookmark-heart',
-    description: 'Coverage items, inclusions, and treatment entitlements.',
-  },
-  {
     name: 'Payment Modes',
     icon: 'feather:credit-card',
     description: 'Ways patients can settle their balances.',
   },
 ]
-
-const localOptions = ref<OptionItem[]>([
-  {
-    id: 7,
-    category: 'Benefits',
-    name: 'Preventive Cleaning Benefit',
-    code: 'PCB',
-    description: 'Member benefit for routine cleaning coverage.',
-    active: true,
-  },
-  {
-    id: 8,
-    category: 'Benefits',
-    name: 'Simple Extraction Benefit',
-    code: 'SEB',
-    description: 'Coverage for non-surgical extraction procedures.',
-    active: true,
-  },
-])
 
 const selectedCategory = ref<OptionCategory>('Procedures')
 const search = ref('')
@@ -85,7 +68,7 @@ const {
   procedures,
   saveProcedure: persistProcedure,
   savingProcedure,
-  toggleProcedure: persistProcedureToggle
+  toggleProcedure: persistProcedureToggle,
 } = useProcedures()
 const {
   clearPaymentModeError,
@@ -101,7 +84,7 @@ const {
 const selectedCategoryDetails = computed(() =>
   categories.find((category) => category.name === selectedCategory.value),
 )
-const options = computed(() => [...localOptions.value, ...procedures.value, ...paymentModes.value])
+const options = computed(() => [...procedures.value, ...paymentModes.value])
 const categoryOptions = computed(() =>
   options.value.filter((option) => option.category === selectedCategory.value),
 )
@@ -118,6 +101,7 @@ const filteredOptions = computed(() => {
 const totalActiveOptions = computed(() => options.value.filter((option) => option.active).length)
 const isPaymentModesSelected = computed(() => selectedCategory.value === 'Payment Modes')
 const isProceduresSelected = computed(() => selectedCategory.value === 'Procedures')
+const loadingSummary = computed(() => loadingProcedures.value || loadingPaymentModes.value)
 const canDeleteManagedOptions = computed(() => getStoredRoles().includes('superAdmin'))
 const errorMessage = computed(
   () => localErrorMessage.value || procedureErrorMessage.value || paymentModeErrorMessage.value,
@@ -147,10 +131,10 @@ function getCategoryAccent(category: OptionCategory) {
   }
 
   return {
-    surface: 'from-emerald-light via-white to-snow',
-    badge: 'bg-emerald text-white',
-    text: 'text-emerald',
-    ring: 'ring-emerald/12',
+    surface: 'from-sapphire-light via-white to-snow',
+    badge: 'bg-sapphire text-white',
+    text: 'text-sapphire',
+    ring: 'ring-sapphire/12',
   }
 }
 
@@ -210,7 +194,10 @@ function closeForm() {
 }
 
 function confirmDelete(option: OptionItem) {
-  if ((isProcedureOption(option) || isPaymentModeOption(option)) && !canDeleteManagedOptions.value) {
+  if (
+    (isProcedureOption(option) || isPaymentModeOption(option)) &&
+    !canDeleteManagedOptions.value
+  ) {
     localErrorMessage.value = 'Only super administrators can delete procedures and payment modes.'
     return
   }
@@ -262,9 +249,7 @@ async function saveProcedure() {
   const quantity = Number(form.value.quantity)
   const priceValue = String(form.value.price ?? '').trim()
   const defaultPrice =
-    priceValue === '' || Number.isNaN(Number(priceValue))
-      ? null
-      : Number(priceValue)
+    priceValue === '' || Number.isNaN(Number(priceValue)) ? null : Number(priceValue)
 
   if (!Number.isInteger(monthInterval) || monthInterval <= 0) {
     localErrorMessage.value = 'Month interval must be a whole number greater than zero.'
@@ -293,35 +278,6 @@ async function saveProcedure() {
   }
 }
 
-function saveLocalOption() {
-  const name = form.value.name.trim()
-  if (!name) return
-  const priceValue = String(form.value.price ?? '').trim()
-
-  const optionData = {
-    category: form.value.category,
-    name,
-    code: form.value.code.trim().toUpperCase() || name.slice(0, 8).toUpperCase(),
-    description: form.value.description.trim() || 'No description provided.',
-    price:
-      form.value.category === 'Procedures' && priceValue !== ''
-        ? Number(priceValue)
-        : undefined,
-    active: form.value.active,
-  }
-
-  if (editingId.value) {
-    const index = localOptions.value.findIndex((option) => option.id === editingId.value)
-    const existingOption = localOptions.value[index]
-    if (existingOption) localOptions.value[index] = { ...existingOption, ...optionData }
-  } else {
-    localOptions.value.unshift({ id: Date.now(), ...optionData, active: true })
-  }
-
-  selectedCategory.value = form.value.category
-  closeForm()
-}
-
 async function saveOption() {
   const name = form.value.name.trim()
   if (!name) return
@@ -335,8 +291,6 @@ async function saveOption() {
     await savePaymentMode()
     return
   }
-
-  saveLocalOption()
 }
 
 async function toggleOption(option: OptionItem) {
@@ -349,8 +303,6 @@ async function toggleOption(option: OptionItem) {
     await persistPaymentModeToggle(option)
     return
   }
-
-  option.active = !option.active
 }
 
 async function applyStatusChange() {
@@ -378,10 +330,6 @@ async function removeOption() {
     if (deleted) closeDeleteDialog()
     return
   }
-
-  localOptions.value = localOptions.value.filter((item) => item.id !== pendingDeleteOption.value?.id)
-  deletingOption.value = false
-  closeDeleteDialog()
 }
 
 function formatPrice(price?: number) {
@@ -459,7 +407,9 @@ function getProcedureQuantity(option: OptionItem): number {
           <div
             class="rounded-[1.5rem] border border-ruby/15 bg-[linear-gradient(135deg,#fff4f4_0%,#ffffff_100%)] p-5"
           >
-            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-ruby">Delete confirmation</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-ruby">
+              Delete confirmation
+            </p>
             <p class="mt-2 text-sm leading-6 text-slate">
               This will permanently remove the selected setup item from this list.
             </p>
@@ -469,7 +419,10 @@ function getProcedureQuantity(option: OptionItem): number {
             Deletion in progress. Please wait while we remove this setup item.
           </p>
 
-          <div v-if="pendingDeleteOption" class="rounded-2xl border border-pebble bg-cloud px-4 py-4">
+          <div
+            v-if="pendingDeleteOption"
+            class="rounded-2xl border border-pebble bg-cloud px-4 py-4"
+          >
             <p class="text-sm font-semibold text-onyx">{{ pendingDeleteOption.name }}</p>
             <p class="mt-1 text-xs uppercase tracking-[0.16em] text-slate">
               {{ pendingDeleteOption.code }}
@@ -503,11 +456,11 @@ function getProcedureQuantity(option: OptionItem): number {
       <div class="grid gap-px border-t border-pebble bg-pebble sm:grid-cols-3">
         <div class="bg-white px-6 py-5">
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Setup groups</p>
-          <p class="mt-2 text-3xl font-black text-onyx">{{ categories.length }}</p>
+          <AppStatValue :loading="loadingSummary" :value="categories.length" />
         </div>
         <div class="bg-white px-6 py-5">
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Active items</p>
-          <p class="mt-2 text-3xl font-black text-onyx">{{ totalActiveOptions }}</p>
+          <AppStatValue :loading="loadingSummary" :value="totalActiveOptions" />
         </div>
         <div class="bg-white px-6 py-5">
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Current group</p>
@@ -521,7 +474,9 @@ function getProcedureQuantity(option: OptionItem): number {
         <div class="flex flex-col gap-5">
           <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate">Setup groups</p>
+              <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate">
+                Setup groups
+              </p>
               <h2 class="mt-2 text-2xl font-black text-onyx">Category selector</h2>
             </div>
             <div class="rounded-2xl border border-pebble bg-cloud px-4 py-3 text-sm text-slate">
@@ -537,10 +492,10 @@ function getProcedureQuantity(option: OptionItem): number {
                 v-for="category in categories"
                 :key="category.name"
                 type="button"
-                class="group w-[240px] shrink-0 rounded-[1.5rem] border p-4 text-left transition-all duration-200"
+                class="group w-60 shrink-0 rounded-[1.5rem] border p-4 text-left transition-all duration-200"
                 :class="
                   selectedCategory === category.name
-                    ? `border-transparent bg-gradient-to-br ${getCategoryAccent(category.name).surface} shadow-sm ring-1 ${getCategoryAccent(category.name).ring}`
+                    ? `border-transparent bg-linear-to-br ${getCategoryAccent(category.name).surface} shadow-sm ring-1 ${getCategoryAccent(category.name).ring}`
                     : 'border-pebble bg-white hover:border-tangerine/35 hover:bg-fog/40'
                 "
                 @click="selectCategory(category.name)"
@@ -578,7 +533,6 @@ function getProcedureQuantity(option: OptionItem): number {
               </button>
             </div>
           </div>
-
         </div>
       </div>
 
@@ -605,7 +559,13 @@ function getProcedureQuantity(option: OptionItem): number {
           {{ errorMessage }}
         </p>
 
-        <div v-if="(loadingProcedures && isProceduresSelected) || (loadingPaymentModes && isPaymentModesSelected)" class="mt-5">
+        <div
+          v-if="
+            (loadingProcedures && isProceduresSelected) ||
+            (loadingPaymentModes && isPaymentModesSelected)
+          "
+          class="mt-5"
+        >
           <AppLoadingScreen
             :title="isProceduresSelected ? 'Loading procedures' : 'Loading payment modes'"
             :message="
@@ -708,7 +668,11 @@ function getProcedureQuantity(option: OptionItem): number {
                       <button
                         type="button"
                         class="inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold"
-                        :class="option.active ? 'bg-emerald-light text-emerald' : 'bg-ruby-light text-ruby'"
+                        :class="
+                          option.active
+                            ? 'bg-emerald-light text-emerald'
+                            : 'bg-ruby-light text-ruby'
+                        "
                         @click="confirmStatusChange(option)"
                       >
                         <span
@@ -731,7 +695,8 @@ function getProcedureQuantity(option: OptionItem): number {
                         <button
                           v-if="
                             canDeleteManagedOptions ||
-                            (option.category !== 'Payment Modes' && option.category !== 'Procedures')
+                            (option.category !== 'Payment Modes' &&
+                              option.category !== 'Procedures')
                           "
                           type="button"
                           class="inline-flex items-center gap-2 rounded-xl bg-ruby-light px-3 py-2 text-xs font-semibold text-ruby transition hover:bg-ruby-light/80"
@@ -786,8 +751,8 @@ function getProcedureQuantity(option: OptionItem): number {
                 {{ form.name || (editingId ? 'Update setup item' : 'Create setup item') }}
               </h3>
               <p class="mt-2 text-sm leading-6 text-slate">
-                Configure the item details, visibility, and operational rules used across the
-                clinic setup library.
+                Configure the item details, visibility, and operational rules used across the clinic
+                setup library.
               </p>
             </div>
 
@@ -874,7 +839,7 @@ function getProcedureQuantity(option: OptionItem): number {
                 <label class="mb-3 block text-sm font-medium text-onyx">Status</label>
                 <button
                   type="button"
-                  class="flex w-full items-center justify-between rounded-[1.25rem] border px-4 py-3.5 text-left transition"
+                  class="flex w-full items-center justify-between rounded-lg border px-4 py-3.5 text-left transition"
                   :class="
                     form.active
                       ? 'border-emerald/25 bg-emerald-light/70 text-emerald'
@@ -896,7 +861,10 @@ function getProcedureQuantity(option: OptionItem): number {
                       <span class="block text-sm font-bold text-onyx">
                         {{ form.active ? 'Active' : 'Inactive' }}
                       </span>
-                      <span class="block text-xs" :class="form.active ? 'text-emerald' : 'text-ruby'">
+                      <span
+                        class="block text-xs"
+                        :class="form.active ? 'text-emerald' : 'text-ruby'"
+                      >
                         {{
                           form.active
                             ? 'This item is currently available for active workflows.'

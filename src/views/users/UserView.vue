@@ -1,14 +1,31 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { AppTable, AppButton, AppDialog, AppInput, AppLoadingScreen } from '@/components/app'
+import {
+  AppTable,
+  AppButton,
+  AppDialog,
+  AppInput,
+  AppLoadingScreen,
+  AppStatValue,
+} from '@/components/app'
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
 import { useUsersList } from '@/composables'
 
 const router = useRouter()
 const showDialog = ref(false)
-const { accessRoleCount, applyFilters, currentPage, errorMessage, filters, loading, roles, totalEntries, totalPages, users } =
-  useUsersList()
+const {
+  accessRoleCount,
+  applyFilters,
+  currentPage,
+  errorMessage,
+  filters,
+  loading,
+  roles,
+  totalEntries,
+  totalPages,
+  users,
+} = useUsersList()
 
 function confirmFilters() {
   showDialog.value = false
@@ -92,11 +109,11 @@ function confirmFilters() {
       <div class="grid gap-px border-t border-pebble bg-pebble md:grid-cols-3">
         <div class="bg-white px-6 py-5">
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Total Users</p>
-          <p class="mt-2 text-3xl font-black text-onyx">{{ totalEntries }}</p>
+          <AppStatValue :loading="loading" :value="totalEntries" />
         </div>
         <div class="bg-white px-6 py-5">
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Access Roles</p>
-          <p class="mt-2 text-3xl font-black text-onyx">{{ accessRoleCount }}</p>
+          <AppStatValue :loading="loading" :value="accessRoleCount" />
         </div>
         <div class="bg-white px-6 py-5">
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Setup Focus</p>
@@ -126,7 +143,15 @@ function confirmFilters() {
 
       <div v-else class="overflow-hidden rounded-[1.5rem] border border-pebble">
         <AppTable
-          :theads="['User #', 'Name', 'Role Assignment', 'Email', 'Status', 'Password Reset', 'Action']"
+          :theads="[
+            'User #',
+            'Name',
+            'Role Assignment',
+            'Email',
+            'Status',
+            'Password Reset',
+            'Action',
+          ]"
           :total-entries="totalEntries"
           :total-pages="totalPages"
           :current-page="currentPage"
@@ -175,9 +200,7 @@ function confirmFilters() {
                 <span
                   class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
                   :class="
-                    user.mustChangePassword
-                      ? 'bg-amber-light text-amber'
-                      : 'bg-fog text-slate'
+                    user.mustChangePassword ? 'bg-amber-light text-amber' : 'bg-fog text-slate'
                   "
                 >
                   {{ user.mustChangePassword ? 'Required' : 'Not required' }}

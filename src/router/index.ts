@@ -156,7 +156,7 @@ const router = createRouter({
       name: 'options',
       component: OptionsView,
       meta: {
-        title: 'Options',
+        title: 'Setup Library',
         icon: 'feather:sliders',
         navItem: [true, { visibleTo: ['superAdmin', 'admin'] }],
       },
