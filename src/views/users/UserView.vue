@@ -81,7 +81,7 @@ function confirmFilters() {
 
   <div class="space-y-6">
     <section
-      class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#f6fffe_0%,#ffffff_45%,#ebf8fa_100%)] shadow-sm"
+      class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#fff7ed_0%,#ffffff_48%,#f8fbff_100%)] shadow-sm"
     >
       <div class="grid gap-6 p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div class="space-y-4">

@@ -156,7 +156,7 @@ async function confirmSave() {
     </p>
 
     <section
-      class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#f8fbff_0%,#ffffff_52%,#fbf7ee_100%)] shadow-sm"
+      class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#fff7ed_0%,#ffffff_48%,#f8fbff_100%)] shadow-sm"
     >
       <div class="space-y-5 p-6">
         <div>

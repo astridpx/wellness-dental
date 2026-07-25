@@ -86,16 +86,18 @@ const quickViews = [
   <div class="space-y-6">
     <section class="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
       <div
-        class="rounded-4xl bg-[linear-gradient(140deg,#122833_0%,#1b3b49_100%)] p-6 text-white shadow-lg lg:p-8"
+        class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#fff7ed_0%,#ffffff_48%,#f8fbff_100%)] p-6 shadow-sm lg:p-8"
       >
         <div class="flex flex-col gap-6">
           <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div class="max-w-2xl">
-              <p class="text-[11px] font-semibold uppercase tracking-[0.32em] text-tangerine-light">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.32em] text-tangerine">
                 Provider Control
               </p>
-              <h1 class="mt-3 text-4xl font-black tracking-tight">Dentist roster, rebuilt</h1>
-              <p class="mt-4 text-sm leading-7 text-white/68">
+              <h1 class="mt-3 text-4xl font-black tracking-tight text-onyx">
+                Dentist roster, rebuilt
+              </h1>
+              <p class="mt-4 text-sm leading-7 text-slate">
                 This screen now behaves like a provider operations board with summary signals,
                 specialty snapshots, and a more compact active roster below.
               </p>
@@ -103,7 +105,7 @@ const quickViews = [
             <div class="flex flex-wrap gap-3">
               <AppButton
                 btn-theme="outline"
-                class="border-white/12 bg-white/8 px-5 py-3 normal-case text-white hover:border-white/20 hover:bg-white/14 hover:text-white"
+                class="px-5 py-3 normal-case"
                 @click="showDialog = true"
               >
                 Filter roster
@@ -120,13 +122,13 @@ const quickViews = [
             <article
               v-for="card in summary"
               :key="card.label"
-              class="rounded-[1.5rem] border border-white/10 bg-white/6 p-5"
+              class="rounded-[1.5rem] border border-pebble bg-white p-5 shadow-sm"
             >
-              <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/55">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate">
                 {{ card.label }}
               </p>
-              <p class="mt-3 text-3xl font-black">{{ card.value }}</p>
-              <p class="mt-3 text-sm leading-6 text-white/62">{{ card.note }}</p>
+              <p class="mt-3 text-3xl font-black text-onyx">{{ card.value }}</p>
+              <p class="mt-3 text-sm leading-6 text-slate">{{ card.note }}</p>
             </article>
           </div>
         </div>

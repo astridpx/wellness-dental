@@ -144,7 +144,7 @@ const paginatedRecords = computed(() => {
   <div class="space-y-6">
     <section class="grid gap-6 xl:grid-cols-[1.35fr_0.9fr]">
       <div
-        class="relative overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#f8fbff_0%,#ffffff_52%,#fbf7ee_100%)] p-6 shadow-sm lg:p-8"
+        class="relative overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#fff7ed_0%,#ffffff_48%,#f8fbff_100%)] p-6 shadow-sm lg:p-8"
       >
         <div class="pointer-events-none absolute inset-0">
           <div class="absolute -left-16 top-0 h-48 w-48 rounded-full bg-sapphire/6 blur-3xl" />

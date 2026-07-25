@@ -51,27 +51,31 @@ function save() {
 
 <template>
   <section class="space-y-6">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div>
-        <p class="text-[11px] font-semibold uppercase tracking-[0.3em] text-smoke">
-          Dentist builder
-        </p>
-        <h1 class="mt-2 text-3xl font-black text-onyx">
-          {{ isEditMode ? 'Provider setup editor' : 'New provider setup' }}
-        </h1>
-        <p class="mt-3 max-w-2xl text-sm leading-7 text-slate">
-          This form is restructured as a clinic setup workspace, with a persistent provider summary
-          panel on the left and grouped build sections on the right.
-        </p>
+    <section
+      class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#fff7ed_0%,#ffffff_48%,#f8fbff_100%)] shadow-sm"
+    >
+      <div class="flex flex-col gap-4 p-6 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.3em] text-tangerine">
+            Dentist builder
+          </p>
+          <h1 class="mt-2 text-3xl font-black text-onyx">
+            {{ isEditMode ? 'Provider setup editor' : 'New provider setup' }}
+          </h1>
+          <p class="mt-3 max-w-2xl text-sm leading-7 text-slate">
+            This form is restructured as a clinic setup workspace, with a persistent provider
+            summary panel on the left and grouped build sections on the right.
+          </p>
+        </div>
+        <AppButton
+          btn-theme="outline"
+          class="px-5 py-3 normal-case"
+          @click="router.push('/dentists')"
+        >
+          Back to roster
+        </AppButton>
       </div>
-      <AppButton
-        btn-theme="outline"
-        class="px-5 py-3 normal-case"
-        @click="router.push('/dentists')"
-      >
-        Back to roster
-      </AppButton>
-    </div>
+    </section>
 
     <form class="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]" @submit.prevent="save">
       <aside class="space-y-5">

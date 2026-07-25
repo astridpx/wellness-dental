@@ -32,7 +32,7 @@ const clinicNotes = [
 <template>
   <div class="space-y-6">
     <section
-      class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#f7fbff_0%,#ffffff_52%,#fbf6ea_100%)] shadow-sm"
+      class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#fff7ed_0%,#ffffff_48%,#f8fbff_100%)] shadow-sm"
     >
       <div class="grid gap-6 p-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
         <div class="space-y-4">
