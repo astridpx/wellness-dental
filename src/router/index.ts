@@ -12,6 +12,7 @@ import SingleUserView from '@/views/users/SingleUserView.vue'
 import TransactionView from '@/views/transactions/TransactionView.vue'
 import SingleTransactionView from '@/views/transactions/SingleTransactionView.vue'
 import OptionsView from '@/views/OptionsView.vue'
+import PlansView from '@/views/PlansView.vue'
 
 type RouteNavItem = [boolean, { visibleTo: string[] }]
 
@@ -133,6 +134,16 @@ const router = createRouter({
         title: 'Options',
         icon: 'feather:sliders',
         navItem: [true, { visibleTo: ['superAdmin', 'admin'] }],
+      },
+    },
+    {
+      path: '/plans',
+      name: 'plans',
+      component: PlansView,
+      meta: {
+        title: 'Plans',
+        icon: 'feather:clipboard',
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
     {
