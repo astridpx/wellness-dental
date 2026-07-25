@@ -2,6 +2,7 @@ import AppButton from './AppButton.vue'
 import AppDialog from './AppDialog.vue'
 import AppInput from './AppInput.vue'
 import AppLoadingScreen from './AppLoadingScreen.vue'
+import AppModal from './AppModal.vue'
 import AppPagination from './AppPagination.vue'
 import AppSidebar from './AppSidebar.vue'
 import AppTable from './AppTable.vue'
@@ -13,6 +14,7 @@ export {
   AppDialog,
   AppInput,
   AppLoadingScreen,
+  AppModal,
   AppPagination,
   AppSidebar,
   AppTable,

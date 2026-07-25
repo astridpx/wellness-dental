@@ -56,7 +56,7 @@ defineEmits(['close', 'confirm'])
             leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
           >
             <DialogPanel
-              class="relative w-full transform overflow-hidden rounded-4xl border border-white/70 bg-[linear-gradient(180deg,#ffffff_0%,#fffaf3_100%)] p-5 text-left shadow-[0_24px_80px_rgba(15,23,42,0.18)] transition-all sm:my-8 sm:p-8"
+              class="relative flex max-h-[calc(100vh-2rem)] w-full transform flex-col overflow-hidden rounded-4xl border border-white/70 bg-[linear-gradient(180deg,#ffffff_0%,#fffaf3_100%)] p-5 text-left shadow-[0_24px_80px_rgba(15,23,42,0.18)] transition-all sm:my-8 sm:max-h-[calc(100vh-3rem)] sm:p-8"
               :class="props.maxWidth"
             >
               <button
@@ -67,7 +67,9 @@ defineEmits(['close', 'confirm'])
                 ×
               </button>
 
-              <div class="rounded-[1.5rem] border border-white/80 bg-white/75 p-5 shadow-sm sm:p-6">
+              <div
+                class="scrollbar min-h-0 flex-1 overflow-y-scroll rounded-[1.5rem] border border-white/80 bg-white/75 p-5 shadow-sm sm:p-6"
+              >
                 <div class="mb-6 flex items-center gap-3">
                   <div
                     class="flex h-12 w-12 items-center justify-center rounded-2xl bg-tangerine-light text-xl text-tangerine shadow-sm"
@@ -89,7 +91,7 @@ defineEmits(['close', 'confirm'])
                 </div>
               </div>
 
-              <div class="mt-5 grid gap-3 sm:grid-flow-col sm:grid-cols-2">
+              <div class="mt-5 grid shrink-0 gap-3 sm:grid-flow-col sm:grid-cols-2">
                 <AppButton btn-theme="outline" class="w-full normal-case" @click="$emit('close')">
                   Cancel
                 </AppButton>
