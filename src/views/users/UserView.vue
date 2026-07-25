@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AppTable, AppButton, AppDialog, AppInput } from '@/components/app'
+import { AppTable, AppButton, AppDialog, AppInput, AppLoadingScreen } from '@/components/app'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables'
@@ -25,7 +25,7 @@ const { getAuthHeaders, logout } = useAuth()
 const baseURL = import.meta.env.VITE_APP_MAIN_API_BASE_URL
 
 const showDialog = ref(false)
-const loading = ref(false)
+const loading = ref(true)
 const errorMessage = ref('')
 const users = ref<UserRow[]>([])
 const roles = ref<RoleOption[]>([])
@@ -216,7 +216,14 @@ onMounted(async () => {
         {{ errorMessage }}
       </p>
 
-      <div class="overflow-hidden rounded-[1.5rem] border border-pebble">
+      <div v-if="loading">
+        <AppLoadingScreen
+          title="Loading clinic users"
+          message="Please wait while we retrieve staff accounts, role assignments, and contact coverage."
+        />
+      </div>
+
+      <div v-else class="overflow-hidden rounded-[1.5rem] border border-pebble">
         <AppTable
           :theads="['User #', 'Name', 'Role Assignment', 'Email', 'Phone', 'Action']"
           :total-entries="totalEntries"
@@ -225,10 +232,7 @@ onMounted(async () => {
           @update-pg-num="currentPage = $event"
         >
           <template #trs>
-            <tr v-if="loading">
-              <td colspan="6" class="text-center text-slate">Loading users...</td>
-            </tr>
-            <tr v-else-if="!paginatedUsers.length">
+            <tr v-if="!paginatedUsers.length">
               <td colspan="6" class="text-center text-slate">No users found.</td>
             </tr>
             <tr
