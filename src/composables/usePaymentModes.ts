@@ -118,6 +118,22 @@ export function usePaymentModes() {
     return true
   }
 
+  async function deletePaymentMode (option: PaymentModeOption) {
+    errorMessage.value = ''
+
+    const result = await request(`/wellness/paymentModes/${option.id}`, {
+      method: 'DELETE'
+    })
+
+    if (!result.ok) {
+      errorMessage.value = result.error || 'Unable to delete payment mode.'
+      return false
+    }
+
+    await fetchPaymentModes()
+    return true
+  }
+
   function clearPaymentModeError() {
     errorMessage.value = ''
   }
@@ -134,6 +150,7 @@ export function usePaymentModes() {
     paymentModes,
     savePaymentMode,
     savingPaymentMode,
+    deletePaymentMode,
     togglePaymentMode,
   }
 }

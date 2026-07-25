@@ -2,7 +2,7 @@
 import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
 import { AppButton, AppDialog, AppInput, AppLoadingScreen, AppModal } from '@/components/app'
-import { usePaymentModes, useProcedures } from '@/composables'
+import { useAuth, usePaymentModes, useProcedures } from '@/composables'
 import type { PaymentModeOption, ProcedureOption } from '@/composables'
 
 type OptionCategory = 'Procedures' | 'Payment Modes' | 'Benefits'
@@ -61,6 +61,7 @@ const search = ref('')
 const showForm = ref(false)
 const showDeleteDialog = ref(false)
 const showStatusDialog = ref(false)
+const deletingOption = ref(false)
 const editingId = ref<number | null>(null)
 const localErrorMessage = ref('')
 const pendingDeleteOption = ref<OptionItem | null>(null)
@@ -72,10 +73,13 @@ const form = ref({
   description: '',
   price: '',
   monthInterval: '1',
-  quantity: '1'
+  quantity: '1',
+  active: true,
 })
+const { getStoredRoles } = useAuth()
 const {
   clearProcedureError,
+  deleteProcedure: persistProcedureDelete,
   errorMessage: procedureErrorMessage,
   loadingProcedures,
   procedures,
@@ -85,6 +89,7 @@ const {
 } = useProcedures()
 const {
   clearPaymentModeError,
+  deletePaymentMode: persistPaymentModeDelete,
   errorMessage: paymentModeErrorMessage,
   loadingPaymentModes,
   paymentModes,
@@ -113,6 +118,7 @@ const filteredOptions = computed(() => {
 const totalActiveOptions = computed(() => options.value.filter((option) => option.active).length)
 const isPaymentModesSelected = computed(() => selectedCategory.value === 'Payment Modes')
 const isProceduresSelected = computed(() => selectedCategory.value === 'Procedures')
+const canDeleteManagedOptions = computed(() => getStoredRoles().includes('superAdmin'))
 const errorMessage = computed(
   () => localErrorMessage.value || procedureErrorMessage.value || paymentModeErrorMessage.value,
 )
@@ -173,7 +179,8 @@ function resetForm() {
     description: '',
     price: '',
     monthInterval: '1',
-    quantity: '1'
+    quantity: '1',
+    active: true,
   }
 }
 
@@ -191,7 +198,8 @@ function openEditForm(option: OptionItem) {
     description: option.description,
     price: option.price?.toString() ?? '',
     monthInterval: String(option.monthInterval ?? 1),
-    quantity: String(option.quantity ?? 1)
+    quantity: String(option.quantity ?? 1),
+    active: option.active,
   }
   showForm.value = true
 }
@@ -202,13 +210,8 @@ function closeForm() {
 }
 
 function confirmDelete(option: OptionItem) {
-  if (option.category === 'Procedures') {
-    localErrorMessage.value = 'Delete for procedures is not available yet.'
-    return
-  }
-
-  if (option.category === 'Payment Modes') {
-    localErrorMessage.value = 'Delete for payment modes is not available yet.'
+  if ((isProcedureOption(option) || isPaymentModeOption(option)) && !canDeleteManagedOptions.value) {
+    localErrorMessage.value = 'Only super administrators can delete procedures and payment modes.'
     return
   }
 
@@ -217,6 +220,7 @@ function confirmDelete(option: OptionItem) {
 }
 
 function closeDeleteDialog() {
+  if (deletingOption.value) return
   showDeleteDialog.value = false
   pendingDeleteOption.value = null
 }
@@ -235,16 +239,13 @@ async function savePaymentMode() {
   const name = form.value.name.trim()
   const code = form.value.code.trim().toUpperCase() || name.slice(0, 8).toUpperCase()
   const description = form.value.description.trim() || 'No description provided.'
-  const existingOption = editingId.value
-    ? options.value.find((option) => option.id === editingId.value && option.category === 'Payment Modes')
-    : null
 
   const saved = await persistPaymentMode({
     id: editingId.value,
     name,
     code,
     description,
-    active: existingOption?.active ?? true,
+    active: form.value.active,
   })
 
   if (saved) {
@@ -263,9 +264,6 @@ async function saveProcedure() {
     form.value.price.trim() === '' || Number.isNaN(Number(form.value.price))
       ? null
       : Number(form.value.price)
-  const existingOption = editingId.value
-    ? options.value.find((option) => option.id === editingId.value && option.category === 'Procedures')
-    : null
 
   if (!Number.isInteger(monthInterval) || monthInterval <= 0) {
     localErrorMessage.value = 'Month interval must be a whole number greater than zero.'
@@ -285,7 +283,7 @@ async function saveProcedure() {
     monthInterval,
     quantity,
     defaultPrice,
-    active: existingOption?.active ?? true
+    active: form.value.active,
   })
 
   if (saved) {
@@ -307,6 +305,7 @@ function saveLocalOption() {
       form.value.category === 'Procedures' && form.value.price !== ''
         ? Number(form.value.price)
         : undefined,
+    active: form.value.active,
   }
 
   if (editingId.value) {
@@ -338,10 +337,6 @@ async function saveOption() {
   saveLocalOption()
 }
 
-function toggleLocalOption(option: OptionItem) {
-  option.active = !option.active
-}
-
 async function toggleOption(option: OptionItem) {
   if (isProcedureOption(option)) {
     await persistProcedureToggle(option)
@@ -353,7 +348,7 @@ async function toggleOption(option: OptionItem) {
     return
   }
 
-  toggleLocalOption(option)
+  option.active = !option.active
 }
 
 async function applyStatusChange() {
@@ -363,10 +358,27 @@ async function applyStatusChange() {
   closeStatusDialog()
 }
 
-function removeOption() {
+async function removeOption() {
   if (!pendingDeleteOption.value) return
 
+  deletingOption.value = true
+
+  if (isProcedureOption(pendingDeleteOption.value)) {
+    const deleted = await persistProcedureDelete(pendingDeleteOption.value)
+    deletingOption.value = false
+    if (deleted) closeDeleteDialog()
+    return
+  }
+
+  if (isPaymentModeOption(pendingDeleteOption.value)) {
+    const deleted = await persistPaymentModeDelete(pendingDeleteOption.value)
+    deletingOption.value = false
+    if (deleted) closeDeleteDialog()
+    return
+  }
+
   localOptions.value = localOptions.value.filter((item) => item.id !== pendingDeleteOption.value?.id)
+  deletingOption.value = false
   closeDeleteDialog()
 }
 
@@ -435,7 +447,8 @@ function getProcedureQuantity(option: OptionItem): number {
     <AppDialog
       title="Delete setup item"
       :show="showDeleteDialog"
-      confirm-label="Delete item"
+      :disabled="deletingOption"
+      :confirm-label="deletingOption ? 'Deleting item...' : 'Delete item'"
       @close="closeDeleteDialog"
       @confirm="removeOption"
     >
@@ -449,6 +462,10 @@ function getProcedureQuantity(option: OptionItem): number {
               This will permanently remove the selected setup item from this list.
             </p>
           </div>
+
+          <p v-if="deletingOption" class="rounded-xl bg-sky-light px-4 py-3 text-sm text-sapphire">
+            Deletion in progress. Please wait while we remove this setup item.
+          </p>
 
           <div v-if="pendingDeleteOption" class="rounded-2xl border border-pebble bg-cloud px-4 py-4">
             <p class="text-sm font-semibold text-onyx">{{ pendingDeleteOption.name }}</p>
@@ -689,53 +706,37 @@ function getProcedureQuantity(option: OptionItem): number {
                       <button
                         type="button"
                         class="inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold"
-                        :class="option.active ? 'bg-emerald-light text-emerald' : 'bg-fog text-slate'"
-                        @click="toggleOption(option)"
+                        :class="option.active ? 'bg-emerald-light text-emerald' : 'bg-ruby-light text-ruby'"
+                        @click="confirmStatusChange(option)"
                       >
                         <span
                           class="size-1.5 rounded-full"
-                          :class="option.active ? 'bg-emerald' : 'bg-slate'"
+                          :class="option.active ? 'bg-emerald' : 'bg-ruby'"
                         />
                         {{ option.active ? 'Active' : 'Inactive' }}
                       </button>
                     </td>
                     <td class="px-5 py-4">
-                      <div class="flex justify-end gap-1">
+                      <div class="flex flex-wrap justify-end gap-2">
                         <button
                           type="button"
-                          class="rounded-lg p-2 transition"
-                          :title="option.active ? 'Deactivate option' : 'Activate option'"
-                          :class="
-                            option.active
-                              ? 'text-amber hover:bg-amber-light hover:text-amber'
-                              : 'text-emerald hover:bg-emerald-light hover:text-emerald'
-                          "
-                          @click="confirmStatusChange(option)"
-                        >
-                          <Icon
-                            :icon="
-                              option.active
-                                ? 'feather:toggle-right'
-                                : 'feather:toggle-left'
-                            "
-                            class="size-4"
-                          />
-                        </button>
-                        <button
-                          type="button"
-                          class="rounded-lg p-2 text-slate transition hover:bg-fog hover:text-onyx"
-                          title="Edit option"
+                          class="inline-flex items-center gap-2 rounded-xl bg-fog px-3 py-2 text-xs font-semibold text-slate transition hover:bg-pebble hover:text-onyx"
                           @click="openEditForm(option)"
                         >
                           <Icon icon="feather:edit-2" class="size-4" />
+                          Edit
                         </button>
                         <button
+                          v-if="
+                            canDeleteManagedOptions ||
+                            (option.category !== 'Payment Modes' && option.category !== 'Procedures')
+                          "
                           type="button"
-                          class="rounded-lg p-2 text-slate transition hover:bg-ruby-light hover:text-ruby"
-                          title="Delete option"
+                          class="inline-flex items-center gap-2 rounded-xl bg-ruby-light px-3 py-2 text-xs font-semibold text-ruby transition hover:bg-ruby-light/80"
                           @click="confirmDelete(option)"
                         >
                           <Icon icon="feather:trash-2" class="size-4" />
+                          Delete
                         </button>
                       </div>
                     </td>
@@ -767,55 +768,184 @@ function getProcedureQuantity(option: OptionItem): number {
       :show="showForm"
       :title="editingId ? 'Edit setup item' : 'Add setup item'"
       subtitle="Setup item details"
-      max-width="sm:max-w-xl"
+      max-width="sm:max-w-5xl"
       @close="closeForm"
     >
-      <form id="setup-item-form" class="space-y-5 p-6" @submit.prevent="saveOption">
-        <div class="space-y-5 p-6">
-          <div>
-            <label class="mb-2 block text-sm font-medium text-onyx">Setup group</label>
-            <select v-model="form.category">
-              <option v-for="category in categories" :key="category.name" :value="category.name">
-                {{ category.name }}
-              </option>
-            </select>
+      <form id="setup-item-form" class="space-y-6 p-6 lg:p-7" @submit.prevent="saveOption">
+        <section
+          class="rounded-[1.6rem] border border-pebble bg-[radial-gradient(circle_at_top_left,#f8fbff_0%,#ffffff_52%,#fbf7ee_100%)] p-5"
+        >
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div class="max-w-2xl">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-smoke">
+                Setup overview
+              </p>
+              <h3 class="mt-2 text-2xl font-black text-onyx">
+                {{ form.name || (editingId ? 'Update setup item' : 'Create setup item') }}
+              </h3>
+              <p class="mt-2 text-sm leading-6 text-slate">
+                Configure the item details, visibility, and operational rules used across the
+                clinic setup library.
+              </p>
+            </div>
+
+            <div class="grid gap-3 sm:grid-cols-2 lg:w-[320px]">
+              <div class="rounded-2xl border border-white/80 bg-white/90 px-4 py-4 shadow-sm">
+                <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Group</p>
+                <p class="mt-2 text-sm font-bold text-onyx">{{ form.category }}</p>
+              </div>
+              <div class="rounded-2xl border border-white/80 bg-white/90 px-4 py-4 shadow-sm">
+                <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Status</p>
+                <p
+                  class="mt-2 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
+                  :class="form.active ? 'bg-emerald-light text-emerald' : 'bg-ruby-light text-ruby'"
+                >
+                  <span
+                    class="size-1.5 rounded-full"
+                    :class="form.active ? 'bg-emerald' : 'bg-ruby'"
+                  />
+                  {{ form.active ? 'Active' : 'Inactive' }}
+                </p>
+              </div>
+            </div>
           </div>
-          <div class="grid gap-5 sm:grid-cols-2">
-            <AppInput v-model="form.name" label="Item name" placeholder="e.g. Dental X-ray" />
-            <AppInput v-model="form.code" label="Code" placeholder="e.g. XRAY" />
-          </div>
-          <AppInput
-            v-if="form.category === 'Procedures'"
-            v-model="form.monthInterval"
-            label="Month interval"
-            type="number"
-            min="1"
-            placeholder="1"
-          />
-          <AppInput
-            v-if="form.category === 'Procedures'"
-            v-model="form.quantity"
-            label="Quantity"
-            type="number"
-            min="1"
-            placeholder="1"
-          />
-          <AppInput
-            v-if="form.category === 'Procedures'"
-            v-model="form.price"
-            label="Default price (PHP)"
-            type="number"
-            placeholder="0.00"
-          />
-          <div>
-            <label class="mb-2 block text-sm font-medium text-onyx">Description</label>
-            <textarea
-              v-model="form.description"
-              rows="3"
-              placeholder="Briefly describe when this setup item should be used."
-              class="w-full resize-y rounded-md border border-gray-200 bg-white px-4 py-3 text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
-            ></textarea>
-          </div>
+        </section>
+
+        <div class="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_320px]">
+          <section class="space-y-6">
+            <div class="rounded-[1.5rem] border border-pebble bg-white p-5 shadow-sm">
+              <div class="mb-5">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-smoke">
+                  Basic details
+                </p>
+                <h4 class="mt-2 text-lg font-black text-onyx">Identity and classification</h4>
+              </div>
+
+              <div class="grid gap-5 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                  <label class="mb-2 block text-sm font-medium text-onyx">Setup group</label>
+                  <select v-model="form.category">
+                    <option
+                      v-for="category in categories"
+                      :key="category.name"
+                      :value="category.name"
+                    >
+                      {{ category.name }}
+                    </option>
+                  </select>
+                </div>
+                <AppInput v-model="form.name" label="Item name" placeholder="e.g. Dental X-ray" />
+                <AppInput v-model="form.code" label="Code" placeholder="e.g. XRAY" />
+              </div>
+            </div>
+
+            <div class="rounded-[1.5rem] border border-pebble bg-white p-5 shadow-sm">
+              <div class="mb-5">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-smoke">
+                  Description
+                </p>
+                <h4 class="mt-2 text-lg font-black text-onyx">Usage notes</h4>
+              </div>
+
+              <div>
+                <label class="mb-2 block text-sm font-medium text-onyx">Description</label>
+                <textarea
+                  v-model="form.description"
+                  rows="5"
+                  placeholder="Briefly describe when this setup item should be used."
+                  class="w-full resize-y rounded-md border border-gray-200 bg-white px-4 py-3 text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+                ></textarea>
+              </div>
+            </div>
+          </section>
+
+          <section class="space-y-6">
+            <div class="rounded-[1.5rem] border border-pebble bg-white p-5 shadow-sm">
+              <div class="mb-5">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-smoke">
+                  Availability
+                </p>
+                <h4 class="mt-2 text-lg font-black text-onyx">Status and readiness</h4>
+              </div>
+
+              <div>
+                <label class="mb-3 block text-sm font-medium text-onyx">Status</label>
+                <button
+                  type="button"
+                  class="flex w-full items-center justify-between rounded-[1.25rem] border px-4 py-3.5 text-left transition"
+                  :class="
+                    form.active
+                      ? 'border-emerald/25 bg-emerald-light/70 text-emerald'
+                      : 'border-ruby/20 bg-ruby-light/70 text-ruby'
+                  "
+                  @click="form.active = !form.active"
+                >
+                  <span class="flex items-center gap-3">
+                    <span
+                      class="relative inline-flex h-7 w-12 items-center rounded-full transition"
+                      :class="form.active ? 'bg-emerald' : 'bg-ruby'"
+                    >
+                      <span
+                        class="inline-block h-5 w-5 rounded-full bg-white shadow-sm transition"
+                        :class="form.active ? 'translate-x-6' : 'translate-x-1'"
+                      />
+                    </span>
+                    <span>
+                      <span class="block text-sm font-bold text-onyx">
+                        {{ form.active ? 'Active' : 'Inactive' }}
+                      </span>
+                      <span class="block text-xs" :class="form.active ? 'text-emerald' : 'text-ruby'">
+                        {{
+                          form.active
+                            ? 'This item is currently available for active workflows.'
+                            : 'This item is currently hidden from active workflows.'
+                        }}
+                      </span>
+                    </span>
+                  </span>
+                  <Icon
+                    :icon="form.active ? 'feather:toggle-right' : 'feather:toggle-left'"
+                    class="size-5"
+                  />
+                </button>
+              </div>
+            </div>
+
+            <div
+              v-if="form.category === 'Procedures'"
+              class="rounded-[1.5rem] border border-pebble bg-white p-5 shadow-sm"
+            >
+              <div class="mb-5">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-smoke">
+                  Procedure rules
+                </p>
+                <h4 class="mt-2 text-lg font-black text-onyx">Coverage defaults</h4>
+              </div>
+
+              <div class="space-y-5">
+                <AppInput
+                  v-model="form.monthInterval"
+                  label="Month interval"
+                  type="number"
+                  min="1"
+                  placeholder="1"
+                />
+                <AppInput
+                  v-model="form.quantity"
+                  label="Quantity"
+                  type="number"
+                  min="1"
+                  placeholder="1"
+                />
+                <AppInput
+                  v-model="form.price"
+                  label="Default price (PHP)"
+                  type="number"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+          </section>
         </div>
       </form>
 

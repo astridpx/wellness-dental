@@ -138,6 +138,22 @@ export function useProcedures () {
     return true
   }
 
+  async function deleteProcedure (option: ProcedureOption) {
+    errorMessage.value = ''
+
+    const result = await request(`/wellness/procedures/${option.id}`, {
+      method: 'DELETE'
+    })
+
+    if (!result.ok) {
+      errorMessage.value = result.error || 'Unable to delete procedure.'
+      return false
+    }
+
+    await fetchProcedures()
+    return true
+  }
+
   function clearProcedureError () {
     errorMessage.value = ''
   }
@@ -154,6 +170,7 @@ export function useProcedures () {
     procedures,
     saveProcedure,
     savingProcedure,
+    deleteProcedure,
     toggleProcedure
   }
 }
