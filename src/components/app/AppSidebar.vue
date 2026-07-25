@@ -130,7 +130,8 @@ const year = new Date().getFullYear()
               </nav>
 
               <p class="text-center text-sm text-light-two font-light">
-                <strong class="block uppercase pb-1.5">{{ appTitle }} {{ appVer }}</strong>
+                <strong class="block uppercase pb-1.5">{{ appTitle }}</strong>
+                <span class="block pb-1.5">Version {{ appVer }}</span>
                 <br />
                 All times are Philippine Standard Time.
                 <br />
@@ -212,7 +213,8 @@ const year = new Date().getFullYear()
       </nav>
 
       <p class="text-center text-sm text-light-two font-light">
-        <strong class="block uppercase pb-1.5">{{ appTitle }} {{ appVer }}</strong>
+        <strong class="block uppercase pb-1.5">{{ appTitle }}</strong>
+        <span class="block pb-1.5">Version {{ appVer }}</span>
         All times are Philippine Standard Time.
         <br />
         &copy; {{ year }} Integrated Management Services, Inc.

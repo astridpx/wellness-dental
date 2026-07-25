@@ -1,4 +1,5 @@
 import AccountSettingsView from '@/views/AccountSettingsView.vue'
+import ClinicView from '@/views/ClinicView.vue'
 import DashboardView from '@/views/Dashboardvue.vue'
 import LoginView from '@/views/LoginView.vue'
 import SystemLogsView from '@/views/SystemLogsView.vue'
@@ -45,11 +46,33 @@ const router = createRouter({
       },
     },
     {
+      path: '/transactions',
+      name: 'transactions',
+      component: TransactionView,
+      meta: {
+        title: 'Transaction',
+        icon: 'feather:credit-card',
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
+      },
+    },
+    {
+      path: '/transactions/add',
+      name: 'addTransaction',
+      component: SingleTransactionView,
+      meta: { title: 'Add Transaction', navItem: [false, { visibleTo: ['superAdmin', 'admin'] }] },
+    },
+    {
+      path: '/transactions/:id/edit',
+      name: 'editTransaction',
+      component: SingleTransactionView,
+      meta: { title: 'Edit Transaction', navItem: [false, { visibleTo: ['superAdmin', 'admin'] }] },
+    },
+    {
       path: '/dentists',
       name: 'dentists',
       component: DentistView,
       meta: {
-        title: 'Dentists',
+        title: 'Dentist Profile',
         icon: 'streamline-ultimate:dentistry-tooth-shield',
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
@@ -72,6 +95,26 @@ const router = createRouter({
         title: 'Edit Dentists',
         icon: 'feather:home',
         navItem: [false, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
+      },
+    },
+    {
+      path: '/clinic',
+      name: 'clinic',
+      component: ClinicView,
+      meta: {
+        title: 'Dental Clinic',
+        icon: 'feather:briefcase',
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
+      },
+    },
+    {
+      path: '/plans',
+      name: 'plans',
+      component: PlansView,
+      meta: {
+        title: 'IMS Dental Plans',
+        icon: 'feather:clipboard',
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
     {
@@ -105,28 +148,6 @@ const router = createRouter({
       },
     },
     {
-      path: '/transactions',
-      name: 'transactions',
-      component: TransactionView,
-      meta: {
-        title: 'Transactions',
-        icon: 'feather:credit-card',
-        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
-      },
-    },
-    {
-      path: '/transactions/add',
-      name: 'addTransaction',
-      component: SingleTransactionView,
-      meta: { title: 'Add Transaction', navItem: [false, { visibleTo: ['superAdmin', 'admin'] }] },
-    },
-    {
-      path: '/transactions/:id/edit',
-      name: 'editTransaction',
-      component: SingleTransactionView,
-      meta: { title: 'Edit Transaction', navItem: [false, { visibleTo: ['superAdmin', 'admin'] }] },
-    },
-    {
       path: '/options',
       name: 'options',
       component: OptionsView,
@@ -134,16 +155,6 @@ const router = createRouter({
         title: 'Options',
         icon: 'feather:sliders',
         navItem: [true, { visibleTo: ['superAdmin', 'admin'] }],
-      },
-    },
-    {
-      path: '/plans',
-      name: 'plans',
-      component: PlansView,
-      meta: {
-        title: 'Plans',
-        icon: 'feather:clipboard',
-        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
     {
@@ -171,7 +182,7 @@ const router = createRouter({
       name: 'accountSettings',
       component: AccountSettingsView,
       meta: {
-        title: 'Account Settings',
+        title: 'Account Setting',
         icon: 'feather:settings',
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
