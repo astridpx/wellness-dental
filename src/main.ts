@@ -22,6 +22,6 @@ dayjs.tz.setDefault('Asia/Manila')
 app.use(createPinia())
 app.use(router)
 app.provide('dayjs', dayjs)
-app.provide('appVer', '')
+app.provide('appVer', __APP_VERSION__)
 
 app.mount('#app')

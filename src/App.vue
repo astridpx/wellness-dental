@@ -159,6 +159,11 @@ watch(
                   <Icon icon="feather:log-out" class="h-5 w-5" />
                   Logout
                 </button>
+
+                <div class="mt-5 text-center text-xs text-white/40">
+                  <p>{{ appTitle }}</p>
+                  <p class="mt-1">Version {{ appVer }}</p>
+                </div>
               </div>
             </DialogPanel>
           </TransitionChild>
@@ -227,7 +232,10 @@ watch(
             </button>
           </div>
 
-          <p class="mt-5 text-center text-xs text-white/35">{{ appTitle }}</p>
+          <div class="mt-5 text-center text-xs text-white/35">
+            <p>{{ appTitle }}</p>
+            <p class="mt-1">Version {{ appVer }}</p>
+          </div>
         </div>
       </aside>
 
