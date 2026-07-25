@@ -2,8 +2,8 @@
 import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
 import { AppButton, AppInput, AppLoadingScreen } from '@/components/app'
-import { usePaymentModes } from '@/composables'
-import type { PaymentModeOption } from '@/composables'
+import { usePaymentModes, useProcedures } from '@/composables'
+import type { PaymentModeOption, ProcedureOption } from '@/composables'
 
 type OptionCategory = 'Procedures' | 'Payment Modes' | 'Benefits'
 
@@ -15,6 +15,8 @@ type OptionItem = {
   description: string
   price?: number
   active: boolean
+  monthInterval?: number
+  quantity?: number
 }
 
 const categories: Array<{ name: OptionCategory; icon: string; description: string }> = [
@@ -36,33 +38,6 @@ const categories: Array<{ name: OptionCategory; icon: string; description: strin
 ]
 
 const localOptions = ref<OptionItem[]>([
-  {
-    id: 1,
-    category: 'Procedures',
-    name: 'Dental Consultation',
-    code: 'CONSULT',
-    description: 'Initial oral assessment and treatment planning.',
-    price: 800,
-    active: true,
-  },
-  {
-    id: 2,
-    category: 'Procedures',
-    name: 'Oral Prophylaxis',
-    code: 'OP-REG',
-    description: 'Regular dental cleaning.',
-    price: 1200,
-    active: true,
-  },
-  {
-    id: 3,
-    category: 'Procedures',
-    name: 'Tooth Extraction',
-    code: 'EXT-SIMPLE',
-    description: 'Simple extraction of a permanent tooth.',
-    price: 1500,
-    active: true,
-  },
   {
     id: 7,
     category: 'Benefits',
@@ -92,7 +67,18 @@ const form = ref({
   code: '',
   description: '',
   price: '',
+  monthInterval: '1',
+  quantity: '1'
 })
+const {
+  clearProcedureError,
+  errorMessage: procedureErrorMessage,
+  loadingProcedures,
+  procedures,
+  saveProcedure: persistProcedure,
+  savingProcedure,
+  toggleProcedure: persistProcedureToggle
+} = useProcedures()
 const {
   clearPaymentModeError,
   errorMessage: paymentModeErrorMessage,
@@ -106,7 +92,7 @@ const {
 const selectedCategoryDetails = computed(() =>
   categories.find((category) => category.name === selectedCategory.value),
 )
-const options = computed(() => [...localOptions.value, ...paymentModes.value])
+const options = computed(() => [...localOptions.value, ...procedures.value, ...paymentModes.value])
 const categoryOptions = computed(() =>
   options.value.filter((option) => option.category === selectedCategory.value),
 )
@@ -122,16 +108,24 @@ const filteredOptions = computed(() => {
 })
 const totalActiveOptions = computed(() => options.value.filter((option) => option.active).length)
 const isPaymentModesSelected = computed(() => selectedCategory.value === 'Payment Modes')
-const errorMessage = computed(() => localErrorMessage.value || paymentModeErrorMessage.value)
+const isProceduresSelected = computed(() => selectedCategory.value === 'Procedures')
+const errorMessage = computed(
+  () => localErrorMessage.value || procedureErrorMessage.value || paymentModeErrorMessage.value,
+)
 
 function isPaymentModeOption(option: OptionItem | PaymentModeOption): option is PaymentModeOption {
   return option.category === 'Payment Modes'
+}
+
+function isProcedureOption(option: OptionItem | ProcedureOption): option is ProcedureOption {
+  return option.category === 'Procedures' && 'monthInterval' in option && 'quantity' in option
 }
 
 function selectCategory(category: OptionCategory) {
   selectedCategory.value = category
   search.value = ''
   localErrorMessage.value = ''
+  clearProcedureError()
   clearPaymentModeError()
 }
 
@@ -143,6 +137,8 @@ function resetForm() {
     code: '',
     description: '',
     price: '',
+    monthInterval: '1',
+    quantity: '1'
   }
 }
 
@@ -159,6 +155,8 @@ function openEditForm(option: OptionItem) {
     code: option.code,
     description: option.description,
     price: option.price?.toString() ?? '',
+    monthInterval: String(option.monthInterval ?? 1),
+    quantity: String(option.quantity ?? 1)
   }
   showForm.value = true
 }
@@ -186,6 +184,47 @@ async function savePaymentMode() {
 
   if (saved) {
     selectedCategory.value = 'Payment Modes'
+    closeForm()
+  }
+}
+
+async function saveProcedure() {
+  const name = form.value.name.trim()
+  const procedureCode = form.value.code.trim().toUpperCase() || name.slice(0, 8).toUpperCase()
+  const description = form.value.description.trim() || 'No description provided.'
+  const monthInterval = Number(form.value.monthInterval)
+  const quantity = Number(form.value.quantity)
+  const defaultPrice =
+    form.value.price.trim() === '' || Number.isNaN(Number(form.value.price))
+      ? null
+      : Number(form.value.price)
+  const existingOption = editingId.value
+    ? options.value.find((option) => option.id === editingId.value && option.category === 'Procedures')
+    : null
+
+  if (!Number.isInteger(monthInterval) || monthInterval <= 0) {
+    localErrorMessage.value = 'Month interval must be a whole number greater than zero.'
+    return
+  }
+
+  if (!Number.isInteger(quantity) || quantity <= 0) {
+    localErrorMessage.value = 'Quantity must be a whole number greater than zero.'
+    return
+  }
+
+  const saved = await persistProcedure({
+    id: editingId.value,
+    name,
+    procedureCode,
+    description,
+    monthInterval,
+    quantity,
+    defaultPrice,
+    active: existingOption?.active ?? true
+  })
+
+  if (saved) {
+    selectedCategory.value = 'Procedures'
     closeForm()
   }
 }
@@ -221,6 +260,11 @@ async function saveOption() {
   const name = form.value.name.trim()
   if (!name) return
 
+  if (form.value.category === 'Procedures') {
+    await saveProcedure()
+    return
+  }
+
   if (form.value.category === 'Payment Modes') {
     await savePaymentMode()
     return
@@ -234,6 +278,11 @@ function toggleLocalOption(option: OptionItem) {
 }
 
 async function toggleOption(option: OptionItem) {
+  if (isProcedureOption(option)) {
+    await persistProcedureToggle(option)
+    return
+  }
+
   if (isPaymentModeOption(option)) {
     await persistPaymentModeToggle(option)
     return
@@ -243,6 +292,11 @@ async function toggleOption(option: OptionItem) {
 }
 
 function removeOption(option: OptionItem) {
+  if (option.category === 'Procedures') {
+    localErrorMessage.value = 'Delete for procedures is not available yet.'
+    return
+  }
+
   if (option.category === 'Payment Modes') {
     localErrorMessage.value = 'Delete for payment modes is not available yet.'
     return
@@ -254,6 +308,14 @@ function removeOption(option: OptionItem) {
 function formatPrice(price?: number) {
   if (price === undefined) return '—'
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(price)
+}
+
+function getProcedureMonthInterval(option: OptionItem): number {
+  return isProcedureOption(option) ? option.monthInterval : 1
+}
+
+function getProcedureQuantity(option: OptionItem): number {
+  return isProcedureOption(option) ? option.quantity : 1
 }
 </script>
 
@@ -355,10 +417,14 @@ function formatPrice(price?: number) {
           {{ errorMessage }}
         </p>
 
-        <div v-if="loadingPaymentModes && isPaymentModesSelected" class="mt-5">
+        <div v-if="(loadingProcedures && isProceduresSelected) || (loadingPaymentModes && isPaymentModesSelected)" class="mt-5">
           <AppLoadingScreen
-            title="Loading payment modes"
-            message="Please wait while we retrieve the available settlement options for the clinic."
+            :title="isProceduresSelected ? 'Loading procedures' : 'Loading payment modes'"
+            :message="
+              isProceduresSelected
+                ? 'Please wait while we retrieve the available dental procedures for the clinic.'
+                : 'Please wait while we retrieve the available settlement options for the clinic.'
+            "
           />
         </div>
 
@@ -398,6 +464,18 @@ function formatPrice(price?: number) {
                       v-if="selectedCategory === 'Procedures'"
                       class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate"
                     >
+                      Interval
+                    </th>
+                    <th
+                      v-if="selectedCategory === 'Procedures'"
+                      class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate"
+                    >
+                      Quantity
+                    </th>
+                    <th
+                      v-if="selectedCategory === 'Procedures'"
+                      class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate"
+                    >
                       Price
                     </th>
                     <th
@@ -426,6 +504,14 @@ function formatPrice(price?: number) {
                       <code class="rounded-md bg-fog px-2 py-1 text-xs font-semibold text-slate">{{
                         option.code
                       }}</code>
+                    </td>
+                    <td v-if="selectedCategory === 'Procedures'" class="px-5 py-4 text-slate">
+                      {{ getProcedureMonthInterval(option) }} month{{
+                        getProcedureMonthInterval(option) === 1 ? '' : 's'
+                      }}
+                    </td>
+                    <td v-if="selectedCategory === 'Procedures'" class="px-5 py-4 text-slate">
+                      {{ getProcedureQuantity(option) }}
                     </td>
                     <td v-if="selectedCategory === 'Procedures'" class="px-5 py-4 text-slate">
                       {{ formatPrice(option.price) }}
@@ -532,6 +618,22 @@ function formatPrice(price?: number) {
           </div>
           <AppInput
             v-if="form.category === 'Procedures'"
+            v-model="form.monthInterval"
+            label="Month interval"
+            type="number"
+            min="1"
+            placeholder="1"
+          />
+          <AppInput
+            v-if="form.category === 'Procedures'"
+            v-model="form.quantity"
+            label="Quantity"
+            type="number"
+            min="1"
+            placeholder="1"
+          />
+          <AppInput
+            v-if="form.category === 'Procedures'"
             v-model="form.price"
             label="Default price (PHP)"
             type="number"
@@ -560,11 +662,14 @@ function formatPrice(price?: number) {
               type="submit"
               btn-theme="primary"
               class="px-5 py-3 normal-case"
-              :disabled="!form.name.trim() || savingPaymentMode"
+              :disabled="!form.name.trim() || savingProcedure || savingPaymentMode"
             >
               <Icon icon="feather:save" class="size-4" />
-              {{ savingPaymentMode && form.category === 'Payment Modes'
-                ? 'Saving...'
+              {{
+                form.category === 'Procedures' && savingProcedure
+                  ? 'Saving...'
+                  : savingPaymentMode && form.category === 'Payment Modes'
+                    ? 'Saving...'
                 : editingId
                   ? 'Save changes'
                   : 'Add setup item' }}
