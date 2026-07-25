@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
-import { AppButton, AppInput, AppLoadingScreen } from '@/components/app'
+import { AppButton, AppDialog, AppInput, AppLoadingScreen, AppModal } from '@/components/app'
 import { usePaymentModes, useProcedures } from '@/composables'
 import type { PaymentModeOption, ProcedureOption } from '@/composables'
 
@@ -59,8 +59,12 @@ const localOptions = ref<OptionItem[]>([
 const selectedCategory = ref<OptionCategory>('Procedures')
 const search = ref('')
 const showForm = ref(false)
+const showDeleteDialog = ref(false)
+const showStatusDialog = ref(false)
 const editingId = ref<number | null>(null)
 const localErrorMessage = ref('')
+const pendingDeleteOption = ref<OptionItem | null>(null)
+const pendingStatusOption = ref<OptionItem | null>(null)
 const form = ref({
   category: 'Procedures' as OptionCategory,
   name: '',
@@ -113,6 +117,37 @@ const errorMessage = computed(
   () => localErrorMessage.value || procedureErrorMessage.value || paymentModeErrorMessage.value,
 )
 
+function getCategoryCount(category: OptionCategory) {
+  return options.value.filter((option) => option.category === category).length
+}
+
+function getCategoryAccent(category: OptionCategory) {
+  if (category === 'Procedures') {
+    return {
+      surface: 'from-sapphire-light via-white to-snow',
+      badge: 'bg-sapphire text-white',
+      text: 'text-sapphire',
+      ring: 'ring-sapphire/12',
+    }
+  }
+
+  if (category === 'Payment Modes') {
+    return {
+      surface: 'from-tangerine-light via-white to-snow',
+      badge: 'bg-tangerine text-white',
+      text: 'text-tangerine-dark',
+      ring: 'ring-tangerine/12',
+    }
+  }
+
+  return {
+    surface: 'from-emerald-light via-white to-snow',
+    badge: 'bg-emerald text-white',
+    text: 'text-emerald',
+    ring: 'ring-emerald/12',
+  }
+}
+
 function isPaymentModeOption(option: OptionItem | PaymentModeOption): option is PaymentModeOption {
   return option.category === 'Payment Modes'
 }
@@ -164,6 +199,36 @@ function openEditForm(option: OptionItem) {
 function closeForm() {
   showForm.value = false
   resetForm()
+}
+
+function confirmDelete(option: OptionItem) {
+  if (option.category === 'Procedures') {
+    localErrorMessage.value = 'Delete for procedures is not available yet.'
+    return
+  }
+
+  if (option.category === 'Payment Modes') {
+    localErrorMessage.value = 'Delete for payment modes is not available yet.'
+    return
+  }
+
+  pendingDeleteOption.value = option
+  showDeleteDialog.value = true
+}
+
+function closeDeleteDialog() {
+  showDeleteDialog.value = false
+  pendingDeleteOption.value = null
+}
+
+function confirmStatusChange(option: OptionItem) {
+  pendingStatusOption.value = option
+  showStatusDialog.value = true
+}
+
+function closeStatusDialog() {
+  showStatusDialog.value = false
+  pendingStatusOption.value = null
 }
 
 async function savePaymentMode() {
@@ -291,18 +356,18 @@ async function toggleOption(option: OptionItem) {
   toggleLocalOption(option)
 }
 
-function removeOption(option: OptionItem) {
-  if (option.category === 'Procedures') {
-    localErrorMessage.value = 'Delete for procedures is not available yet.'
-    return
-  }
+async function applyStatusChange() {
+  if (!pendingStatusOption.value) return
 
-  if (option.category === 'Payment Modes') {
-    localErrorMessage.value = 'Delete for payment modes is not available yet.'
-    return
-  }
+  await toggleOption(pendingStatusOption.value)
+  closeStatusDialog()
+}
 
-  localOptions.value = localOptions.value.filter((item) => item.id !== option.id)
+function removeOption() {
+  if (!pendingDeleteOption.value) return
+
+  localOptions.value = localOptions.value.filter((item) => item.id !== pendingDeleteOption.value?.id)
+  closeDeleteDialog()
 }
 
 function formatPrice(price?: number) {
@@ -321,6 +386,81 @@ function getProcedureQuantity(option: OptionItem): number {
 
 <template>
   <div class="space-y-6">
+    <AppDialog
+      :title="pendingStatusOption?.active ? 'Deactivate setup item' : 'Activate setup item'"
+      :show="showStatusDialog"
+      :confirm-label="pendingStatusOption?.active ? 'Deactivate item' : 'Activate item'"
+      @close="closeStatusDialog"
+      @confirm="applyStatusChange"
+    >
+      <template #dialog-content>
+        <div class="space-y-4">
+          <div
+            class="rounded-[1.5rem] border p-5"
+            :class="
+              pendingStatusOption?.active
+                ? 'border-amber/20 bg-[linear-gradient(135deg,#fff8e8_0%,#ffffff_100%)]'
+                : 'border-emerald/15 bg-[linear-gradient(135deg,#effaf4_0%,#ffffff_100%)]'
+            "
+          >
+            <p
+              class="text-xs font-semibold uppercase tracking-[0.22em]"
+              :class="pendingStatusOption?.active ? 'text-amber' : 'text-emerald'"
+            >
+              Status confirmation
+            </p>
+            <p class="mt-2 text-sm leading-6 text-slate">
+              {{
+                pendingStatusOption?.active
+                  ? 'This item will be marked inactive and may no longer appear as an available option in active workflows.'
+                  : 'This item will be marked active and can be used again in available workflows.'
+              }}
+            </p>
+          </div>
+
+          <div
+            v-if="pendingStatusOption"
+            class="rounded-2xl border border-pebble bg-cloud px-4 py-4"
+          >
+            <p class="text-sm font-semibold text-onyx">{{ pendingStatusOption.name }}</p>
+            <p class="mt-1 text-xs uppercase tracking-[0.16em] text-slate">
+              {{ pendingStatusOption.code }}
+            </p>
+            <p class="mt-2 text-sm text-slate">{{ pendingStatusOption.description }}</p>
+          </div>
+        </div>
+      </template>
+    </AppDialog>
+
+    <AppDialog
+      title="Delete setup item"
+      :show="showDeleteDialog"
+      confirm-label="Delete item"
+      @close="closeDeleteDialog"
+      @confirm="removeOption"
+    >
+      <template #dialog-content>
+        <div class="space-y-4">
+          <div
+            class="rounded-[1.5rem] border border-ruby/15 bg-[linear-gradient(135deg,#fff4f4_0%,#ffffff_100%)] p-5"
+          >
+            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-ruby">Delete confirmation</p>
+            <p class="mt-2 text-sm leading-6 text-slate">
+              This will permanently remove the selected setup item from this list.
+            </p>
+          </div>
+
+          <div v-if="pendingDeleteOption" class="rounded-2xl border border-pebble bg-cloud px-4 py-4">
+            <p class="text-sm font-semibold text-onyx">{{ pendingDeleteOption.name }}</p>
+            <p class="mt-1 text-xs uppercase tracking-[0.16em] text-slate">
+              {{ pendingDeleteOption.code }}
+            </p>
+            <p class="mt-2 text-sm text-slate">{{ pendingDeleteOption.description }}</p>
+          </div>
+        </div>
+      </template>
+    </AppDialog>
+
     <section
       class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#fff7ed_0%,#ffffff_48%,#f8fbff_100%)] shadow-sm"
     >
@@ -357,42 +497,71 @@ function getProcedureQuantity(option: OptionItem): number {
       </div>
     </section>
 
-    <section class="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-      <aside class="rounded-[1.5rem] border border-pebble bg-white p-4 shadow-sm">
-        <p class="px-3 pb-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate">
-          Setup groups
-        </p>
-        <div class="space-y-2">
-          <button
-            v-for="category in categories"
-            :key="category.name"
-            type="button"
-            class="w-full rounded-2xl p-3 text-left transition"
-            :class="
-              selectedCategory === category.name
-                ? 'bg-tangerine-light text-tangerine-dark'
-                : 'text-onyx hover:bg-fog'
-            "
-            @click="selectCategory(category.name)"
-          >
-            <div class="flex items-center gap-3">
-              <span
-                class="flex size-9 shrink-0 items-center justify-center rounded-xl"
-                :class="selectedCategory === category.name ? 'bg-white' : 'bg-fog'"
-              >
-                <Icon :icon="category.icon" class="size-4.5" />
-              </span>
-              <span class="min-w-0 flex-1">
-                <span class="block text-sm font-bold">{{ category.name }}</span>
-                <span class="mt-0.5 block text-xs text-slate">
-                  {{ options.filter((option) => option.category === category.name).length }} saved
-                </span>
-              </span>
-              <Icon icon="feather:chevron-right" class="size-4" />
+    <section class="space-y-6">
+      <div class="rounded-[1.75rem] border border-pebble bg-white p-5 shadow-sm">
+        <div class="flex flex-col gap-5">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate">Setup groups</p>
+              <h2 class="mt-2 text-2xl font-black text-onyx">Category selector</h2>
             </div>
-          </button>
+            <div class="rounded-2xl border border-pebble bg-cloud px-4 py-3 text-sm text-slate">
+              <span class="font-semibold text-onyx">{{ selectedCategory }}</span>
+              <span class="mx-2 text-smoke">•</span>
+              {{ getCategoryCount(selectedCategory) }} saved
+            </div>
+          </div>
+
+          <div class="scrollbar -mx-1 overflow-x-auto px-1 pb-1">
+            <div class="flex min-w-max gap-3">
+              <button
+                v-for="category in categories"
+                :key="category.name"
+                type="button"
+                class="group w-[240px] shrink-0 rounded-[1.5rem] border p-4 text-left transition-all duration-200"
+                :class="
+                  selectedCategory === category.name
+                    ? `border-transparent bg-gradient-to-br ${getCategoryAccent(category.name).surface} shadow-sm ring-1 ${getCategoryAccent(category.name).ring}`
+                    : 'border-pebble bg-white hover:border-tangerine/35 hover:bg-fog/40'
+                "
+                @click="selectCategory(category.name)"
+              >
+                <div class="flex items-start gap-3">
+                  <span
+                    class="flex size-11 shrink-0 items-center justify-center rounded-2xl shadow-sm"
+                    :class="
+                      selectedCategory === category.name
+                        ? getCategoryAccent(category.name).badge
+                        : 'bg-fog text-slate group-hover:bg-white'
+                    "
+                  >
+                    <Icon :icon="category.icon" class="size-5" />
+                  </span>
+                  <span class="min-w-0 flex-1">
+                    <span class="flex items-center justify-between gap-3">
+                      <span class="text-sm font-black text-onyx">{{ category.name }}</span>
+                      <span
+                        class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                        :class="
+                          selectedCategory === category.name
+                            ? 'bg-white/90 text-onyx'
+                            : 'bg-fog text-slate'
+                        "
+                      >
+                        {{ getCategoryCount(category.name) }}
+                      </span>
+                    </span>
+                    <span class="mt-2 line-clamp-2 block text-sm leading-6 text-slate">
+                      {{ category.description }}
+                    </span>
+                  </span>
+                </div>
+              </button>
+            </div>
+          </div>
+
         </div>
-      </aside>
+      </div>
 
       <div class="rounded-[1.5rem] border border-pebble bg-white p-5 shadow-sm lg:p-6">
         <div
@@ -534,12 +703,21 @@ function getProcedureQuantity(option: OptionItem): number {
                       <div class="flex justify-end gap-1">
                         <button
                           type="button"
-                          class="rounded-lg p-2 text-slate transition hover:bg-fog hover:text-onyx"
+                          class="rounded-lg p-2 transition"
                           :title="option.active ? 'Deactivate option' : 'Activate option'"
-                          @click="toggleOption(option)"
+                          :class="
+                            option.active
+                              ? 'text-amber hover:bg-amber-light hover:text-amber'
+                              : 'text-emerald hover:bg-emerald-light hover:text-emerald'
+                          "
+                          @click="confirmStatusChange(option)"
                         >
                           <Icon
-                            :icon="option.active ? 'feather:eye-off' : 'feather:eye'"
+                            :icon="
+                              option.active
+                                ? 'feather:toggle-right'
+                                : 'feather:toggle-left'
+                            "
                             class="size-4"
                           />
                         </button>
@@ -555,7 +733,7 @@ function getProcedureQuantity(option: OptionItem): number {
                           type="button"
                           class="rounded-lg p-2 text-slate transition hover:bg-ruby-light hover:text-ruby"
                           title="Delete option"
-                          @click="removeOption(option)"
+                          @click="confirmDelete(option)"
                         >
                           <Icon icon="feather:trash-2" class="size-4" />
                         </button>
@@ -585,25 +763,15 @@ function getProcedureQuantity(option: OptionItem): number {
       </div>
     </section>
 
-    <div
-      v-if="showForm"
-      class="fixed inset-0 z-50 flex items-end bg-onyx/35 p-4 backdrop-blur-sm sm:items-center sm:justify-center"
+    <AppModal
+      :show="showForm"
+      :title="editingId ? 'Edit setup item' : 'Add setup item'"
+      subtitle="Setup item details"
+      max-width="sm:max-w-xl"
+      @close="closeForm"
     >
-      <div class="w-full max-w-xl rounded-[1.5rem] bg-white shadow-2xl">
-        <div class="flex items-start justify-between border-b border-pebble px-6 py-5">
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-tangerine">
-              Setup item details
-            </p>
-            <h2 class="mt-1 text-xl font-black text-onyx">
-              {{ editingId ? 'Edit setup item' : 'Add setup item' }}
-            </h2>
-          </div>
-          <button type="button" class="rounded-lg p-2 text-slate hover:bg-fog" @click="closeForm">
-            <Icon icon="feather:x" class="size-5" />
-          </button>
-        </div>
-        <form class="space-y-5 p-6" @submit.prevent="saveOption">
+      <form id="setup-item-form" class="space-y-5 p-6" @submit.prevent="saveOption">
+        <div class="space-y-5 p-6">
           <div>
             <label class="mb-2 block text-sm font-medium text-onyx">Setup group</label>
             <select v-model="form.category">
@@ -648,35 +816,39 @@ function getProcedureQuantity(option: OptionItem): number {
               class="w-full resize-y rounded-md border border-gray-200 bg-white px-4 py-3 text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
             ></textarea>
           </div>
-          <div
-            class="flex flex-col-reverse gap-3 border-t border-pebble pt-5 sm:flex-row sm:justify-end"
+        </div>
+      </form>
+
+      <template #footer>
+        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <AppButton
+            type="button"
+            btn-theme="outline"
+            class="px-5 py-3 normal-case"
+            @click="closeForm"
           >
-            <AppButton
-              type="button"
-              btn-theme="outline"
-              class="px-5 py-3 normal-case"
-              @click="closeForm"
-              >Cancel</AppButton
-            >
-            <AppButton
-              type="submit"
-              btn-theme="primary"
-              class="px-5 py-3 normal-case"
-              :disabled="!form.name.trim() || savingProcedure || savingPaymentMode"
-            >
-              <Icon icon="feather:save" class="size-4" />
-              {{
-                form.category === 'Procedures' && savingProcedure
+            Cancel
+          </AppButton>
+          <AppButton
+            form="setup-item-form"
+            type="submit"
+            btn-theme="primary"
+            class="px-5 py-3 normal-case"
+            :disabled="!form.name.trim() || savingProcedure || savingPaymentMode"
+          >
+            <Icon icon="feather:save" class="size-4" />
+            {{
+              form.category === 'Procedures' && savingProcedure
+                ? 'Saving...'
+                : savingPaymentMode && form.category === 'Payment Modes'
                   ? 'Saving...'
-                  : savingPaymentMode && form.category === 'Payment Modes'
-                    ? 'Saving...'
-                : editingId
-                  ? 'Save changes'
-                  : 'Add setup item' }}
-            </AppButton>
-          </div>
-        </form>
-      </div>
-    </div>
+                  : editingId
+                    ? 'Save changes'
+                    : 'Add setup item'
+            }}
+          </AppButton>
+        </div>
+      </template>
+    </AppModal>
   </div>
 </template>
