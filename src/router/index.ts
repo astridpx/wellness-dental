@@ -7,6 +7,7 @@ import UserLogsView from '@/views/UserLogsView.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuth } from '@/composables'
 import DentistView from '@/views/dentists/DentistView.vue'
+import PasswordResetUsersView from '@/views/users/PasswordResetUsersView.vue'
 import UserView from '@/views/users/UserView.vue'
 import SingleDentistView from '@/views/dentists/SingleDentistView.vue'
 import SingleUserView from '@/views/users/SingleUserView.vue'
@@ -124,6 +125,16 @@ const router = createRouter({
       meta: {
         title: 'Users',
         icon: 'feather:users',
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
+      },
+    },
+    {
+      path: '/users/password-reset',
+      name: 'passwordResetUsers',
+      component: PasswordResetUsersView,
+      meta: {
+        title: 'Password Reset Queue',
+        icon: 'feather:key',
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
       },
     },

@@ -18,7 +18,6 @@ const selectedRoleNames = computed(() =>
     .filter((role) => userData.value.roleCodes.includes(role.code))
     .map((role) => role.name),
 )
-const primaryRoleLabel = computed(() => selectedRoleNames.value[0] || 'No role selected')
 const accountStatusOptions = [
   {
     value: 'Active',
@@ -159,101 +158,45 @@ async function confirmSave() {
     <section
       class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#f8fbff_0%,#ffffff_52%,#fbf7ee_100%)] shadow-sm"
     >
-      <div class="grid gap-6 p-6 xl:grid-cols-[minmax(0,1.1fr)_320px] xl:items-start">
-        <div class="space-y-5">
-          <div>
-            <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
-              Staff account overview
-            </p>
-            <h2 class="mt-2 text-4xl font-black tracking-tight text-onyx">{{ displayName }}</h2>
-            <p class="mt-3 max-w-2xl text-sm leading-6 text-slate">
-              Manage access configuration, personal details, and internal ownership information for
-              this staff profile.
-            </p>
-          </div>
-
-          <div class="grid gap-4 md:grid-cols-3">
-            <div class="rounded-[1.4rem] border border-pebble bg-white px-5 py-4 shadow-sm">
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Mode</p>
-              <p class="mt-2 text-2xl font-black text-onyx">
-                {{ isEditMode ? 'Edit' : 'Create' }}
-              </p>
-            </div>
-            <div class="rounded-[1.4rem] border border-pebble bg-white px-5 py-4 shadow-sm">
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">
-                Assigned roles
-              </p>
-              <p class="mt-2 text-2xl font-black text-onyx">{{ selectedRoleCount }}</p>
-            </div>
-            <div class="rounded-[1.4rem] border border-pebble bg-white px-5 py-4 shadow-sm">
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Status</p>
-              <p
-                class="mt-2 text-2xl font-black"
-                :class="userData.status === 'Active' ? 'text-emerald' : 'text-ruby'"
-              >
-                {{ userData.status }}
-              </p>
-            </div>
-          </div>
+      <div class="space-y-5 p-6">
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
+            Staff account overview
+          </p>
+          <h2 class="mt-2 text-4xl font-black tracking-tight text-onyx">{{ displayName }}</h2>
+          <p class="mt-3 max-w-3xl text-sm leading-6 text-slate">
+            Manage access configuration, personal details, and internal ownership information for
+            this staff profile.
+          </p>
         </div>
 
-        <div class="rounded-[1.6rem] border border-pebble bg-white p-5 shadow-sm">
-          <div class="flex items-start gap-4">
-            <div
-              class="flex h-16 w-16 shrink-0 items-center justify-center rounded-[1.35rem] bg-[linear-gradient(145deg,#eef3ff_0%,#fbf4e4_100%)] text-tangerine shadow-sm"
-            >
-              <Icon icon="feather:user" class="size-7" />
-            </div>
-            <div class="min-w-0">
-              <p class="text-sm font-bold text-onyx">{{ displayName }}</p>
-              <p class="mt-1 text-sm text-slate">
-                {{ userData.email || 'No email address yet' }}
-              </p>
-              <div class="mt-3 flex flex-wrap gap-2">
-                <span
-                  class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
-                  :class="
-                    userData.status === 'Active'
-                      ? 'bg-emerald-light text-emerald'
-                      : 'bg-ruby-light text-ruby'
-                  "
-                >
-                  {{ userData.status }}
-                </span>
-                <span
-                  class="inline-flex rounded-full bg-fog px-3 py-1 text-xs font-semibold text-slate"
-                >
-                  {{ selectedRoleCount }} role{{ selectedRoleCount === 1 ? '' : 's' }}
-                </span>
-              </div>
-            </div>
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div class="rounded-[1.4rem] border border-pebble bg-white px-5 py-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Mode</p>
+            <p class="mt-2 text-2xl font-black text-onyx">
+              {{ isEditMode ? 'Edit' : 'Create' }}
+            </p>
           </div>
-
-          <div class="mt-5 space-y-3">
-            <div class="rounded-2xl border border-pebble bg-cloud px-4 py-4">
-              <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">User number</p>
-              <p class="mt-2 text-sm font-bold text-onyx">
-                {{ userData.userNo || 'Generated after save' }}
-              </p>
-            </div>
-            <div class="rounded-2xl border border-pebble bg-cloud px-4 py-4">
-              <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Department</p>
-              <p class="mt-2 text-sm font-bold text-onyx">
-                {{ userData.department || 'Not assigned' }}
-              </p>
-            </div>
-            <div class="rounded-2xl border border-pebble bg-cloud px-4 py-4">
-              <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Primary role</p>
-              <p class="mt-2 text-sm font-bold text-onyx">
-                {{ primaryRoleLabel }}
-              </p>
-            </div>
-            <div class="rounded-2xl border border-pebble bg-cloud px-4 py-4">
-              <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Job title</p>
-              <p class="mt-2 text-sm font-bold text-onyx">
-                {{ userData.jobTitle || 'Not assigned' }}
-              </p>
-            </div>
+          <div class="rounded-[1.4rem] border border-pebble bg-white px-5 py-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">
+              Assigned roles
+            </p>
+            <p class="mt-2 text-2xl font-black text-onyx">{{ selectedRoleCount }}</p>
+          </div>
+          <div class="rounded-[1.4rem] border border-pebble bg-white px-5 py-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Status</p>
+            <p
+              class="mt-2 text-2xl font-black"
+              :class="userData.status === 'Active' ? 'text-emerald' : 'text-ruby'"
+            >
+              {{ userData.status }}
+            </p>
+          </div>
+          <div class="rounded-[1.4rem] border border-pebble bg-white px-5 py-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Department</p>
+            <p class="mt-2 text-lg font-black text-onyx">
+              {{ userData.department || 'Not assigned' }}
+            </p>
           </div>
         </div>
       </div>

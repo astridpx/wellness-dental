@@ -1,6 +1,7 @@
 export * from './useAuth'
 export * from './useFile'
 export * from './useNavigation'
+export * from './usePasswordResetAccounts'
 export * from './usePaymentModes'
 export * from './usePlans'
 export * from './useProcedures'
