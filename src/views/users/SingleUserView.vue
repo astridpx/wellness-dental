@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed } from 'vue'
-import { AppButton, AppInput, AppLoadingScreen } from '@/components/app'
+import { computed, ref } from 'vue'
+import { AppButton, AppDialog, AppInput, AppLoadingScreen } from '@/components/app'
 import { useUserForm } from '@/composables'
 
 const { errorMessage, goBackToList, isEditMode, loading, roles, save, saving, userData } =
   useUserForm()
+const showSaveDialog = ref(false)
 
 const selectedRoleCount = computed(() => userData.value.roleCodes.length)
 const displayName = computed(() => {
@@ -60,9 +61,71 @@ function generatePassword() {
     return characters[value % characters.length]
   }).join('')
 }
+
+function openSaveDialog() {
+  if (loading.value || saving.value) return
+  showSaveDialog.value = true
+}
+
+function closeSaveDialog() {
+  if (saving.value) return
+  showSaveDialog.value = false
+}
+
+async function confirmSave() {
+  await save()
+  showSaveDialog.value = false
+}
 </script>
 
 <template>
+  <AppDialog
+    title="Confirm user changes"
+    :show="showSaveDialog"
+    :disabled="saving"
+    :confirm-label="saving ? 'Saving...' : isEditMode ? 'Confirm Update' : 'Confirm Save'"
+    @close="closeSaveDialog"
+    @confirm="confirmSave"
+  >
+    <template #dialog-content>
+      <div class="space-y-5">
+        <div
+          class="rounded-[1.5rem] border border-tangerine/15 bg-[linear-gradient(135deg,#fff8ef_0%,#ffffff_100%)] p-5"
+        >
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-tangerine">
+            Save Confirmation
+          </p>
+          <p class="mt-2 text-sm leading-6 text-slate">
+            {{
+              isEditMode
+                ? 'Please confirm that you want to update this employee profile, access coverage, and account settings.'
+                : 'Please confirm that you want to create this employee account with the current details and access setup.'
+            }}
+          </p>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Employee</p>
+            <p class="mt-2 text-sm font-bold text-onyx">{{ displayName }}</p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Username</p>
+            <p class="mt-2 text-sm font-bold text-onyx">{{ userData.username || 'Not set yet' }}</p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Status</p>
+            <p class="mt-2 text-sm font-bold text-onyx">{{ userData.status }}</p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Roles</p>
+            <p class="mt-2 text-sm font-bold text-onyx">{{ selectedRoleCount }}</p>
+          </div>
+        </div>
+      </div>
+    </template>
+  </AppDialog>
+
   <div v-if="loading" class="space-y-6">
     <AppLoadingScreen
       title="Loading user profile"
@@ -80,8 +143,8 @@ function generatePassword() {
           {{ isEditMode ? 'Edit Team Member' : 'Create Team Member' }}
         </h1>
         <p class="mt-2 max-w-2xl text-sm leading-6 text-slate">
-          Set up staff access, role coverage, department ownership, and credential controls from
-          one focused profile workspace.
+          Set up staff access, role coverage, department ownership, and credential controls from one
+          focused profile workspace.
         </p>
       </div>
       <AppButton btn-theme="outline" class="px-5 py-3 normal-case" @click="goBackToList">
@@ -196,7 +259,7 @@ function generatePassword() {
       </div>
     </section>
 
-    <form class="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]" @submit.prevent="save">
+    <form class="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]" @submit.prevent="openSaveDialog">
       <div
         class="h-fit rounded-[1.75rem] border border-pebble bg-[linear-gradient(145deg,#f8fbff_0%,#ffffff_100%)] p-6 shadow-sm"
       >
@@ -261,9 +324,7 @@ function generatePassword() {
                 v-model="userData.password"
                 type="password"
                 :placeholder="
-                  isEditMode
-                    ? 'Leave blank to keep current password'
-                    : 'Minimum 8 characters'
+                  isEditMode ? 'Leave blank to keep current password' : 'Minimum 8 characters'
                 "
               >
                 <template #trailing>
@@ -324,7 +385,7 @@ function generatePassword() {
           <div class="grid gap-5 md:grid-cols-2">
             <div class="md:col-span-2">
               <label class="mb-2 block text-sm font-medium text-slate">Role Assignment</label>
-              <div class="rounded-[1.25rem] border border-pebble bg-white p-4">
+              <div class="rounded-lg border border-pebble bg-white p-4">
                 <div class="grid gap-3 md:grid-cols-2">
                   <label
                     v-for="role in roles"
@@ -355,7 +416,7 @@ function generatePassword() {
                   v-for="option in accountStatusOptions"
                   :key="option.value"
                   type="button"
-                  class="rounded-[1.25rem] border px-4 py-4 text-left transition"
+                  class="rounded-lg border px-4 py-4 text-left transition"
                   :class="
                     userData.status === option.value
                       ? option.classes
@@ -397,7 +458,7 @@ function generatePassword() {
                   v-for="option in passwordPolicyOptions"
                   :key="option.label"
                   type="button"
-                  class="rounded-[1.25rem] border px-4 py-4 text-left transition"
+                  class="rounded-lg border px-4 py-4 text-left transition"
                   :class="
                     userData.mustChangePassword === option.value
                       ? 'border-sapphire/20 bg-sapphire-light text-sapphire-dark'
@@ -427,7 +488,7 @@ function generatePassword() {
               </div>
             </div>
 
-            <div class="md:col-span-2 rounded-[1.25rem] border border-pebble bg-white p-4">
+            <div class="md:col-span-2 rounded-lg border border-pebble bg-white p-4">
               <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
                   <p class="text-sm font-bold text-onyx">Selected access coverage</p>
