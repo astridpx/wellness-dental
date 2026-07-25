@@ -120,7 +120,12 @@ onMounted(async () => {
 </script>
 
 <template>
-  <AppDialog title="Filter Users" :show="showDialog" @close="showDialog = false" @confirm="applyFilters">
+  <AppDialog
+    title="Filter Users"
+    :show="showDialog"
+    @close="showDialog = false"
+    @confirm="applyFilters"
+  >
     <template #dialog-content>
       <div class="space-y-5">
         <div
@@ -172,10 +177,9 @@ onMounted(async () => {
             Team Access Control
           </div>
           <div>
-            <h1 class="text-3xl font-black tracking-tight text-onyx">Clinic Team</h1>
+            <h1 class="text-3xl font-black tracking-tight text-onyx">Wellness Team</h1>
             <p class="mt-3 max-w-2xl text-sm leading-6 text-slate">
-              Organize front-desk, dental assistant, billing, and administrator access across the
-              clinic.
+              Organize front-desk, dental assistant, billing, and administrator access.
             </p>
           </div>
         </div>
@@ -200,7 +204,7 @@ onMounted(async () => {
         <div class="bg-white px-6 py-5">
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Setup Focus</p>
           <p class="mt-2 text-sm font-medium leading-6 text-onyx">
-            Staff profiles combine role assignment, clinic responsibility, and contact coverage.
+            Staff profiles combine role assignment, responsibility, and contact coverage.
           </p>
         </div>
       </div>
@@ -208,7 +212,7 @@ onMounted(async () => {
 
     <section class="rounded-[1.5rem] border border-pebble bg-white p-5 shadow-sm">
       <div class="mb-5">
-        <h2 class="text-xl font-black text-onyx">Clinic Staff Directory</h2>
+        <h2 class="text-xl font-black text-onyx">Wellness Staff Directory</h2>
         <p class="mt-1 text-sm text-slate">Browse and manage staff access records below.</p>
       </div>
 
@@ -218,7 +222,7 @@ onMounted(async () => {
 
       <div v-if="loading">
         <AppLoadingScreen
-          title="Loading clinic users"
+          title="Loading wellness users"
           message="Please wait while we retrieve staff accounts, role assignments, and contact coverage."
         />
       </div>
@@ -247,7 +251,9 @@ onMounted(async () => {
               <td>
                 <div class="flex flex-wrap justify-end gap-2">
                   <span
-                    v-for="roleCode in user.roles?.length ? user.roles : [user.primaryRole || 'No role']"
+                    v-for="roleCode in user.roles?.length
+                      ? user.roles
+                      : [user.primaryRole || 'No role']"
                     :key="roleCode"
                     class="inline-flex rounded-full bg-tangerine-light px-3 py-1 text-xs font-semibold text-tangerine"
                   >
