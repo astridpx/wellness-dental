@@ -1,33 +1,12 @@
 <script lang="ts" setup>
 import { Icon } from '@iconify/vue'
 import { AppTable, AppButton, AppDialog, AppInput, AppLoadingScreen } from '@/components/app'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useAuth } from '@/composables'
+import { ref } from 'vue'
+import { useSystemLogs } from '@/composables'
 
-type SystemLogRow = {
-  id: number
-  createdAt: string
-  activity: string
-  success: boolean
-}
-
-const { getAuthHeaders, logout } = useAuth()
-const baseURL = import.meta.env.VITE_APP_MAIN_API_BASE_URL
-
-const logs = ref<SystemLogRow[]>([])
 const showDialog = ref(false)
-const loading = ref(true)
-const errorMessage = ref('')
-const currentPage = ref(1)
-const perPage = ref(10)
-const totalEntries = ref(0)
-const totalPages = ref(1)
-
-const filters = reactive({
-  activity: '',
-})
-
-const successCount = computed(() => logs.value.filter((log) => log.success).length)
+const { applyFilters, currentPage, errorMessage, filters, loading, logs, successCount, totalEntries, totalPages } =
+  useSystemLogs()
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('en-US', {
@@ -39,62 +18,10 @@ function formatDate(value: string) {
   }).format(new Date(value))
 }
 
-async function handleApiError(response: Response) {
-  if (response.status === 401 || response.status === 403) {
-    await logout(true)
-    return true
-  }
-
-  return false
-}
-
-async function fetchLogs() {
-  loading.value = true
-  errorMessage.value = ''
-
-  const params = new URLSearchParams({
-    page: String(currentPage.value),
-    perPage: String(perPage.value),
-  })
-
-  if (filters.activity) params.set('activity', filters.activity)
-
-  try {
-    const res = await fetch(`${baseURL}/wellness/logs/system?${params.toString()}`, {
-      headers: getAuthHeaders(false),
-    })
-
-    if (await handleApiError(res)) return
-
-    const obj = await res.json()
-    if (!res.ok) {
-      errorMessage.value = obj.error || 'Unable to load system logs.'
-      return
-    }
-
-    logs.value = Array.isArray(obj.data) ? obj.data : []
-    totalEntries.value = Number(obj.metadata?.totalEntries || 0)
-    totalPages.value = Number(obj.metadata?.totalPages || 1)
-  } catch {
-    errorMessage.value = 'Unable to connect to the server.'
-  } finally {
-    loading.value = false
-  }
-}
-
-function applyFilters() {
-  currentPage.value = 1
+function confirmFilters() {
   showDialog.value = false
-  void fetchLogs()
+  applyFilters()
 }
-
-watch(currentPage, () => {
-  void fetchLogs()
-})
-
-onMounted(async () => {
-  await fetchLogs()
-})
 </script>
 
 <template>
@@ -102,7 +29,7 @@ onMounted(async () => {
     title="Filter System Logs"
     :show="showDialog"
     @close="showDialog = false"
-    @confirm="applyFilters"
+    @confirm="confirmFilters"
   >
     <template #dialog-content>
       <div class="space-y-5">

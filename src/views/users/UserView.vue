@@ -1,122 +1,18 @@
 <script setup lang="ts">
 import { AppTable, AppButton, AppDialog, AppInput, AppLoadingScreen } from '@/components/app'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuth } from '@/composables'
-
-type UserRow = {
-  id: number
-  userNo: string
-  name: string
-  primaryRole: string
-  roles?: string[]
-  email: string
-  phone: string | null
-}
-
-type RoleOption = {
-  id: number
-  code: string
-  name: string
-}
+import { ref } from 'vue'
+import { useUsersList } from '@/composables'
 
 const router = useRouter()
-const { getAuthHeaders, logout } = useAuth()
-const baseURL = import.meta.env.VITE_APP_MAIN_API_BASE_URL
-
 const showDialog = ref(false)
-const loading = ref(true)
-const errorMessage = ref('')
-const users = ref<UserRow[]>([])
-const roles = ref<RoleOption[]>([])
-const currentPage = ref(1)
-const perPage = ref(10)
-const totalEntries = ref(0)
-const totalPages = ref(1)
+const { accessRoleCount, applyFilters, currentPage, errorMessage, filters, loading, roles, totalEntries, totalPages, users } =
+  useUsersList()
 
-const filters = reactive({
-  userNo: '',
-  name: '',
-  email: '',
-  role: '',
-})
-
-const accessRoleCount = computed(() => roles.value.length)
-
-const paginatedUsers = computed(() => users.value)
-
-async function handleApiError(response: Response) {
-  if (response.status === 401 || response.status === 403) {
-    await logout(true)
-    return true
-  }
-
-  return false
-}
-
-async function fetchRoles() {
-  const res = await fetch(`${baseURL}/wellness/roles`, {
-    headers: getAuthHeaders(false),
-  })
-
-  if (await handleApiError(res)) return
-
-  const obj = await res.json()
-  roles.value = Array.isArray(obj.data) ? obj.data : []
-}
-
-async function fetchUsers() {
-  loading.value = true
-  errorMessage.value = ''
-
-  const params = new URLSearchParams({
-    page: String(currentPage.value),
-    perPage: String(perPage.value),
-  })
-
-  if (filters.userNo) params.set('userNo', filters.userNo)
-  if (filters.name) params.set('name', filters.name)
-  if (filters.email) params.set('email', filters.email)
-  if (filters.role) params.set('role', filters.role)
-
-  try {
-    const res = await fetch(`${baseURL}/wellness/users?${params.toString()}`, {
-      headers: getAuthHeaders(false),
-    })
-
-    if (await handleApiError(res)) return
-
-    const obj = await res.json()
-
-    if (!res.ok) {
-      errorMessage.value = obj.error || 'Unable to load users.'
-      return
-    }
-
-    users.value = Array.isArray(obj.data) ? obj.data : []
-    totalEntries.value = Number(obj.metadata?.totalEntries || 0)
-    totalPages.value = Number(obj.metadata?.totalPages || 1)
-  } catch {
-    errorMessage.value = 'Unable to connect to the server.'
-  } finally {
-    loading.value = false
-  }
-}
-
-function applyFilters() {
-  currentPage.value = 1
+function confirmFilters() {
   showDialog.value = false
-  void fetchUsers()
+  applyFilters()
 }
-
-watch(currentPage, () => {
-  void fetchUsers()
-})
-
-onMounted(async () => {
-  await fetchRoles()
-  await fetchUsers()
-})
 </script>
 
 <template>
@@ -124,7 +20,7 @@ onMounted(async () => {
     title="Filter Users"
     :show="showDialog"
     @close="showDialog = false"
-    @confirm="applyFilters"
+    @confirm="confirmFilters"
   >
     <template #dialog-content>
       <div class="space-y-5">
@@ -236,11 +132,11 @@ onMounted(async () => {
           @update-pg-num="currentPage = $event"
         >
           <template #trs>
-            <tr v-if="!paginatedUsers.length">
+            <tr v-if="!users.length">
               <td colspan="6" class="text-center text-slate">No users found.</td>
             </tr>
             <tr
-              v-for="user in paginatedUsers"
+              v-for="user in users"
               v-else
               :key="user.id"
               class="cursor-pointer"

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { AppButton, AppInput, AppLoadingScreen } from '@/components/app'
-import { useAuth } from '@/composables'
+import { usePaymentModes } from '@/composables'
+import type { PaymentModeOption } from '@/composables'
 
 type OptionCategory = 'Procedures' | 'Payment Modes' | 'Benefits'
 
@@ -14,14 +15,6 @@ type OptionItem = {
   description: string
   price?: number
   active: boolean
-}
-
-type PaymentModeResponse = {
-  id: number
-  name: string
-  code: string
-  description: string | null
-  isActive: boolean
 }
 
 const categories: Array<{ name: OptionCategory; icon: string; description: string }> = [
@@ -42,10 +35,7 @@ const categories: Array<{ name: OptionCategory; icon: string; description: strin
   },
 ]
 
-const { getAuthHeaders, logout } = useAuth()
-const baseURL = import.meta.env.VITE_APP_MAIN_API_BASE_URL
-
-const options = ref<OptionItem[]>([
+const localOptions = ref<OptionItem[]>([
   {
     id: 1,
     category: 'Procedures',
@@ -95,9 +85,7 @@ const selectedCategory = ref<OptionCategory>('Procedures')
 const search = ref('')
 const showForm = ref(false)
 const editingId = ref<number | null>(null)
-const loadingPaymentModes = ref(false)
-const savingPaymentMode = ref(false)
-const errorMessage = ref('')
+const localErrorMessage = ref('')
 const form = ref({
   category: 'Procedures' as OptionCategory,
   name: '',
@@ -105,10 +93,20 @@ const form = ref({
   description: '',
   price: '',
 })
+const {
+  clearPaymentModeError,
+  errorMessage: paymentModeErrorMessage,
+  loadingPaymentModes,
+  paymentModes,
+  savePaymentMode: persistPaymentMode,
+  savingPaymentMode,
+  togglePaymentMode: persistPaymentModeToggle,
+} = usePaymentModes()
 
 const selectedCategoryDetails = computed(() =>
   categories.find((category) => category.name === selectedCategory.value),
 )
+const options = computed(() => [...localOptions.value, ...paymentModes.value])
 const categoryOptions = computed(() =>
   options.value.filter((option) => option.category === selectedCategory.value),
 )
@@ -124,62 +122,17 @@ const filteredOptions = computed(() => {
 })
 const totalActiveOptions = computed(() => options.value.filter((option) => option.active).length)
 const isPaymentModesSelected = computed(() => selectedCategory.value === 'Payment Modes')
+const errorMessage = computed(() => localErrorMessage.value || paymentModeErrorMessage.value)
 
-function mapPaymentModeToOption(paymentMode: PaymentModeResponse): OptionItem {
-  return {
-    id: paymentMode.id,
-    category: 'Payment Modes',
-    name: paymentMode.name,
-    code: paymentMode.code,
-    description: paymentMode.description || 'No description provided.',
-    active: Boolean(paymentMode.isActive),
-  }
-}
-
-function replacePaymentModeOptions(paymentModes: PaymentModeResponse[]) {
-  const nonPaymentModeOptions = options.value.filter((option) => option.category !== 'Payment Modes')
-  options.value = [...nonPaymentModeOptions, ...paymentModes.map(mapPaymentModeToOption)]
-}
-
-async function handleApiError(response: Response) {
-  if (response.status === 401 || response.status === 403) {
-    await logout(true)
-    return true
-  }
-
-  return false
-}
-
-async function fetchPaymentModes() {
-  loadingPaymentModes.value = true
-  errorMessage.value = ''
-
-  try {
-    const res = await fetch(`${baseURL}/wellness/paymentModes?perPage=100`, {
-      headers: getAuthHeaders(false),
-    })
-
-    if (await handleApiError(res)) return
-
-    const obj = await res.json()
-
-    if (!res.ok) {
-      errorMessage.value = obj.error || 'Unable to load payment modes.'
-      return
-    }
-
-    replacePaymentModeOptions(Array.isArray(obj.data) ? obj.data : [])
-  } catch {
-    errorMessage.value = 'Unable to connect to the server.'
-  } finally {
-    loadingPaymentModes.value = false
-  }
+function isPaymentModeOption(option: OptionItem | PaymentModeOption): option is PaymentModeOption {
+  return option.category === 'Payment Modes'
 }
 
 function selectCategory(category: OptionCategory) {
   selectedCategory.value = category
   search.value = ''
-  errorMessage.value = ''
+  localErrorMessage.value = ''
+  clearPaymentModeError()
 }
 
 function resetForm() {
@@ -216,9 +169,6 @@ function closeForm() {
 }
 
 async function savePaymentMode() {
-  savingPaymentMode.value = true
-  errorMessage.value = ''
-
   const name = form.value.name.trim()
   const code = form.value.code.trim().toUpperCase() || name.slice(0, 8).toUpperCase()
   const description = form.value.description.trim() || 'No description provided.'
@@ -226,41 +176,17 @@ async function savePaymentMode() {
     ? options.value.find((option) => option.id === editingId.value && option.category === 'Payment Modes')
     : null
 
-  const payload = {
+  const saved = await persistPaymentMode({
+    id: editingId.value,
     name,
     code,
     description,
-    isActive: existingOption?.active ?? true,
-  }
+    active: existingOption?.active ?? true,
+  })
 
-  try {
-    const res = await fetch(
-      editingId.value
-        ? `${baseURL}/wellness/paymentModes/${editingId.value}`
-        : `${baseURL}/wellness/paymentModes`,
-      {
-        method: editingId.value ? 'PUT' : 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-      },
-    )
-
-    if (await handleApiError(res)) return
-
-    const obj = await res.json()
-
-    if (!res.ok) {
-      errorMessage.value = obj.error || 'Unable to save payment mode.'
-      return
-    }
-
-    await fetchPaymentModes()
+  if (saved) {
     selectedCategory.value = 'Payment Modes'
     closeForm()
-  } catch {
-    errorMessage.value = 'Unable to connect to the server.'
-  } finally {
-    savingPaymentMode.value = false
   }
 }
 
@@ -280,11 +206,11 @@ function saveLocalOption() {
   }
 
   if (editingId.value) {
-    const index = options.value.findIndex((option) => option.id === editingId.value)
-    const existingOption = options.value[index]
-    if (existingOption) options.value[index] = { ...existingOption, ...optionData }
+    const index = localOptions.value.findIndex((option) => option.id === editingId.value)
+    const existingOption = localOptions.value[index]
+    if (existingOption) localOptions.value[index] = { ...existingOption, ...optionData }
   } else {
-    options.value.unshift({ id: Date.now(), ...optionData, active: true })
+    localOptions.value.unshift({ id: Date.now(), ...optionData, active: true })
   }
 
   selectedCategory.value = form.value.category
@@ -303,43 +229,13 @@ async function saveOption() {
   saveLocalOption()
 }
 
-async function togglePaymentMode(option: OptionItem) {
-  errorMessage.value = ''
-
-  try {
-    const res = await fetch(`${baseURL}/wellness/paymentModes/${option.id}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({
-        name: option.name,
-        code: option.code,
-        description: option.description,
-        isActive: !option.active,
-      }),
-    })
-
-    if (await handleApiError(res)) return
-
-    const obj = await res.json()
-
-    if (!res.ok) {
-      errorMessage.value = obj.error || 'Unable to update payment mode status.'
-      return
-    }
-
-    await fetchPaymentModes()
-  } catch {
-    errorMessage.value = 'Unable to connect to the server.'
-  }
-}
-
 function toggleLocalOption(option: OptionItem) {
   option.active = !option.active
 }
 
 async function toggleOption(option: OptionItem) {
-  if (option.category === 'Payment Modes') {
-    await togglePaymentMode(option)
+  if (isPaymentModeOption(option)) {
+    await persistPaymentModeToggle(option)
     return
   }
 
@@ -348,21 +244,17 @@ async function toggleOption(option: OptionItem) {
 
 function removeOption(option: OptionItem) {
   if (option.category === 'Payment Modes') {
-    errorMessage.value = 'Delete for payment modes is not available yet.'
+    localErrorMessage.value = 'Delete for payment modes is not available yet.'
     return
   }
 
-  options.value = options.value.filter((item) => item.id !== option.id)
+  localOptions.value = localOptions.value.filter((item) => item.id !== option.id)
 }
 
 function formatPrice(price?: number) {
   if (price === undefined) return '—'
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(price)
 }
-
-onMounted(async () => {
-  await fetchPaymentModes()
-})
 </script>
 
 <template>

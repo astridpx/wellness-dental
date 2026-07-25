@@ -1,191 +1,10 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { AppButton, AppInput } from '@/components/app'
-import { computed, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useAuth } from '@/composables'
+import { useUserForm } from '@/composables'
 
-type RoleOption = {
-  id: number
-  code: string
-  name: string
-}
-
-type UserResponse = {
-  id: number
-  userCode: string
-  username: string
-  email: string
-  firstName: string
-  lastName: string
-  middleName: string | null
-  displayName: string
-  department: string | null
-  jobTitle: string | null
-  mobileNumber: string | null
-  roles: string[]
-  primaryRole: string
-  isActive: boolean
-  mustChangePassword: boolean
-}
-
-const route = useRoute()
-const router = useRouter()
-const { getAuthHeaders, logout } = useAuth()
-const baseURL = import.meta.env.VITE_APP_MAIN_API_BASE_URL
-
-const isEditMode = computed(() => !!route.params.id)
-const loading = ref(false)
-const saving = ref(false)
-const errorMessage = ref('')
-const roles = ref<RoleOption[]>([])
-
-const userData = ref({
-  userNo: '',
-  username: '',
-  password: '',
-  firstName: '',
-  lastName: '',
-  middleName: '',
-  email: '',
-  phone: '',
-  roleCodes: [] as string[],
-  department: '',
-  jobTitle: '',
-  status: 'Active',
-  mustChangePassword: true,
-})
-
-async function handleApiError(response: Response) {
-  if (response.status === 401 || response.status === 403) {
-    await logout(true)
-    return true
-  }
-
-  return false
-}
-
-async function fetchRoles() {
-  const res = await fetch(`${baseURL}/wellness/roles`, {
-    headers: getAuthHeaders(false),
-  })
-
-  if (await handleApiError(res)) return
-
-  const obj = await res.json()
-  roles.value = Array.isArray(obj.data) ? obj.data : []
-}
-
-async function fetchUser() {
-  if (!isEditMode.value) return
-
-  loading.value = true
-  errorMessage.value = ''
-
-  try {
-    const res = await fetch(`${baseURL}/wellness/users/${route.params.id}`, {
-      headers: getAuthHeaders(false),
-    })
-
-    if (await handleApiError(res)) return
-
-    const obj = await res.json()
-
-    if (!res.ok || !obj.data) {
-      errorMessage.value = obj.error || 'Unable to load user.'
-      return
-    }
-
-    const user = obj.data as UserResponse
-    userData.value = {
-      userNo: user.userCode,
-      username: user.username,
-      password: '',
-      firstName: user.firstName,
-      lastName: user.lastName,
-      middleName: user.middleName || '',
-      email: user.email,
-      phone: user.mobileNumber || '',
-      roleCodes: user.roles || [],
-      department: user.department || '',
-      jobTitle: user.jobTitle || '',
-      status: user.isActive ? 'Active' : 'Inactive',
-      mustChangePassword: user.mustChangePassword,
-    }
-  } catch {
-    errorMessage.value = 'Unable to connect to the server.'
-  } finally {
-    loading.value = false
-  }
-}
-
-async function save() {
-  saving.value = true
-  errorMessage.value = ''
-
-  const payload: Record<string, unknown> = {
-    username: userData.value.username,
-    firstName: userData.value.firstName,
-    lastName: userData.value.lastName,
-    middleName: userData.value.middleName || null,
-    email: userData.value.email,
-    mobileNumber: userData.value.phone || null,
-    roleCodes: userData.value.roleCodes,
-    department: userData.value.department || null,
-    jobTitle: userData.value.jobTitle || null,
-    isActive: userData.value.status === 'Active',
-    mustChangePassword: userData.value.mustChangePassword,
-  }
-
-  if (userData.value.password.trim()) {
-    payload.password = userData.value.password
-  }
-
-  if (!isEditMode.value && !payload.password) {
-    errorMessage.value = 'Password is required when creating a user.'
-    saving.value = false
-    return
-  }
-
-  if (!userData.value.roleCodes.length) {
-    errorMessage.value = 'Please assign at least one role.'
-    saving.value = false
-    return
-  }
-
-  try {
-    const res = await fetch(
-      isEditMode.value
-        ? `${baseURL}/wellness/users/${route.params.id}`
-        : `${baseURL}/wellness/users`,
-      {
-        method: isEditMode.value ? 'PUT' : 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-      },
-    )
-
-    if (await handleApiError(res)) return
-
-    const obj = await res.json()
-
-    if (!res.ok) {
-      errorMessage.value = obj.error || 'Unable to save user.'
-      return
-    }
-
-    await router.push('/users')
-  } catch {
-    errorMessage.value = 'Unable to connect to the server.'
-  } finally {
-    saving.value = false
-  }
-}
-
-onMounted(async () => {
-  await fetchRoles()
-  await fetchUser()
-})
+const { errorMessage, goBackToList, isEditMode, loading, roles, save, saving, userData } =
+  useUserForm()
 </script>
 
 <template>
@@ -199,7 +18,7 @@ onMounted(async () => {
           Set up staff access, role coverage, and department ownership for the dental clinic.
         </p>
       </div>
-      <AppButton btn-theme="outline" class="px-5 py-3 normal-case" @click="router.push('/users')">
+      <AppButton btn-theme="outline" class="px-5 py-3 normal-case" @click="goBackToList">
         Back to List
       </AppButton>
     </div>
@@ -355,7 +174,7 @@ onMounted(async () => {
             type="button"
             btn-theme="outline"
             class="px-5 py-3 normal-case"
-            @click="router.push('/users')"
+            @click="goBackToList"
           >
             Cancel
           </AppButton>
