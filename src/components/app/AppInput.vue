@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, ref } from 'vue'
+import { computed, ref, useSlots } from 'vue'
 
 const props = defineProps({
   transparent: {
@@ -29,8 +29,10 @@ defineEmits(['focus', 'blur'])
 
 const model = defineModel<string | number>()
 const showPassword = ref(false)
+const slots = useSlots()
 
 const isPasswordField = computed(() => props.type === 'password')
+const hasTrailingSlot = computed(() => Boolean(slots.trailing))
 const inputType = computed(() =>
   isPasswordField.value ? (showPassword.value ? 'text' : 'password') : props.type,
 )
@@ -57,7 +59,8 @@ const inputType = computed(() =>
         :class="[
           inputClass,
           {
-            'pr-12': isPasswordField,
+            'pr-24': isPasswordField && hasTrailingSlot,
+            'pr-12': isPasswordField && !hasTrailingSlot,
             'px-12': !isPasswordField,
             'pl-12': true,
             'border-ruby focus:border-ruby focus:ring-ruby/20': hasError,
@@ -73,16 +76,20 @@ const inputType = computed(() =>
         @blur="$emit('blur', $event)"
       />
 
-      <button
-        v-if="isPasswordField"
-        type="button"
-        class="absolute right-4 top-1/2 -translate-y-1/2 text-slate transition hover:text-onyx"
-        @click="showPassword = !showPassword"
+      <div
+        v-if="isPasswordField || hasTrailingSlot"
+        class="absolute right-4 top-1/2 flex -translate-y-1/2 items-center gap-2"
       >
-        <Icon :icon="showPassword ? 'feather:eye-off' : 'feather:eye'" class="h-5 w-5" />
-      </button>
-
-      <slot />
+        <slot name="trailing" />
+        <button
+          v-if="isPasswordField"
+          type="button"
+          class="text-slate transition hover:text-onyx"
+          @click="showPassword = !showPassword"
+        >
+          <Icon :icon="showPassword ? 'feather:eye-off' : 'feather:eye'" class="h-5 w-5" />
+        </button>
+      </div>
     </div>
 
     <div v-else class="relative">
@@ -99,7 +106,8 @@ const inputType = computed(() =>
           inputClass,
           {
             'px-4': !isPasswordField,
-            'pl-4 pr-12': isPasswordField,
+            'pl-4 pr-24': isPasswordField && hasTrailingSlot,
+            'pl-4 pr-12': isPasswordField && !hasTrailingSlot,
             'border-ruby focus:border-ruby focus:ring-ruby/20': hasError,
             'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400': disabled,
             'border-gray-200 bg-white hover:border-slate focus:border-tangerine':
@@ -112,14 +120,20 @@ const inputType = computed(() =>
         @blur="$emit('blur', $event)"
       />
 
-      <button
-        v-if="isPasswordField"
-        type="button"
-        class="absolute right-4 top-1/2 -translate-y-1/2 text-slate transition hover:text-onyx"
-        @click="showPassword = !showPassword"
+      <div
+        v-if="isPasswordField || hasTrailingSlot"
+        class="absolute right-4 top-1/2 flex -translate-y-1/2 items-center gap-2"
       >
-        <Icon :icon="showPassword ? 'feather:eye-off' : 'feather:eye'" class="h-5 w-5" />
-      </button>
+        <slot name="trailing" />
+        <button
+          v-if="isPasswordField"
+          type="button"
+          class="text-slate transition hover:text-onyx"
+          @click="showPassword = !showPassword"
+        >
+          <Icon :icon="showPassword ? 'feather:eye-off' : 'feather:eye'" class="h-5 w-5" />
+        </button>
+      </div>
     </div>
   </div>
 </template>

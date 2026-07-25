@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { AppTable, AppButton, AppDialog, AppInput, AppLoadingScreen } from '@/components/app'
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
@@ -159,7 +160,18 @@ function confirmFilters() {
               </td>
               <td>{{ user.email }}</td>
               <td>{{ user.phone || 'N/A' }}</td>
-              <td class="text-sm font-semibold text-slate">Edit</td>
+              <td class="px-5 py-4">
+                <div class="flex justify-end">
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-2 rounded-xl bg-fog px-3 py-2 text-xs font-semibold text-slate transition hover:bg-pebble hover:text-onyx"
+                    @click.stop="router.push(`/users/${user.id}/edit`)"
+                  >
+                    <Icon icon="feather:edit-2" class="size-4" />
+                    Edit
+                  </button>
+                </div>
+              </td>
             </tr>
           </template>
         </AppTable>
