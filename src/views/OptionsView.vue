@@ -260,10 +260,11 @@ async function saveProcedure() {
   const description = form.value.description.trim() || 'No description provided.'
   const monthInterval = Number(form.value.monthInterval)
   const quantity = Number(form.value.quantity)
+  const priceValue = String(form.value.price ?? '').trim()
   const defaultPrice =
-    form.value.price.trim() === '' || Number.isNaN(Number(form.value.price))
+    priceValue === '' || Number.isNaN(Number(priceValue))
       ? null
-      : Number(form.value.price)
+      : Number(priceValue)
 
   if (!Number.isInteger(monthInterval) || monthInterval <= 0) {
     localErrorMessage.value = 'Month interval must be a whole number greater than zero.'
@@ -295,6 +296,7 @@ async function saveProcedure() {
 function saveLocalOption() {
   const name = form.value.name.trim()
   if (!name) return
+  const priceValue = String(form.value.price ?? '').trim()
 
   const optionData = {
     category: form.value.category,
@@ -302,8 +304,8 @@ function saveLocalOption() {
     code: form.value.code.trim().toUpperCase() || name.slice(0, 8).toUpperCase(),
     description: form.value.description.trim() || 'No description provided.',
     price:
-      form.value.category === 'Procedures' && form.value.price !== ''
-        ? Number(form.value.price)
+      form.value.category === 'Procedures' && priceValue !== ''
+        ? Number(priceValue)
         : undefined,
     active: form.value.active,
   }
