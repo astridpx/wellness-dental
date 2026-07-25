@@ -126,7 +126,7 @@ function confirmFilters() {
 
       <div v-else class="overflow-hidden rounded-[1.5rem] border border-pebble">
         <AppTable
-          :theads="['User #', 'Name', 'Role Assignment', 'Email', 'Phone', 'Action']"
+          :theads="['User #', 'Name', 'Role Assignment', 'Email', 'Phone', 'Status', 'Action']"
           :total-entries="totalEntries"
           :total-pages="totalPages"
           :current-page="currentPage"
@@ -134,7 +134,7 @@ function confirmFilters() {
         >
           <template #trs>
             <tr v-if="!users.length">
-              <td colspan="6" class="text-center text-slate">No users found.</td>
+              <td colspan="7" class="text-center text-slate">No users found.</td>
             </tr>
             <tr
               v-for="user in users"
@@ -160,6 +160,18 @@ function confirmFilters() {
               </td>
               <td>{{ user.email }}</td>
               <td>{{ user.phone || 'N/A' }}</td>
+              <td>
+                <span
+                  class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
+                  :class="
+                    (user.status || (user.isActive ? 'Active' : 'Inactive')) === 'Active'
+                      ? 'bg-emerald-light text-emerald'
+                      : 'bg-ruby-light text-ruby'
+                  "
+                >
+                  {{ user.status || (user.isActive ? 'Active' : 'Inactive') }}
+                </span>
+              </td>
               <td class="px-5 py-4">
                 <div class="flex justify-end">
                   <button

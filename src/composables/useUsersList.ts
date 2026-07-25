@@ -9,6 +9,8 @@ export type UserRow = {
   roles?: string[]
   email: string
   phone: string | null
+  isActive?: boolean
+  status?: 'Active' | 'Inactive'
 }
 
 export type RoleOption = {
