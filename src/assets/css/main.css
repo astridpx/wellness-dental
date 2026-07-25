@@ -3,7 +3,7 @@
 
 @layer base {
   html {
-    @apply bg-[#edf6f7];
+    @apply bg-[#eef3fb];
   }
 
   body {
@@ -31,7 +31,7 @@
   }
 
   select.opaque {
-    @apply border-[#d9eced] bg-[#d9eced] text-[#5f6d75];
+    @apply border-[#e4e8f2] bg-[#edf1f8] text-[#5e6983];
   }
 
   textarea {
@@ -40,7 +40,7 @@
 
   .scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: #97b9bd transparent;
+    scrollbar-color: #9f8746 transparent;
   }
 
   .scrollbar::-webkit-scrollbar {
@@ -52,7 +52,7 @@
   }
 
   .scrollbar::-webkit-scrollbar-thumb {
-    background: #97b9bd;
+    background: #9f8746;
     border-radius: 9999px;
     border: 2px solid transparent;
     background-clip: content-box;
@@ -60,43 +60,43 @@
 }
 
 @theme {
-  --color-sapphire: #1d4f63;
-  --color-sapphire-dark: #133a4a;
-  --color-sapphire-light: #e7f4f6;
+  --color-sapphire: #153a78;
+  --color-sapphire-dark: #0c2754;
+  --color-sapphire-light: #edf2ff;
 
-  --color-tangerine: #1ea7a0;
-  --color-tangerine-dark: #157d78;
-  --color-tangerine-light: #e7faf8;
-  --color-apricot: #f1fcfb;
+  --color-tangerine: #b08a34;
+  --color-tangerine-dark: #89671f;
+  --color-tangerine-light: #f7efd9;
+  --color-apricot: #fbf6e8;
 
   --color-snow: #ffffff;
-  --color-cloud: #f8fbfb;
-  --color-mist: #edf6f7;
-  --color-fog: #eef4f5;
-  --color-pebble: #d7e4e6;
+  --color-cloud: #f8f9fd;
+  --color-mist: #eef3fb;
+  --color-fog: #f2f5fa;
+  --color-pebble: #d8dfeb;
 
-  --color-onyx: #16313d;
-  --color-slate: #56707a;
-  --color-smoke: #86a1ab;
-  --color-ash: #99a9b0;
+  --color-onyx: #162947;
+  --color-slate: #5b6985;
+  --color-smoke: #8b98b0;
+  --color-ash: #a1adbf;
 
-  --color-emerald: #1f9d68;
-  --color-emerald-light: #ecfaf3;
+  --color-emerald: #2a8f6d;
+  --color-emerald-light: #eef9f4;
 
-  --color-amber: #d59b16;
-  --color-amber-light: #fff7df;
+  --color-amber: #c2942b;
+  --color-amber-light: #fff6de;
 
   --color-ruby: #d45555;
   --color-ruby-light: #fff0f0;
 
-  --color-sky: #3386c9;
-  --color-sky-light: #ebf5ff;
+  --color-sky: #4a77c7;
+  --color-sky-light: #edf4ff;
 
-  --color-focus-ring: rgba(30, 167, 160, 0.22);
+  --color-focus-ring: rgba(176, 138, 52, 0.22);
 
-  --shadow-sm: 0 4px 12px rgba(22, 49, 61, 0.05);
-  --shadow-md: 0 12px 28px rgba(22, 49, 61, 0.09);
-  --shadow-lg: 0 24px 56px rgba(22, 49, 61, 0.14);
+  --shadow-sm: 0 4px 12px rgba(21, 42, 78, 0.06);
+  --shadow-md: 0 12px 28px rgba(21, 42, 78, 0.11);
+  --shadow-lg: 0 24px 56px rgba(21, 42, 78, 0.16);
 
   --radius-sm: 0.5rem;
   --radius-md: 0.875rem;
