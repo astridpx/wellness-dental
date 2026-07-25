@@ -1,192 +1,205 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import QRCode from 'qrcode'
-import { saveAs } from 'file-saver'
-import { AppButton, AppDialog, AppTable } from '@/components/app'
+import { Icon } from '@iconify/vue'
+import { computed, ref } from 'vue'
+import { AppTable } from '@/components/app'
 
-const baseURL = import.meta.env.VITE_APP_MAIN_API_BASE_URL
-
-const showDialog = ref(false)
 const currentPage = ref(1)
 const perPage = ref(5)
-const qrCanvas = ref<HTMLCanvasElement | null>(null)
-const clinicCode = ref('IMS-DENTAL-CHECKIN')
-const qrCodeUrl = computed(() => `${baseURL}/${clinicCode.value}`)
 
-const readinessCards = [
+const overviewCards = [
   {
-    label: 'Provider setup',
-    value: '92%',
-    note: 'Licenses and specialties verified for active roster.',
+    label: 'Recorded procedures',
+    value: '148',
+    note: 'Treatment and service records logged this week.',
+    tone: 'bg-sapphire-light text-sapphire',
+    icon: 'feather:clipboard',
   },
   {
-    label: 'Chair utilization',
-    value: '14/18',
-    note: 'Chairs reserved across morning and afternoon blocks.',
+    label: 'Pending records',
+    value: '12',
+    note: 'Entries waiting for review, correction, or completion.',
+    tone: 'bg-amber-light text-amber',
+    icon: 'feather:clock',
   },
   {
-    label: 'Pending collections',
-    value: '₱12,450',
-    note: 'Open balances waiting for front-desk follow-up.',
+    label: 'Collection records',
+    value: '₱86,200',
+    note: 'Recorded payment activity across cash, card, and benefit settlements.',
+    tone: 'bg-emerald-light text-emerald',
+    icon: 'feather:credit-card',
   },
 ]
 
 const workflowBoard = [
   {
-    title: 'Credential review',
-    count: 3,
+    title: 'Records for review',
+    count: 6,
+    note: 'Entries that still need coding, verification, or final approval.',
     tone: 'bg-amber-light text-amber',
-    note: 'Dentists waiting for final compliance checks.',
   },
   {
-    title: 'Ready to schedule',
-    count: 21,
+    title: 'Ready for posting',
+    count: 18,
+    note: 'Completed records prepared for ledger, claims, or reporting handoff.',
     tone: 'bg-emerald-light text-emerald',
-    note: 'Providers fully mapped to rooms and treatment types.',
   },
   {
-    title: 'Front desk escalations',
+    title: 'Follow-up needed',
     count: 4,
-    tone: 'bg-sky-light text-sky',
-    note: 'Cases needing payment coding or schedule clarification.',
-  },
-]
-
-const todaySchedule = [
-  {
-    id: 1,
-    patient: 'Ariana Torres',
-    dentist: 'Dr. Maria Santos',
-    chair: 'Chair 2',
-    service: 'Prophylaxis',
-    status: 'Confirmed',
-  },
-  {
-    id: 2,
-    patient: 'Liam Reyes',
-    dentist: 'Dr. James Lim',
-    chair: 'Chair 5',
-    service: 'Ortho Adjustment',
-    status: 'In Chair',
-  },
-  {
-    id: 3,
-    patient: 'Nina Cruz',
-    dentist: 'Dr. Angela Cruz',
-    chair: 'Chair 1',
-    service: 'Extraction',
-    status: 'Pending',
-  },
-  {
-    id: 4,
-    patient: 'Evan Tan',
-    dentist: 'Dr. Patricia Tan',
-    chair: 'Imaging',
-    service: 'Dental X-ray',
-    status: 'Confirmed',
-  },
-  {
-    id: 5,
-    patient: 'Mika Santos',
-    dentist: 'Dr. Carlo Reyes',
-    chair: 'Chair 4',
-    service: 'Consultation',
-    status: 'Pending',
-  },
-  {
-    id: 6,
-    patient: 'Rico Valdez',
-    dentist: 'Dr. Maria Santos',
-    chair: 'Chair 2',
-    service: 'Restoration',
-    status: 'Confirmed',
-  },
-  {
-    id: 7,
-    patient: 'Aly Gomez',
-    dentist: 'Dr. Angela Cruz',
-    chair: 'Pediatric',
-    service: 'Cleaning',
-    status: 'In Chair',
+    note: 'Cases with missing details, inactive setup mappings, or mismatched amounts.',
+    tone: 'bg-ruby-light text-ruby',
   },
 ]
 
 const actionRail = [
-  'Lock dentist specialties before publishing next week schedules.',
-  'Map every treatment code to payment modes in options.',
-  'Refresh reception QR handoff if intake routing changed.',
+  'Review procedure mappings for items added in the setup library.',
+  'Complete incomplete treatment records before end-of-day reporting.',
+  'Verify that payment mode records align with the latest internal collections.',
 ]
 
-const paginatedSchedule = computed(() => {
+const recentRecords = [
+  {
+    id: 1,
+    patient: 'Ariana Torres',
+    provider: 'Dr. Maria Santos',
+    service: 'Oral Prophylaxis',
+    amount: '₱1,200',
+    status: 'Recorded',
+  },
+  {
+    id: 2,
+    patient: 'Liam Reyes',
+    provider: 'Dr. James Lim',
+    service: 'Consultation',
+    amount: '₱800',
+    status: 'Pending Review',
+  },
+  {
+    id: 3,
+    patient: 'Nina Cruz',
+    provider: 'Dr. Angela Cruz',
+    service: 'Extraction',
+    amount: '₱1,500',
+    status: 'Recorded',
+  },
+  {
+    id: 4,
+    patient: 'Evan Tan',
+    provider: 'Dr. Patricia Tan',
+    service: 'Dental X-ray',
+    amount: '₱650',
+    status: 'Posted',
+  },
+  {
+    id: 5,
+    patient: 'Mika Santos',
+    provider: 'Dr. Carlo Reyes',
+    service: 'Cleaning',
+    amount: '₱1,200',
+    status: 'Pending Review',
+  },
+  {
+    id: 6,
+    patient: 'Rico Valdez',
+    provider: 'Dr. Maria Santos',
+    service: 'Restoration',
+    amount: '₱2,300',
+    status: 'Recorded',
+  },
+  {
+    id: 7,
+    patient: 'Aly Gomez',
+    provider: 'Dr. Angela Cruz',
+    service: 'Cleaning',
+    amount: '₱1,200',
+    status: 'Posted',
+  },
+]
+
+const summaryFeed = [
+  {
+    title: 'Records synchronization',
+    detail: 'Procedure, benefit, and payment mode setup is aligned with the internal recording flow.',
+    icon: 'feather:refresh-cw',
+  },
+  {
+    title: 'Internal-use only',
+    detail: 'This workspace is focused on staff recording, verification, and reporting, not patient self-service.',
+    icon: 'feather:lock',
+  },
+  {
+    title: 'Audit readiness',
+    detail: 'User logs and system logs are available for tracing who updated internal entries.',
+    icon: 'feather:shield',
+  },
+]
+
+const paginatedRecords = computed(() => {
   const start = (currentPage.value - 1) * perPage.value
-  return todaySchedule.slice(start, start + perPage.value)
+  return recentRecords.slice(start, start + perPage.value)
 })
-
-async function generateQRCode() {
-  if (!qrCanvas.value) return
-  await QRCode.toCanvas(qrCanvas.value, qrCodeUrl.value, {
-    width: 180,
-    margin: 2,
-    color: { dark: '#122833', light: '#ffffff' },
-  })
-}
-
-function downloadQR() {
-  if (!qrCanvas.value) return
-
-  qrCanvas.value.toBlob((blob) => {
-    if (!blob) return
-    saveAs(blob, `ims-dental-checkin-${clinicCode.value}.png`)
-  }, 'image/png')
-}
-
-onMounted(generateQRCode)
 </script>
 
 <template>
   <div class="space-y-6">
     <section class="grid gap-6 xl:grid-cols-[1.35fr_0.9fr]">
-      <div class="overflow-hidden rounded-4xl bg-[#122833] p-6 text-white shadow-lg lg:p-8">
-        <div class="flex flex-col gap-8">
+      <div
+        class="relative overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#f8fbff_0%,#ffffff_52%,#fbf7ee_100%)] p-6 shadow-sm lg:p-8"
+      >
+        <div class="pointer-events-none absolute inset-0">
+          <div class="absolute -left-16 top-0 h-48 w-48 rounded-full bg-sapphire/6 blur-3xl" />
+          <div class="absolute right-0 top-10 h-64 w-64 rounded-full bg-tangerine/10 blur-3xl" />
+          <div class="absolute bottom-0 left-1/3 h-40 w-40 rounded-full bg-sky/8 blur-3xl" />
+        </div>
+
+        <div class="relative flex flex-col gap-8">
           <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div class="max-w-2xl">
-              <p class="text-[11px] font-semibold uppercase tracking-[0.34em] text-tangerine-light">
-                Dentist Setup Board
+              <p class="text-[11px] font-semibold uppercase tracking-[0.34em] text-tangerine">
+                Internal Records Dashboard
               </p>
-              <h1 class="mt-3 text-4xl font-black tracking-tight">A new clinic command layout</h1>
-              <p class="mt-4 text-sm leading-7 text-white/68">
-                This dashboard is now structured like an operations room: readiness signals up top,
-                workflow lanes in the middle, and daily clinical movement below.
+              <h1 class="mt-3 max-w-3xl text-4xl font-black tracking-tight text-onyx xl:text-5xl">
+                A cleaner command view for recording and monitoring.
+              </h1>
+              <p class="mt-4 max-w-2xl text-base leading-7 text-slate">
+                This dashboard is focused on internal work: recording procedures, checking payment
+                entries, verifying setup dependencies, and keeping operations ready for reporting.
               </p>
             </div>
 
-            <div class="flex flex-wrap gap-3">
-              <AppButton
-                btn-theme="primary"
-                class="px-6 py-3 normal-case shadow-sm"
-                @click="showDialog = true"
-              >
-                Check-In QR
-              </AppButton>
-              <button
-                class="rounded-2xl border border-white/14 bg-white/6 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/12"
-              >
-                Export Shift Summary
-              </button>
+            <div
+              class="w-full max-w-[260px] rounded-[1.6rem] border border-pebble bg-[linear-gradient(145deg,#fff8ea_0%,#ffffff_100%)] p-5 shadow-sm"
+            >
+              <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
+                Workspace mode
+              </p>
+              <p class="mt-2 text-lg font-black text-onyx">Internal use only</p>
+              <p class="mt-2 text-sm leading-6 text-slate">
+                Built for staff recording, review, and administrative tracking.
+              </p>
+              <div class="mt-4 inline-flex items-center gap-2 rounded-full bg-tangerine-light px-3 py-1 text-xs font-semibold text-tangerine">
+                <span class="size-1.5 rounded-full bg-tangerine" />
+                Staff-only workspace
+              </div>
             </div>
           </div>
 
           <div class="grid gap-4 md:grid-cols-3">
             <article
-              v-for="card in readinessCards"
+              v-for="card in overviewCards"
               :key="card.label"
-              class="rounded-[1.5rem] border border-white/10 bg-white/6 p-5"
+              class="rounded-[1.5rem] border border-pebble bg-white p-5 shadow-sm"
             >
-              <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/55">
-                {{ card.label }}
-              </p>
-              <p class="mt-3 text-3xl font-black">{{ card.value }}</p>
-              <p class="mt-3 text-sm leading-6 text-white/62">{{ card.note }}</p>
+              <div class="flex items-center justify-between gap-3">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-smoke">
+                  {{ card.label }}
+                </p>
+                <span :class="card.tone" class="rounded-2xl p-2">
+                  <Icon :icon="card.icon" class="size-4" />
+                </span>
+              </div>
+              <p class="mt-3 text-3xl font-black text-onyx">{{ card.value }}</p>
+              <p class="mt-3 text-sm leading-6 text-slate">{{ card.note }}</p>
             </article>
           </div>
         </div>
@@ -215,26 +228,28 @@ onMounted(generateQRCode)
         </div>
 
         <div
-          class="rounded-4xl border border-pebble bg-[linear-gradient(135deg,#e8faf7_0%,#ffffff_100%)] p-6 shadow-sm"
+          class="rounded-4xl border border-pebble bg-[linear-gradient(135deg,#eef3ff_0%,#ffffff_100%)] p-6 shadow-sm"
         >
           <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
-            Clinic signal
+            Workspace notes
           </p>
-          <h2 class="mt-2 text-2xl font-black text-onyx">Patient intake gateway</h2>
-          <p class="mt-3 text-sm leading-6 text-slate">
-            Keep this QR ready at reception so the redesigned flow also has a clear physical entry
-            point.
-          </p>
-          <div class="mt-5 flex items-center gap-4">
-            <div class="rounded-[1.5rem] bg-white p-3 shadow-sm">
-              <canvas ref="qrCanvas" />
-            </div>
-            <button
-              class="rounded-2xl bg-onyx px-4 py-3 text-sm font-semibold text-white transition hover:bg-sapphire"
-              @click="downloadQR"
+          <h2 class="mt-2 text-2xl font-black text-onyx">Internal monitoring</h2>
+          <div class="mt-5 space-y-3">
+            <div
+              v-for="item in summaryFeed"
+              :key="item.title"
+              class="rounded-[1.3rem] border border-pebble bg-white px-4 py-4 shadow-sm"
             >
-              Download QR
-            </button>
+              <div class="flex items-start gap-3">
+                <div class="rounded-xl bg-tangerine-light p-2 text-tangerine">
+                  <Icon :icon="item.icon" class="size-4" />
+                </div>
+                <div>
+                  <p class="text-sm font-bold text-onyx">{{ item.title }}</p>
+                  <p class="mt-1 text-sm leading-6 text-slate">{{ item.detail }}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -247,7 +262,7 @@ onMounted(generateQRCode)
             <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
               Workflow lanes
             </p>
-            <h2 class="mt-2 text-2xl font-black text-onyx">Provider pipeline</h2>
+            <h2 class="mt-2 text-2xl font-black text-onyx">Recording pipeline</h2>
           </div>
           <Icon icon="feather:git-branch" class="h-5 w-5 text-slate" />
         </div>
@@ -275,44 +290,44 @@ onMounted(generateQRCode)
         <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
-              Live clinic flow
+              Recent activity
             </p>
-            <h2 class="mt-2 text-2xl font-black text-onyx">Chairside schedule</h2>
+            <h2 class="mt-2 text-2xl font-black text-onyx">Recorded entries</h2>
             <p class="mt-2 text-sm text-slate">
-              A denser operational view instead of the old generic dashboard table.
+              A live internal view of recently logged treatments, providers, and recorded amounts.
             </p>
           </div>
           <button class="text-sm font-semibold text-sapphire transition hover:text-tangerine">
-            Open full schedule
+            Open full records
           </button>
         </div>
 
         <div class="mt-5 overflow-hidden rounded-[1.5rem] border border-pebble">
           <AppTable
-            :theads="['Patient', 'Dentist', 'Chair', 'Service', 'Status']"
-            :total-entries="todaySchedule.length"
-            :total-pages="Math.ceil(todaySchedule.length / perPage)"
+            :theads="['Patient', 'Provider', 'Service', 'Amount', 'Status']"
+            :total-entries="recentRecords.length"
+            :total-pages="Math.ceil(recentRecords.length / perPage)"
             :current-page="currentPage"
             @update-pg-num="currentPage = $event"
           >
             <template #trs>
-              <tr v-for="schedule in paginatedSchedule" :key="schedule.id">
-                <td class="font-medium text-onyx">{{ schedule.patient }}</td>
-                <td>{{ schedule.dentist }}</td>
-                <td>{{ schedule.chair }}</td>
-                <td>{{ schedule.service }}</td>
+              <tr v-for="record in paginatedRecords" :key="record.id">
+                <td class="font-medium text-onyx">{{ record.patient }}</td>
+                <td>{{ record.provider }}</td>
+                <td>{{ record.service }}</td>
+                <td>{{ record.amount }}</td>
                 <td>
                   <span
                     class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
                     :class="
-                      schedule.status === 'Confirmed'
+                      record.status === 'Recorded'
                         ? 'bg-emerald-light text-emerald'
-                        : schedule.status === 'In Chair'
+                        : record.status === 'Posted'
                           ? 'bg-sky-light text-sky'
                           : 'bg-amber-light text-amber'
                     "
                   >
-                    {{ schedule.status }}
+                    {{ record.status }}
                   </span>
                 </td>
               </tr>
@@ -321,23 +336,5 @@ onMounted(generateQRCode)
         </div>
       </div>
     </section>
-
-    <AppDialog :show="showDialog" title="Clinic Check-In QR" @close="showDialog = false">
-      <template #dialog-content>
-        <div class="space-y-4 text-center">
-          <p class="text-sm leading-6 text-slate">
-            Display this code at reception so patients can open the clinic intake or check-in flow.
-          </p>
-          <div class="flex justify-center rounded-[1.5rem] bg-fog p-5">
-            <canvas ref="qrCanvas" />
-          </div>
-          <div class="flex justify-center">
-            <AppButton btn-theme="primary" class="px-5 py-3 normal-case" @click="downloadQR">
-              Download QR
-            </AppButton>
-          </div>
-        </div>
-      </template>
-    </AppDialog>
   </div>
 </template>
