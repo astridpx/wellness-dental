@@ -3,12 +3,12 @@
 
 @layer base {
   html {
-    @apply bg-[#eef3fb];
+    @apply bg-[#f6efe2];
   }
 
   body {
     font-family: 'Manrope', sans-serif;
-    @apply text-onyx;
+    @apply text-onyx bg-[radial-gradient(circle_at_top,#fbf4e8_0%,#f6f8fc_34%,#edf2fa_68%,#e8eef6_100%)];
   }
 
   h1,
@@ -26,12 +26,12 @@
   }
 
   select {
-    @apply w-full appearance-none rounded-md border border-gray-200 bg-white px-4 py-3 text-slate-800 outline-none transition-all duration-200;
+    @apply w-full appearance-none rounded-xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fbfcff_100%)] px-4 py-3 text-slate-800 outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-all duration-200;
     @apply focus:border-tangerine focus:ring-4 focus:ring-focus-ring;
   }
 
   select.opaque {
-    @apply border-[#e4e8f2] bg-[#edf1f8] text-[#5e6983];
+    @apply border-[#dce4f1] bg-[linear-gradient(180deg,#eff3f9_0%,#e8eef8_100%)] text-[#5e6983];
   }
 
   textarea {
@@ -63,17 +63,19 @@
   --color-sapphire: #153a78;
   --color-sapphire-dark: #0c2754;
   --color-sapphire-light: #edf2ff;
+  --color-sapphire-mist: #f5f8ff;
 
   --color-tangerine: #b08a34;
   --color-tangerine-dark: #89671f;
   --color-tangerine-light: #f7efd9;
   --color-apricot: #fbf6e8;
+  --color-champagne: #f8f1e4;
 
   --color-snow: #ffffff;
-  --color-cloud: #f8f9fd;
-  --color-mist: #eef3fb;
-  --color-fog: #f2f5fa;
-  --color-pebble: #d8dfeb;
+  --color-cloud: #fafbfe;
+  --color-mist: #eef2f9;
+  --color-fog: #f4f6fb;
+  --color-pebble: #d7dfec;
 
   --color-onyx: #162947;
   --color-slate: #5b6985;
@@ -94,9 +96,9 @@
 
   --color-focus-ring: rgba(176, 138, 52, 0.22);
 
-  --shadow-sm: 0 4px 12px rgba(21, 42, 78, 0.06);
-  --shadow-md: 0 12px 28px rgba(21, 42, 78, 0.11);
-  --shadow-lg: 0 24px 56px rgba(21, 42, 78, 0.16);
+  --shadow-sm: 0 10px 26px rgba(21, 42, 78, 0.07);
+  --shadow-md: 0 18px 44px rgba(21, 42, 78, 0.12);
+  --shadow-lg: 0 28px 72px rgba(21, 42, 78, 0.18);
 
   --radius-sm: 0.5rem;
   --radius-md: 0.875rem;

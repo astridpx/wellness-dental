@@ -26,10 +26,10 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="overflow-hidsden rounded-md border border-gray-200 bg-white shadow-sm">
-    <div class="overflow-x-scroll grid rounded-md">
+  <div class="overflow-hidden rounded-[1.5rem] border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fbfcff_100%)] shadow-[0_18px_34px_rgba(21,42,78,0.06)]">
+    <div class="grid overflow-x-scroll rounded-[1.5rem]">
       <table class="min-w-full">
-        <thead class="border-b border-gray-200 bg-cloud">
+        <thead class="border-b border-pebble bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5fb_100%)]">
           <tr>
             <th
               v-for="th in theads"
@@ -41,13 +41,13 @@ const emit = defineEmits<{
           </tr>
         </thead>
 
-        <tbody class="divide-y divide-gray-100">
+        <tbody class="divide-y divide-pebble/65">
           <slot name="trs" />
         </tbody>
       </table>
     </div>
 
-    <div class="px-6 py-4">
+    <div class="border-t border-pebble/70 px-6 py-4">
       <AppPagination
         :total-entries="totalEntries"
         :total-pages="totalPages"

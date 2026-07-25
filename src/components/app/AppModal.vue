@@ -50,10 +50,10 @@ defineEmits(['close'])
             leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
           >
             <DialogPanel
-              class="flex max-h-[calc(100vh-2rem)] w-full transform flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-2xl transition-all sm:max-h-[calc(100vh-3rem)]"
+              class="flex max-h-[calc(100vh-2rem)] w-full transform flex-col overflow-hidden rounded-[1.75rem] border border-white/80 bg-[linear-gradient(180deg,#ffffff_0%,#fbfcff_100%)] shadow-[0_28px_70px_rgba(19,39,69,0.18)] transition-all sm:max-h-[calc(100vh-3rem)]"
               :class="props.maxWidth"
             >
-              <div class="shrink-0 flex items-start justify-between border-b border-pebble px-6 py-5">
+              <div class="shrink-0 flex items-start justify-between border-b border-pebble/80 bg-[linear-gradient(180deg,#ffffff_0%,#f9fafc_100%)] px-6 py-5">
                 <div>
                   <p
                     v-if="props.subtitle"
@@ -67,7 +67,7 @@ defineEmits(['close'])
                 </div>
                 <button
                   type="button"
-                  class="rounded-lg p-2 text-slate transition hover:bg-fog"
+                  class="rounded-xl border border-transparent p-2 text-slate transition hover:border-pebble hover:bg-fog"
                   @click="$emit('close')"
                 >
                   <span class="sr-only">Close modal</span>
@@ -81,7 +81,7 @@ defineEmits(['close'])
 
               <div
                 v-if="$slots.footer"
-                class="shrink-0 border-t border-pebble px-6 py-5"
+                class="shrink-0 border-t border-pebble/80 bg-[linear-gradient(180deg,#fbfcff_0%,#f6f8fc_100%)] px-6 py-5"
               >
                 <slot name="footer" />
               </div>

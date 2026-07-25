@@ -73,7 +73,10 @@ watch(
 <template>
   <RouterView v-if="route.name === 'login'" />
 
-  <div v-else class="min-h-screen bg-[linear-gradient(180deg,#f7fbfc_0%,#eef6f7_36%,#e7eff2_100%)]">
+  <div
+    v-else
+    class="min-h-screen bg-[radial-gradient(circle_at_top,#fbf2e2_0%,#f7f8fc_28%,#eef3fa_62%,#e7edf5_100%)]"
+  >
     <TransitionRoot v-if="!isForcedPasswordResetFlow" as="template" :show="sidebarOpen">
       <Dialog as="div" class="relative z-50 xl:hidden" @close="sidebarOpen = false">
         <TransitionChild
@@ -100,7 +103,7 @@ watch(
           >
             <DialogPanel class="flex h-full w-full max-w-sm flex-1">
               <div
-                class="scrollbar flex h-full w-full flex-col overflow-y-auto bg-[#122833] px-5 py-6 text-white shadow-2xl"
+                class="scrollbar flex h-full w-full flex-col overflow-y-auto bg-[linear-gradient(180deg,#10232f_0%,#143040_48%,#173544_100%)] px-5 py-6 text-white shadow-[0_28px_70px_rgba(10,28,44,0.4)]"
               >
                 <div class="mb-6 flex items-start justify-between">
                   <div>
@@ -120,11 +123,11 @@ watch(
                   </button>
                 </div>
 
-                <div class="rounded-[1.75rem] border border-white/10 bg-white/6 p-4">
+                <div class="rounded-[1.75rem] border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.09)_0%,rgba(255,255,255,0.04)_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
                   <p class="text-xs uppercase tracking-[0.2em] text-white/55">Current operator</p>
                   <div class="mt-4 flex items-center gap-3">
                     <div
-                      class="flex h-12 w-12 items-center justify-center rounded-2xl bg-tangerine text-white"
+                    class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(145deg,#c59a42_0%,#a87b23_100%)] text-white shadow-[0_14px_28px_rgba(176,138,52,0.28)]"
                     >
                       <Icon icon="feather:user" class="h-5 w-5" />
                     </div>
@@ -145,7 +148,7 @@ watch(
                     class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition"
                     :class="
                       isActiveLink(item.href)
-                        ? 'bg-white text-onyx'
+                        ? 'bg-[linear-gradient(180deg,#ffffff_0%,#f5f7fb_100%)] text-onyx shadow-[0_12px_24px_rgba(10,24,38,0.16)]'
                         : 'text-white/78 hover:bg-white/10 hover:text-white'
                     "
                     @click="sidebarOpen = false"
@@ -156,7 +159,7 @@ watch(
                 </nav>
 
                 <button
-                  class="mt-6 flex w-full items-center gap-3 rounded-2xl border border-white/12 px-4 py-3 text-sm font-semibold text-white/85 transition hover:bg-white/10"
+                  class="mt-6 flex w-full items-center gap-3 rounded-2xl border border-white/12 bg-white/4 px-4 py-3 text-sm font-semibold text-white/85 transition hover:bg-white/10"
                   @click="logout()"
                 >
                   <Icon icon="feather:log-out" class="h-5 w-5" />
@@ -180,9 +183,9 @@ watch(
     >
       <aside v-if="!isForcedPasswordResetFlow" class="hidden h-full xl:flex xl:w-75 xl:shrink-0 xl:flex-col">
         <div
-          class="scrollbar flex h-full flex-col overflow-y-auto rounded-4xl bg-[#122833] p-5 text-white shadow-lg"
+          class="scrollbar flex h-full flex-col overflow-y-auto rounded-4xl border border-white/8 bg-[linear-gradient(180deg,#10232f_0%,#15303f_44%,#173847_100%)] p-5 text-white shadow-[0_34px_80px_rgba(10,28,44,0.33)]"
         >
-          <div class="rounded-[1.6rem] border border-white/10 bg-white/5 p-5">
+          <div class="rounded-[1.6rem] border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.04)_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
             <div class="flex items-start justify-between gap-4">
               <div>
                 <p
@@ -192,7 +195,7 @@ watch(
                 </p>
                 <h1 class="mt-2 text-3xl font-black leading-none">Clinic OS</h1>
               </div>
-              <div class="rounded-2xl bg-white/8 p-3 text-white/75">
+              <div class="rounded-2xl bg-white/8 p-3 text-white/75 shadow-[0_10px_22px_rgba(10,28,44,0.14)]">
                 <Icon icon="streamline-ultimate:dentistry-tooth-shield" class="h-6 w-6" />
               </div>
             </div>
@@ -210,7 +213,7 @@ watch(
               class="group flex items-center justify-between rounded-2xl px-4 py-3 transition"
               :class="
                 isActiveLink(item.href)
-                  ? 'bg-white text-onyx'
+                  ? 'bg-[linear-gradient(180deg,#ffffff_0%,#f5f7fb_100%)] text-onyx shadow-[0_14px_28px_rgba(10,24,38,0.18)]'
                   : 'text-white/76 hover:bg-white/8 hover:text-white'
               "
             >
@@ -225,12 +228,12 @@ watch(
             </RouterLink>
           </nav>
 
-          <div class="mt-6 rounded-[1.6rem] border border-white/10 bg-white/5 p-4">
+          <div class="mt-6 rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.04)_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
             <p class="text-xs uppercase tracking-[0.22em] text-white/55">Signed in</p>
             <p class="mt-3 text-sm font-semibold">{{ userName }}</p>
             <p class="mt-1 text-xs text-white/55">{{ userEmail || 'No email available' }}</p>
             <button
-              class="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-onyx transition hover:bg-tangerine-light"
+              class="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(180deg,#ffffff_0%,#f4f6fa_100%)] px-4 py-3 text-sm font-semibold text-onyx shadow-[0_14px_26px_rgba(10,24,38,0.14)] transition hover:bg-tangerine-light"
               @click="logout()"
             >
               <Icon icon="feather:log-out" class="h-4 w-4" />
@@ -247,11 +250,11 @@ watch(
 
       <main class="min-w-0 flex-1" :class="isForcedPasswordResetFlow ? 'max-w-5xl' : ''">
         <div
-          class="flex h-full min-h-[calc(100vh-2rem)] flex-col rounded-4xl border border-white/70 bg-white/80 shadow-lg backdrop-blur"
+          class="flex h-full min-h-[calc(100vh-2rem)] flex-col rounded-4xl border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(250,251,254,0.95)_100%)] shadow-[0_28px_70px_rgba(19,39,69,0.12)] backdrop-blur"
         >
           <header
             v-if="!isForcedPasswordResetFlow"
-            class="border-b border-pebble/80 px-4 py-4 sm:px-6 lg:px-8"
+            class="border-b border-pebble/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.78)_0%,rgba(249,250,253,0.7)_100%)] px-4 py-4 sm:px-6 lg:px-8"
           >
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div class="flex items-start gap-3">
@@ -271,13 +274,13 @@ watch(
               </div>
 
               <div class="grid gap-3 sm:grid-cols-2 lg:flex lg:items-center">
-                <div class="rounded-2xl border border-pebble bg-cloud px-4 py-3">
+                <div class="rounded-2xl border border-pebble bg-[linear-gradient(180deg,#fcfdff_0%,#f3f6fb_100%)] px-4 py-3 shadow-[0_10px_22px_rgba(21,42,78,0.05)]">
                   <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-smoke">
                     Today
                   </p>
                   <p class="mt-1 text-sm font-semibold text-onyx">{{ todayLabel }}</p>
                 </div>
-                <div class="rounded-2xl border border-pebble bg-white px-4 py-3">
+                <div class="rounded-2xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-4 py-3 shadow-[0_10px_22px_rgba(21,42,78,0.05)]">
                   <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-smoke">
                     Operator
                   </p>

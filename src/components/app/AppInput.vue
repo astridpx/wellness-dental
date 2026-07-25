@@ -55,7 +55,7 @@ const inputType = computed(() =>
         :disabled="disabled"
         :placeholder="placeholder"
         :readonly="readonly"
-        class="w-full rounded-md border py-3.5 text-onyx placeholder:text-ash outline-none transition-all duration-200 focus:ring-4 focus:ring-focus-ring focus:border-tangerine"
+        class="w-full rounded-xl border py-3.5 text-onyx placeholder:text-ash outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.92)] transition-all duration-200 focus:ring-4 focus:ring-focus-ring focus:border-tangerine"
         :class="[
           inputClass,
           {
@@ -66,9 +66,9 @@ const inputType = computed(() =>
             'border-ruby focus:border-ruby focus:ring-ruby/20': hasError,
             'file-input-reset': fileInputResetClass,
             'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400': disabled,
-            'border-gray-200 bg-white hover:border-slate focus:border-tangerine focus:ring-4 focus:ring-focus-ring':
+            'border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fafcff_100%)] hover:border-slate focus:border-tangerine focus:ring-4 focus:ring-focus-ring':
               transparent && !hasError && !disabled,
-            'border-transparent bg-apricot hover:bg-white focus:border-tangerine focus:bg-white focus:ring-4 focus:ring-focus-ring':
+            'border-transparent bg-[linear-gradient(180deg,#f8f1e4_0%,#fdf9f1_100%)] hover:bg-white focus:border-tangerine focus:bg-white focus:ring-4 focus:ring-focus-ring':
               !transparent && !hasError && !disabled,
           },
         ]"
@@ -101,7 +101,7 @@ const inputType = computed(() =>
         :disabled="disabled"
         :placeholder="placeholder"
         :readonly="readonly"
-        class="w-full rounded-md border py-3.5 text-onyx placeholder:text-ash outline-none transition-all duration-200 focus:ring-4 focus:ring-focus-ring focus:border-tangerine"
+        class="w-full rounded-xl border py-3.5 text-onyx placeholder:text-ash outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.92)] transition-all duration-200 focus:ring-4 focus:ring-focus-ring focus:border-tangerine"
         :class="[
           inputClass,
           {
@@ -110,9 +110,9 @@ const inputType = computed(() =>
             'pl-4 pr-12': isPasswordField && !hasTrailingSlot,
             'border-ruby focus:border-ruby focus:ring-ruby/20': hasError,
             'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400': disabled,
-            'border-gray-200 bg-white hover:border-slate focus:border-tangerine':
+            'border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fafcff_100%)] hover:border-slate focus:border-tangerine':
               transparent && !hasError && !disabled,
-            'border-transparent bg-apricot hover:bg-white focus:border-tangerine focus:bg-white':
+            'border-transparent bg-[linear-gradient(180deg,#f8f1e4_0%,#fdf9f1_100%)] hover:bg-white focus:border-tangerine focus:bg-white':
               !transparent && !hasError && !disabled,
           },
         ]"

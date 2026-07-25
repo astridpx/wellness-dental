@@ -15,7 +15,7 @@ defineProps({
 
 <template>
   <div
-    class="relative overflow-hidden rounded-[1.75rem] border border-white/60 bg-[linear-gradient(145deg,#f6fffe_0%,#ffffff_45%,#eef8fb_100%)] p-8 shadow-md"
+    class="relative overflow-hidden rounded-[1.75rem] border border-white/70 bg-[linear-gradient(145deg,#fff8ef_0%,#ffffff_46%,#f3f7ff_100%)] p-8 shadow-[0_24px_56px_rgba(21,42,78,0.12)]"
   >
     <div class="pointer-events-none absolute inset-0">
       <div class="absolute -left-12 top-0 h-40 w-40 rounded-full bg-tangerine/12 blur-3xl" />
@@ -43,7 +43,7 @@ defineProps({
               class="absolute inset-0 rounded-[1.6rem] border border-tangerine/20 bg-white/70 shadow-sm backdrop-blur"
             />
             <div
-              class="absolute inset-1 rounded-[1.3rem] border border-white/80 bg-[linear-gradient(145deg,#1ea7a0_0%,#43bfc1_100%)] shadow-[0_10px_24px_rgba(30,167,160,0.24)]"
+              class="absolute inset-1 rounded-[1.3rem] border border-white/80 bg-[linear-gradient(145deg,#173f83_0%,#2d5ca8_100%)] shadow-[0_10px_24px_rgba(21,58,120,0.26)]"
             />
             <div
               class="absolute -inset-2 rounded-[1.8rem] border border-tangerine/20 animate-[spin_4s_linear_infinite]"
@@ -69,7 +69,7 @@ defineProps({
           </div>
           <div class="mt-3 h-3 overflow-hidden rounded-full bg-white/80 ring-1 ring-pebble/80">
             <div
-              class="h-full w-1/2 rounded-full bg-[linear-gradient(90deg,#1ea7a0_0%,#46c0c2_55%,#7bd6da_100%)] animate-[loading-progress_1.8s_ease-in-out_infinite]"
+              class="h-full w-1/2 rounded-full bg-[linear-gradient(90deg,#b58a36_0%,#d5b063_55%,#edd7a7_100%)] animate-[loading-progress_1.8s_ease-in-out_infinite]"
             />
           </div>
         </div>
