@@ -7,7 +7,7 @@ import { useAuth } from '@/composables'
 
 const router = useRouter()
 const route = useRoute()
-const { login } = useAuth()
+const { getStoredUser, login } = useAuth()
 
 const identifier = ref('')
 const password = ref('')
@@ -25,7 +25,8 @@ async function handleLogin() {
   pleaseWait.value = false
 
   if (loginResult === true) {
-    await router.push('/')
+    const user = getStoredUser()
+    await router.push(user?.mustChangePassword ? '/accountSettings?forcePasswordReset=1' : '/')
     return
   }
 
@@ -197,6 +198,9 @@ async function handleLogin() {
                 :class="loginError ? 'bg-ruby-light text-ruby' : 'bg-sky-light text-sapphire'"
               >
                 <span v-if="loginError">{{ loginError }}</span>
+                <span v-else-if="route.query.passwordResetRequired">
+                  Your session was ended because your account requires a password update. Sign in again to continue with the password reset.
+                </span>
                 <span v-else>
                   You have been logged out due to an expired token or insufficient permissions.
                 </span>

@@ -126,7 +126,7 @@ function confirmFilters() {
 
       <div v-else class="overflow-hidden rounded-[1.5rem] border border-pebble">
         <AppTable
-          :theads="['User #', 'Name', 'Role Assignment', 'Email', 'Phone', 'Status', 'Action']"
+          :theads="['User #', 'Name', 'Role Assignment', 'Email', 'Status', 'Password Reset', 'Action']"
           :total-entries="totalEntries"
           :total-pages="totalPages"
           :current-page="currentPage"
@@ -159,7 +159,6 @@ function confirmFilters() {
                 </div>
               </td>
               <td>{{ user.email }}</td>
-              <td>{{ user.phone || 'N/A' }}</td>
               <td>
                 <span
                   class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
@@ -170,6 +169,18 @@ function confirmFilters() {
                   "
                 >
                   {{ user.status || (user.isActive ? 'Active' : 'Inactive') }}
+                </span>
+              </td>
+              <td>
+                <span
+                  class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
+                  :class="
+                    user.mustChangePassword
+                      ? 'bg-amber-light text-amber'
+                      : 'bg-fog text-slate'
+                  "
+                >
+                  {{ user.mustChangePassword ? 'Required' : 'Not required' }}
                 </span>
               </td>
               <td class="px-5 py-4">

@@ -38,7 +38,7 @@ const passwordPolicyOptions = [
   {
     value: true,
     label: 'Require reset',
-    description: 'The employee must set a new password on the next login.',
+    description: 'The employee must set a new password immediately.',
     icon: 'feather:key',
   },
   {

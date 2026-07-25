@@ -7,7 +7,6 @@ import UserLogsView from '@/views/UserLogsView.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuth } from '@/composables'
 import DentistView from '@/views/dentists/DentistView.vue'
-import PasswordResetUsersView from '@/views/users/PasswordResetUsersView.vue'
 import UserView from '@/views/users/UserView.vue'
 import SingleDentistView from '@/views/dentists/SingleDentistView.vue'
 import SingleUserView from '@/views/users/SingleUserView.vue'
@@ -31,6 +30,10 @@ function findFirstAccessiblePath(userRoles: string[]) {
   })
 
   return accessibleRoute?.path || null
+}
+
+function isPasswordResetRoute(path: string) {
+  return path === '/accountSettings'
 }
 
 const router = createRouter({
@@ -129,16 +132,6 @@ const router = createRouter({
       },
     },
     {
-      path: '/users/password-reset',
-      name: 'passwordResetUsers',
-      component: PasswordResetUsersView,
-      meta: {
-        title: 'Password Reset Queue',
-        icon: 'feather:key',
-        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
-      },
-    },
-    {
       path: '/users/add',
       name: 'addUsers',
       component: SingleUserView,
@@ -213,11 +206,20 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   document.title = `${to.meta.title} - ${import.meta.env.VITE_APP_TITLE}`
 
-  const { getToken, getStoredRoles, fetchCurrentUser, logout } = useAuth()
+  const { getToken, getStoredRoles, fetchCurrentUser, logout, logoutForPasswordReset } = useAuth()
   const token = getToken()
+  let currentUser = null as Awaited<ReturnType<typeof fetchCurrentUser>> | null
 
   if (!token && to.path !== '/login') return router.push('/login')
-  if (token && to.path === '/login') return router.push('/')
+  if (token && to.path === '/login') {
+    currentUser = await fetchCurrentUser()
+
+    if (currentUser?.mustChangePassword) {
+      return router.push('/accountSettings?forcePasswordReset=1')
+    }
+
+    return router.push('/')
+  }
 
   const visibleTo = getVisibleRoles(to.meta?.navItem)
   if (!token || !visibleTo.length) return
@@ -225,8 +227,17 @@ router.beforeEach(async (to) => {
   let currentRoles = getStoredRoles()
 
   if (!currentRoles.length) {
-    const currentUser = await fetchCurrentUser()
+    currentUser = await fetchCurrentUser()
     currentRoles = currentUser?.roles || []
+  }
+
+  if (!currentUser && token) {
+    currentUser = await fetchCurrentUser()
+  }
+
+  if (currentUser?.mustChangePassword && !isPasswordResetRoute(to.path)) {
+    await logoutForPasswordReset()
+    return
   }
 
   const canAccess = visibleTo.some((role) => currentRoles.includes(role))

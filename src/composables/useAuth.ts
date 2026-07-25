@@ -22,6 +22,7 @@ type WellnessUser = {
   roles: string[]
   primaryRole: string
   isActive: boolean
+  mustChangePassword: boolean
 }
 
 type AuthResponse = {
@@ -74,7 +75,7 @@ export function useAuth() {
     }
   }
 
-  async function logout(forced = false) {
+  async function logout(forced = false, query = '') {
     const token = getToken()
 
     try {
@@ -91,7 +92,12 @@ export function useAuth() {
     }
 
     clearSession()
-    router.push(`/login${forced ? '?forcedLogout=1' : ''}`)
+    const queryString = query || (forced ? '?forcedLogout=1' : '')
+    router.push(`/login${queryString}`)
+  }
+
+  async function logoutForPasswordReset() {
+    await logout(true, '?passwordResetRequired=1')
   }
 
   function getToken() {
@@ -144,5 +150,14 @@ export function useAuth() {
     }
   }
 
-  return { login, logout, getToken, getStoredUser, getStoredRoles, getAuthHeaders, fetchCurrentUser }
+  return {
+    login,
+    logout,
+    logoutForPasswordReset,
+    getToken,
+    getStoredUser,
+    getStoredRoles,
+    getAuthHeaders,
+    fetchCurrentUser,
+  }
 }

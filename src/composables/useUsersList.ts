@@ -11,6 +11,7 @@ export type UserRow = {
   phone: string | null
   isActive?: boolean
   status?: 'Active' | 'Inactive'
+  mustChangePassword?: boolean
 }
 
 export type RoleOption = {

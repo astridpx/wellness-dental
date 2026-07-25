@@ -45,6 +45,9 @@ const userName = computed(() => {
 })
 
 const routeTitle = computed(() => String(route.meta.title || 'Workspace'))
+const isForcedPasswordResetFlow = computed(
+  () => route.path === '/accountSettings' && route.query.forcePasswordReset === '1',
+)
 const todayLabel = computed(() =>
   new Intl.DateTimeFormat('en-US', {
     weekday: 'long',
@@ -71,7 +74,7 @@ watch(
   <RouterView v-if="route.name === 'login'" />
 
   <div v-else class="min-h-screen bg-[linear-gradient(180deg,#f7fbfc_0%,#eef6f7_36%,#e7eff2_100%)]">
-    <TransitionRoot as="template" :show="sidebarOpen">
+    <TransitionRoot v-if="!isForcedPasswordResetFlow" as="template" :show="sidebarOpen">
       <Dialog as="div" class="relative z-50 xl:hidden" @close="sidebarOpen = false">
         <TransitionChild
           as="template"
@@ -171,8 +174,11 @@ watch(
       </Dialog>
     </TransitionRoot>
 
-    <div class="mx-auto flex h-screen max-w-[1680px] gap-4 overflow-hidden p-4 lg:p-6">
-      <aside class="hidden h-full xl:flex xl:w-75 xl:shrink-0 xl:flex-col">
+    <div
+      class="mx-auto flex h-screen max-w-[1680px] gap-4 overflow-hidden p-4 lg:p-6"
+      :class="isForcedPasswordResetFlow ? 'justify-center' : ''"
+    >
+      <aside v-if="!isForcedPasswordResetFlow" class="hidden h-full xl:flex xl:w-75 xl:shrink-0 xl:flex-col">
         <div
           class="scrollbar flex h-full flex-col overflow-y-auto rounded-4xl bg-[#122833] p-5 text-white shadow-lg"
         >
@@ -239,11 +245,14 @@ watch(
         </div>
       </aside>
 
-      <main class="min-w-0 flex-1">
+      <main class="min-w-0 flex-1" :class="isForcedPasswordResetFlow ? 'max-w-5xl' : ''">
         <div
           class="flex h-full min-h-[calc(100vh-2rem)] flex-col rounded-4xl border border-white/70 bg-white/80 shadow-lg backdrop-blur"
         >
-          <header class="border-b border-pebble/80 px-4 py-4 sm:px-6 lg:px-8">
+          <header
+            v-if="!isForcedPasswordResetFlow"
+            class="border-b border-pebble/80 px-4 py-4 sm:px-6 lg:px-8"
+          >
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div class="flex items-start gap-3">
                 <button
