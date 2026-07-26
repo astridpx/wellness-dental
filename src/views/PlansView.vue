@@ -151,9 +151,8 @@ function confirmFilters() {
         message="Please wait while we retrieve the available dental plan records." />
 
       <div v-else class="overflow-hidden rounded-[1.5rem] border border-pebble">
-        <AppTable :theads="['Plan Type ID', 'Plan Code', 'Plan Class', 'Dental Premium 1']"
-          :total-entries="totalEntries" :total-pages="totalPages" :current-page="currentPage"
-          @update-pg-num="currentPage = $event">
+        <AppTable :theads="['Plan Type ID', 'Plan Code', 'Plan Class', 'Dental Premium']" :total-entries="totalEntries"
+          :total-pages="totalPages" :current-page="currentPage" @update-pg-num="currentPage = $event">
           <template #trs>
             <tr v-for="plan in plans" :key="plan.PlanTypeID">
               <td>
