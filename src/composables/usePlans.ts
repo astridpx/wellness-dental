@@ -1,49 +1,86 @@
-import { onMounted, ref } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import { useWellnessApi } from './useWellnessApi'
+import qs from 'qs'
 
 export type DentalPlan = {
   PlanTypeID: number
   PlanCode: string
   DentalPrem1: number
+  PlanClass: string
 }
 
 export function usePlans() {
   const { request } = useWellnessApi()
 
   const plans = ref<DentalPlan[]>([])
-  const loadingPlans = ref(true)
+  const loading = ref(true)
   const errorMessage = ref('')
+  const currentPage = ref(1)
+  const perPage = ref(10)
+  const totalEntries = ref(0)
+  const totalPages = ref(1)
+  const filters = reactive({
+    plantypeId: '',
+    plancode: '',
+    dentalPremium: '',
+    planClass: '',
+  })
 
   async function fetchPlans() {
-    loadingPlans.value = true
+    loading.value = true
     errorMessage.value = ''
 
-    const result = await request<DentalPlan[] | DentalPlan>('/wellness/plans')
+    const params = new URLSearchParams({
+      page: String(currentPage.value),
+      perPage: String(perPage.value),
+    })
+
+
+    if (filters.plantypeId) params.set('planTypeID', filters.plantypeId)
+    if (filters.plancode) params.set('planCode', filters.plancode)
+    if (filters.dentalPremium) params.set('dentalPremium', filters.dentalPremium)
+    if (filters.planClass) params.set('planClass', filters.planClass)
+
+    const result = await request<DentalPlan[] | DentalPlan>(`/wellness/plans?${params.toString()}`)
 
     if (!result.ok) {
       errorMessage.value = result.error || 'Unable to load plans.'
-      loadingPlans.value = false
-      return false
+      loading.value = false
+      return
     }
 
-    if (Array.isArray(result.data)) {
-      plans.value = result.data
-    } else {
-      plans.value = result.data ? [result.data] : []
+    plans.value = Array.isArray(result.data) ? result.data : []
+    totalEntries.value = Number(result.metadata?.totalEntries || 0)
+    totalPages.value = Number(result.metadata?.totalPages || 1)
+    loading.value = false
+  }
+
+  function applyFilters() {
+    if (currentPage.value !== 1) {
+      currentPage.value = 1
+      return
     }
 
-    loadingPlans.value = false
-    return true
+    void fetchPlans()
   }
 
   onMounted(() => {
     void fetchPlans()
   })
 
+  watch(currentPage, () => {
+    void fetchPlans()
+  })
+
   return {
     errorMessage,
     fetchPlans,
-    loadingPlans,
+    loading,
     plans,
+    applyFilters,
+    filters,
+    currentPage,
+    totalEntries,
+    totalPages,
   }
 }
