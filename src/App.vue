@@ -110,7 +110,7 @@ watch(
                     <p
                       class="text-[11px] font-semibold uppercase tracking-[0.32em] text-tangerine-light"
                     >
-                      IMS Dental
+                      Wellness Dental
                     </p>
                     <h2 class="mt-2 text-2xl font-black">Clinic OS</h2>
                   </div>
@@ -123,11 +123,13 @@ watch(
                   </button>
                 </div>
 
-                <div class="rounded-[1.75rem] border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.09)_0%,rgba(255,255,255,0.04)_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                <div
+                  class="rounded-[1.75rem] border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.09)_0%,rgba(255,255,255,0.04)_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                >
                   <p class="text-xs uppercase tracking-[0.2em] text-white/55">Current operator</p>
                   <div class="mt-4 flex items-center gap-3">
                     <div
-                    class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(145deg,#c59a42_0%,#a87b23_100%)] text-white shadow-[0_14px_28px_rgba(176,138,52,0.28)]"
+                      class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(145deg,#c59a42_0%,#a87b23_100%)] text-white shadow-[0_14px_28px_rgba(176,138,52,0.28)]"
                     >
                       <Icon icon="feather:user" class="h-5 w-5" />
                     </div>
@@ -178,123 +180,142 @@ watch(
     </TransitionRoot>
 
     <div
-      class="mx-auto flex h-screen max-w-[1680px] gap-4 overflow-hidden p-4 lg:p-6"
+      class="mx-auto flex min-h-screen max-w-[1680px] p-3 lg:p-5"
       :class="isForcedPasswordResetFlow ? 'justify-center' : ''"
     >
-      <aside v-if="!isForcedPasswordResetFlow" class="hidden h-full xl:flex xl:w-75 xl:shrink-0 xl:flex-col">
-        <div
-          class="scrollbar flex h-full flex-col overflow-y-auto rounded-4xl border border-white/8 bg-[linear-gradient(180deg,#10232f_0%,#15303f_44%,#173847_100%)] p-5 text-white shadow-[0_34px_80px_rgba(10,28,44,0.33)]"
+      <div
+        class="flex h-[calc(100vh-1.5rem)] w-full overflow-hidden rounded-4xl border border-white/75 bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(246,249,253,0.96)_100%)] shadow-[0_24px_60px_rgba(19,39,69,0.12)] backdrop-blur lg:h-[calc(100vh-2.5rem)]"
+        :class="isForcedPasswordResetFlow ? 'max-w-5xl' : ''"
+      >
+        <aside
+          v-if="!isForcedPasswordResetFlow"
+          class="hidden min-h-0 h-full xl:flex xl:w-86 xl:shrink-0 xl:flex-col xl:border-r xl:border-white/10 xl:bg-[linear-gradient(180deg,#10232f_0%,#15303f_44%,#173847_100%)]"
         >
-          <div class="rounded-[1.6rem] border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.04)_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-            <div class="flex items-start justify-between gap-4">
-              <div>
-                <p
-                  class="text-[11px] font-semibold uppercase tracking-[0.32em] text-tangerine-light"
+          <div class="scrollbar flex h-full flex-col overflow-y-auto p-5 text-white">
+            <div
+              class="rounded-[1.6rem] border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.04)_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+            >
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <p
+                    class="text-[11px] font-semibold uppercase tracking-[0.32em] text-tangerine-light"
+                  >
+                    Wellness Dental
+                  </p>
+                  <h1 class="mt-2 text-3xl font-black leading-none">Clinic OS</h1>
+                </div>
+                <div
+                  class="rounded-2xl bg-white/8 p-3 text-white/75 shadow-[0_10px_22px_rgba(10,28,44,0.14)]"
                 >
-                  IMS Dental
-                </p>
-                <h1 class="mt-2 text-3xl font-black leading-none">Clinic OS</h1>
+                  <Icon icon="streamline-ultimate:dentistry-tooth-shield" class="h-6 w-6" />
+                </div>
               </div>
-              <div class="rounded-2xl bg-white/8 p-3 text-white/75 shadow-[0_10px_22px_rgba(10,28,44,0.14)]">
-                <Icon icon="streamline-ultimate:dentistry-tooth-shield" class="h-6 w-6" />
-              </div>
+
+              <p class="mt-4 text-sm leading-6 text-white/65">
+                A dental control room for provider setup, treatment flow, billing, and team
+                operations.
+              </p>
             </div>
-            <p class="mt-4 text-sm leading-6 text-white/65">
-              A dental control room for provider setup, treatment flow, billing, and team
-              operations.
-            </p>
-          </div>
 
-          <nav class="mt-6 flex-1 space-y-2">
-            <RouterLink
-              v-for="item in navigation"
-              :key="item.name"
-              :to="item.href"
-              class="group flex items-center justify-between rounded-2xl px-4 py-3 transition"
-              :class="
-                isActiveLink(item.href)
-                  ? 'bg-[linear-gradient(180deg,#ffffff_0%,#f5f7fb_100%)] text-onyx shadow-[0_14px_28px_rgba(10,24,38,0.18)]'
-                  : 'text-white/76 hover:bg-white/8 hover:text-white'
-              "
+            <nav class="mt-6 flex-1 space-y-2">
+              <RouterLink
+                v-for="item in navigation"
+                :key="item.name"
+                :to="item.href"
+                class="group flex items-center justify-between rounded-2xl px-4 py-3 transition"
+                :class="
+                  isActiveLink(item.href)
+                    ? 'bg-[linear-gradient(180deg,#ffffff_0%,#f5f7fb_100%)] text-onyx shadow-[0_14px_28px_rgba(10,24,38,0.18)]'
+                    : 'text-white/76 hover:bg-white/8 hover:text-white'
+                "
+              >
+                <span class="flex items-center gap-3">
+                  <Icon :icon="item.icon || 'feather:circle'" class="h-5 w-5 shrink-0" />
+                  <span class="text-sm font-semibold">{{ item.name }}</span>
+                </span>
+                <Icon
+                  icon="feather:arrow-up-right"
+                  class="h-4 w-4 opacity-40 transition group-hover:opacity-100"
+                />
+              </RouterLink>
+            </nav>
+
+            <div
+              class="mt-6 rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.04)_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
             >
-              <span class="flex items-center gap-3">
-                <Icon :icon="item.icon || 'feather:circle'" class="h-5 w-5 shrink-0" />
-                <span class="text-sm font-semibold">{{ item.name }}</span>
-              </span>
-              <Icon
-                icon="feather:arrow-up-right"
-                class="h-4 w-4 opacity-40 transition group-hover:opacity-100"
-              />
-            </RouterLink>
-          </nav>
+              <p class="text-xs uppercase tracking-[0.22em] text-white/55">Signed in</p>
+              <p class="mt-3 text-sm font-semibold">{{ userName }}</p>
+              <p class="mt-1 text-xs text-white/55">{{ userEmail || 'No email available' }}</p>
+              <button
+                class="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(180deg,#ffffff_0%,#f4f6fa_100%)] px-4 py-3 text-sm font-semibold text-onyx shadow-[0_14px_26px_rgba(10,24,38,0.14)] transition hover:bg-tangerine-light"
+                @click="logout()"
+              >
+                <Icon icon="feather:log-out" class="h-4 w-4" />
+                Logout
+              </button>
+            </div>
 
-          <div class="mt-6 rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.04)_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-            <p class="text-xs uppercase tracking-[0.22em] text-white/55">Signed in</p>
-            <p class="mt-3 text-sm font-semibold">{{ userName }}</p>
-            <p class="mt-1 text-xs text-white/55">{{ userEmail || 'No email available' }}</p>
-            <button
-              class="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(180deg,#ffffff_0%,#f4f6fa_100%)] px-4 py-3 text-sm font-semibold text-onyx shadow-[0_14px_26px_rgba(10,24,38,0.14)] transition hover:bg-tangerine-light"
-              @click="logout()"
-            >
-              <Icon icon="feather:log-out" class="h-4 w-4" />
-              Logout
-            </button>
+            <div class="mt-5 text-center text-xs text-white/35">
+              <p>{{ appTitle }}</p>
+              <p class="mt-1">Version {{ appVer }}</p>
+            </div>
           </div>
+        </aside>
 
-          <div class="mt-5 text-center text-xs text-white/35">
-            <p>{{ appTitle }}</p>
-            <p class="mt-1">Version {{ appVer }}</p>
-          </div>
-        </div>
-      </aside>
-
-      <main class="min-w-0 flex-1" :class="isForcedPasswordResetFlow ? 'max-w-5xl' : ''">
-        <div
-          class="flex h-full min-h-[calc(100vh-2rem)] flex-col rounded-4xl border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(250,251,254,0.95)_100%)] shadow-[0_28px_70px_rgba(19,39,69,0.12)] backdrop-blur"
-        >
-          <header
-            v-if="!isForcedPasswordResetFlow"
-            class="border-b border-pebble/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.78)_0%,rgba(249,250,253,0.7)_100%)] px-4 py-4 sm:px-6 lg:px-8"
+        <main class="min-w-0 min-h-0 flex-1">
+          <div
+            class="flex h-full min-h-full flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.82)_0%,rgba(250,251,254,0.94)_100%)]"
           >
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div class="flex items-start gap-3">
-                <button
-                  type="button"
-                  class="inline-flex rounded-2xl bg-fog p-3 text-onyx xl:hidden"
-                  @click="sidebarOpen = true"
-                >
-                  <Icon icon="feather:menu" class="h-5 w-5" />
-                </button>
-                <div class="hidden xl:block">
-                  <p class="text-[11px] font-semibold uppercase tracking-[0.28em] text-smoke">
-                    Control Room
-                  </p>
-                  <h2 class="mt-1 text-2xl font-black text-onyx">{{ routeTitle }}</h2>
+            <header
+              v-if="!isForcedPasswordResetFlow"
+              class="border-b border-pebble/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.78)_0%,rgba(249,250,253,0.72)_100%)] px-4 py-4 sm:px-6 lg:px-8"
+            >
+              <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-start gap-3">
+                  <button
+                    type="button"
+                    class="inline-flex rounded-2xl bg-fog p-3 text-onyx xl:hidden"
+                    @click="sidebarOpen = true"
+                  >
+                    <Icon icon="feather:menu" class="h-5 w-5" />
+                  </button>
+                  <div class="hidden xl:block">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.28em] text-smoke">
+                      Control Room
+                    </p>
+                    <h2 class="mt-1 text-2xl font-black text-onyx">{{ routeTitle }}</h2>
+                  </div>
+                </div>
+
+                <div class="hidden gap-3 sm:grid-cols-2 lg:flex lg:items-center">
+                  <div
+                    class="rounded-2xl border border-pebble bg-[linear-gradient(180deg,#fcfdff_0%,#f3f6fb_100%)] px-4 py-3 shadow-[0_10px_22px_rgba(21,42,78,0.05)]"
+                  >
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-smoke">
+                      Today
+                    </p>
+                    <p class="mt-1 text-sm font-semibold text-onyx">{{ todayLabel }}</p>
+                  </div>
+                  <div
+                    class="rounded-2xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-4 py-3 shadow-[0_10px_22px_rgba(21,42,78,0.05)]"
+                  >
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-smoke">
+                      Operator
+                    </p>
+                    <p class="mt-1 text-sm font-semibold text-onyx">{{ userName }}</p>
+                  </div>
                 </div>
               </div>
+            </header>
 
-              <div class="hidden gap-3 sm:grid-cols-2 lg:flex lg:items-center">
-                <div class="rounded-2xl border border-pebble bg-[linear-gradient(180deg,#fcfdff_0%,#f3f6fb_100%)] px-4 py-3 shadow-[0_10px_22px_rgba(21,42,78,0.05)]">
-                  <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-smoke">
-                    Today
-                  </p>
-                  <p class="mt-1 text-sm font-semibold text-onyx">{{ todayLabel }}</p>
-                </div>
-                <div class="rounded-2xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-4 py-3 shadow-[0_10px_22px_rgba(21,42,78,0.05)]">
-                  <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-smoke">
-                    Operator
-                  </p>
-                  <p class="mt-1 text-sm font-semibold text-onyx">{{ userName }}</p>
-                </div>
-              </div>
-            </div>
-          </header>
-
-          <section class="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
-            <RouterView />
-          </section>
-        </div>
-      </main>
+            <section
+              class="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,rgba(255,255,255,0.42)_0%,rgba(244,248,252,0.72)_100%)] px-4 py-5 sm:px-6 lg:px-8 lg:py-8"
+            >
+              <RouterView />
+            </section>
+          </div>
+        </main>
+      </div>
     </div>
   </div>
 </template>
