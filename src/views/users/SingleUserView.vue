@@ -247,14 +247,6 @@ async function confirmSave() {
           </div>
 
           <div class="grid gap-5 md:grid-cols-2">
-            <div class="md:col-span-2">
-              <label class="mb-2 block text-sm font-medium text-slate">User Number</label>
-              <AppInput
-                v-model="userData.userNo"
-                :disabled="true"
-                placeholder="Auto-generated after save"
-              />
-            </div>
             <div>
               <label class="mb-2 block text-sm font-medium text-slate">Username</label>
               <AppInput v-model="userData.username" placeholder="username" />

@@ -149,7 +149,16 @@ const paidCount = transactions.filter((transaction) => transaction.status === 'P
                   >{{ transaction.status }}</span
                 >
               </td>
-              <td class="text-sm font-semibold text-slate">Edit</td>
+              <td class="px-5 py-4">
+                <div class="flex justify-end">
+                  <span
+                    class="inline-flex items-center gap-2 rounded-full border border-[#d8c5a0] bg-[linear-gradient(180deg,#f8eddc_0%,#efe1cb_100%)] px-3.5 py-2 text-xs font-semibold text-[#8c6320] shadow-[0_10px_20px_rgba(176,138,52,0.12)]"
+                  >
+                    <Icon icon="feather:edit-2" class="size-4" />
+                    Edit
+                  </span>
+                </div>
+              </td>
             </tr></template
           ></AppTable
         >
