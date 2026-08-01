@@ -129,7 +129,7 @@ const router = createRouter({
       name: 'membershipDetails',
       component: MembershipDetailsView,
       meta: {
-        title: 'Membership Details',
+        title: 'IMS Membership Details',
         icon: 'feather:shield',
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },

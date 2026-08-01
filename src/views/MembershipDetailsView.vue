@@ -195,7 +195,9 @@ function confirmFilters() {
         </div>
         <div>
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-smoke">Covered Until</p>
-          <p class="mt-2 text-sm font-bold text-onyx">{{ formatDate(selectedMember?.coveredUntil) }}</p>
+          <p class="mt-2 text-sm font-bold text-onyx">
+            {{ formatDate(selectedMember?.coveredUntil) }}
+          </p>
         </div>
       </section>
 
@@ -224,8 +226,10 @@ function confirmFilters() {
         class="overflow-hidden rounded-[1.5rem] border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fbfcff_100%)] shadow-[0_18px_34px_rgba(21,42,78,0.06)]"
       >
         <div class="overflow-x-auto">
-          <table class="w-full min-w-[680px] table-auto">
-            <thead class="border-b border-pebble bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5fb_100%)]">
+          <table class="w-full min-w-170 table-auto">
+            <thead
+              class="border-b border-pebble bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5fb_100%)]"
+            >
               <tr>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Period</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Reference #</th>
@@ -246,25 +250,30 @@ function confirmFilters() {
                   </span>
                 </td>
                 <td class="px-6 py-4 align-top text-onyx">
-                  <span class="block max-w-[240px] whitespace-normal break-words">
+                  <span class="block max-w-60 whitespace-normal wrap-break-word">
                     {{ payment.referenceNumber || 'N/A' }}
                   </span>
                 </td>
                 <td class="px-6 py-4 align-top text-onyx">
                   {{ formatCurrency(selectedMember?.dentalPremium) }}
                 </td>
-                <td class="px-6 py-4 align-top text-onyx">{{ formatDate(payment.dateReceived) }}</td>
+                <td class="px-6 py-4 align-top text-onyx">
+                  {{ formatDate(payment.dateReceived) }}
+                </td>
                 <td class="px-6 py-4 align-top text-onyx">{{ formatDate(payment.datePosted) }}</td>
               </tr>
               <tr v-if="!paymentRecords.length">
                 <td colspan="5" class="w-full px-6 py-14 text-center text-onyx">
                   <div class="flex w-full flex-col items-center">
-                    <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-fog text-smoke">
+                    <span
+                      class="flex h-12 w-12 items-center justify-center rounded-2xl bg-fog text-smoke"
+                    >
                       <Icon icon="feather:credit-card" class="h-5 w-5" />
                     </span>
                     <p class="mt-3 font-semibold text-onyx">No cleared payments found</p>
                     <p class="mt-1 text-sm text-slate">
-                      This member is on a dental-premium plan but has no visible cleared payment history yet.
+                      This member is on a dental-premium plan but has no visible cleared payment
+                      history yet.
                     </p>
                   </div>
                 </td>
@@ -296,7 +305,7 @@ function confirmFilters() {
             <Icon icon="feather:shield" class="h-3.5 w-3.5" />
             Payment Verification
           </div>
-          <h1 class="mt-4 text-3xl font-black tracking-tight text-onyx">Membership Details</h1>
+          <h1 class="mt-4 text-3xl font-black tracking-tight text-onyx">IMS Membership Details</h1>
           <p class="mt-3 max-w-3xl text-sm leading-6 text-slate">
             Verify membership information and cleared payment history for members whose plans
             include dental premium coverage. Plans without dental premium are automatically hidden.
@@ -331,7 +340,9 @@ function confirmFilters() {
           <p class="mt-2 text-3xl font-black text-onyx">{{ stats.activeMembers }}</p>
         </div>
         <div class="bg-white px-6 py-5">
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">With cleared payments</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">
+            With cleared payments
+          </p>
           <p class="mt-2 text-3xl font-black text-onyx">{{ stats.withPayments }}</p>
         </div>
       </div>
@@ -342,7 +353,8 @@ function confirmFilters() {
         <div>
           <h2 class="text-xl font-black text-onyx">Verification Directory</h2>
           <p class="mt-1 text-sm text-slate">
-            Search member records and inspect their payment history without showing non-dental plans.
+            Search member records and inspect their payment history without showing non-dental
+            plans.
           </p>
         </div>
         <div class="flex flex-wrap items-center gap-3">
@@ -392,8 +404,10 @@ function confirmFilters() {
         class="overflow-hidden rounded-[1.5rem] border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fbfcff_100%)] shadow-[0_18px_34px_rgba(21,42,78,0.06)]"
       >
         <div class="overflow-x-auto">
-          <table class="w-full min-w-[920px] table-auto">
-            <thead class="border-b border-pebble bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5fb_100%)]">
+          <table class="w-full min-w-230 table-auto">
+            <thead
+              class="border-b border-pebble bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5fb_100%)]"
+            >
               <tr>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Member</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Company</th>
@@ -409,7 +423,7 @@ function confirmFilters() {
                 class="transition-colors duration-200 hover:bg-apricot"
               >
                 <td class="px-6 py-4 align-top text-onyx">
-                  <div class="min-w-[240px]">
+                  <div class="min-w-60">
                     <p class="font-semibold text-onyx">{{ member.memberName }}</p>
                     <p class="mt-1 text-xs text-slate">
                       {{ member.policyNumber || member.imsCardNumber || 'No policy/card number' }}
@@ -417,12 +431,12 @@ function confirmFilters() {
                   </div>
                 </td>
                 <td class="px-6 py-4 align-top text-onyx">
-                  <span class="block min-w-[220px] whitespace-normal break-words">
+                  <span class="block min-w-55 whitespace-normal wrap-break-word">
                     {{ member.company || 'N/A' }}
                   </span>
                 </td>
                 <td class="px-6 py-4 align-top text-onyx">
-                  <div class="min-w-[160px]">
+                  <div class="min-w-40">
                     <span
                       class="inline-flex rounded-full bg-sapphire-light px-3 py-1 text-xs font-bold tracking-[0.08em] text-sapphire"
                     >
@@ -450,12 +464,15 @@ function confirmFilters() {
               <tr v-if="totalEntries <= 0">
                 <td colspan="5" class="w-full px-6 py-14 text-center text-onyx">
                   <div class="flex w-full flex-col items-center">
-                    <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-fog text-smoke">
+                    <span
+                      class="flex h-12 w-12 items-center justify-center rounded-2xl bg-fog text-smoke"
+                    >
                       <Icon icon="feather:search" class="h-5 w-5" />
                     </span>
                     <p class="mt-3 font-semibold text-onyx">No eligible members found</p>
                     <p class="mt-1 text-sm text-slate">
-                      Try changing the filters. Members on non-dental-premium plans will not appear here.
+                      Try changing the filters. Members on non-dental-premium plans will not appear
+                      here.
                     </p>
                   </div>
                 </td>
@@ -465,9 +482,12 @@ function confirmFilters() {
         </div>
 
         <div class="border-t border-pebble/70 px-6 py-4">
-          <div class="flex flex-col gap-3 text-sm text-slate sm:flex-row sm:items-center sm:justify-between">
+          <div
+            class="flex flex-col gap-3 text-sm text-slate sm:flex-row sm:items-center sm:justify-between"
+          >
             <p>
-              Showing page {{ currentPage }} of {{ totalPages }} with {{ totalEntries }} total members.
+              Showing page {{ currentPage }} of {{ totalPages }} with {{ totalEntries }} total
+              members.
             </p>
             <div class="flex items-center gap-2">
               <AppButton
