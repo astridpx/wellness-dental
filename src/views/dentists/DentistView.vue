@@ -228,7 +228,16 @@ const quickViews = [
                   {{ dentist.status }}
                 </span>
               </td>
-              <td class="text-sm font-semibold text-slate">Open</td>
+              <td class="px-5 py-4">
+                <div class="flex justify-end">
+                  <span
+                    class="inline-flex items-center gap-2 rounded-full border border-[#cbd7dd] bg-[linear-gradient(180deg,#edf5f7_0%,#e2ecef_100%)] px-3.5 py-2 text-xs font-semibold tracking-[0.03em] text-[#2d5562] shadow-[0_10px_20px_rgba(54,89,99,0.08)]"
+                  >
+                    <Icon icon="feather:external-link" class="size-4" />
+                    Open
+                  </span>
+                </div>
+              </td>
             </tr>
           </template>
         </AppTable>

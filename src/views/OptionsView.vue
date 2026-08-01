@@ -686,7 +686,7 @@ function getProcedureQuantity(option: OptionItem): number {
                       <div class="flex flex-wrap justify-end gap-2">
                         <button
                           type="button"
-                          class="inline-flex items-center gap-2 rounded-xl bg-fog px-3 py-2 text-xs font-semibold text-slate transition hover:bg-pebble hover:text-onyx"
+                          class="inline-flex items-center gap-2 rounded-full border border-[#d8c5a0] bg-[linear-gradient(180deg,#f8eddc_0%,#efe1cb_100%)] px-3.5 py-2 text-xs font-semibold text-[#8c6320] shadow-[0_10px_20px_rgba(176,138,52,0.12)] transition hover:border-[#c59a42] hover:bg-[linear-gradient(180deg,#fcf4e8_0%,#f3e5ce_100%)] hover:text-[#6f4a13]"
                           @click="openEditForm(option)"
                         >
                           <Icon icon="feather:edit-2" class="size-4" />
