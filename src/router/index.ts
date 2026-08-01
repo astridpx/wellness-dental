@@ -16,6 +16,7 @@ import SingleTransactionView from '@/views/transactions/SingleTransactionView.vu
 import OptionsView from '@/views/OptionsView.vue'
 import PartnerMembersView from '@/views/PartnerMembersView.vue'
 import PlansView from '@/views/PlansView.vue'
+import MembershipDetailsView from '@/views/MembershipDetailsView.vue'
 
 type RouteNavItem = [boolean, { visibleTo: string[] }]
 
@@ -120,6 +121,16 @@ const router = createRouter({
       meta: {
         title: 'IMS Dental Plans',
         icon: 'feather:clipboard',
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
+      },
+    },
+    {
+      path: '/membership-details',
+      name: 'membershipDetails',
+      component: MembershipDetailsView,
+      meta: {
+        title: 'Membership Details',
+        icon: 'feather:shield',
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
