@@ -265,7 +265,7 @@ watch(
                 >
                   <Icon icon="feather:menu" class="h-5 w-5" />
                 </button>
-                <div>
+                <div class="hidden xl:block">
                   <p class="text-[11px] font-semibold uppercase tracking-[0.28em] text-smoke">
                     Control Room
                   </p>
@@ -273,7 +273,7 @@ watch(
                 </div>
               </div>
 
-              <div class="grid gap-3 sm:grid-cols-2 lg:flex lg:items-center">
+              <div class="hidden gap-3 sm:grid-cols-2 lg:flex lg:items-center">
                 <div class="rounded-2xl border border-pebble bg-[linear-gradient(180deg,#fcfdff_0%,#f3f6fb_100%)] px-4 py-3 shadow-[0_10px_22px_rgba(21,42,78,0.05)]">
                   <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-smoke">
                     Today
