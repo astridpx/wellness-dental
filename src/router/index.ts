@@ -1,3 +1,4 @@
+import BusinessPartnersView from '@/views/BusinessPartnersView.vue'
 import AccountSettingsView from '@/views/AccountSettingsView.vue'
 import ClinicView from '@/views/ClinicView.vue'
 import DashboardView from '@/views/Dashboardvue.vue'
@@ -13,6 +14,7 @@ import SingleUserView from '@/views/users/SingleUserView.vue'
 import TransactionView from '@/views/transactions/TransactionView.vue'
 import SingleTransactionView from '@/views/transactions/SingleTransactionView.vue'
 import OptionsView from '@/views/OptionsView.vue'
+import PartnerMembersView from '@/views/PartnerMembersView.vue'
 import PlansView from '@/views/PlansView.vue'
 
 type RouteNavItem = [boolean, { visibleTo: string[] }]
@@ -119,6 +121,26 @@ const router = createRouter({
         title: 'IMS Dental Plans',
         icon: 'feather:clipboard',
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
+      },
+    },
+    {
+      path: '/partner-members',
+      name: 'partnerMembers',
+      component: PartnerMembersView,
+      meta: {
+        title: 'Partner Members',
+        icon: 'feather:upload-cloud',
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
+      },
+    },
+    {
+      path: '/business-partners',
+      name: 'businessPartners',
+      component: BusinessPartnersView,
+      meta: {
+        title: 'Business Partners',
+        icon: 'feather:briefcase',
+        navItem: [true, { visibleTo: ['superAdmin', 'admin'] }],
       },
     },
     {
