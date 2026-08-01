@@ -94,6 +94,7 @@ function confirmFilters() {
   <AppDialog
     title="Filter Membership Details"
     :show="showFilterModal"
+    max-width="sm:max-w-4xl"
     confirm-label="Apply Filters"
     @close="showFilterModal = false"
     @confirm="confirmFilters"
