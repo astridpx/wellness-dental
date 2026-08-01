@@ -190,6 +190,10 @@ export function useDentistForm() {
     successMessage.value = isEditMode.value
       ? 'Dentist profile updated successfully.'
       : 'Dentist profile created successfully.'
+    if (isEditMode.value)
+      await fetchDentists()
+    else
+      dentistData.value = emptyDentistData
     return true
   }
 

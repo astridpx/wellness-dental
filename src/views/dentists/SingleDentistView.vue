@@ -191,7 +191,7 @@ const setupSteps = ['Provider identity', 'Credentials', 'Payment profile', 'Acco
             <AppInput v-model="dentistData.firstname" label="First Name" placeholder="Maria" />
             <AppInput v-model="dentistData.lastname" label="Last Name" placeholder="Santos" />
             <AppInput v-model="dentistData.middleInitial" label="M.I." placeholder="C" />
-            <AppInput v-model="dentistData.email" label="Email Address" placeholder="name@clinic.com" />
+            <AppInput type="email" v-model="dentistData.email" label="Email Address" placeholder="name@clinic.com" />
             <AppInput v-model="dentistData.phone" label="Mobile Number" placeholder="+63 912 345 6789" />
           </div>
         </section>
