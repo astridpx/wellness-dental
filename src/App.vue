@@ -75,7 +75,7 @@ watch(
 
   <div
     v-else
-    class="min-h-screen bg-[radial-gradient(circle_at_top,#fbf2e2_0%,#f7f8fc_28%,#eef3fa_62%,#e7edf5_100%)]"
+    class="min-h-screen bg-[radial-gradient(circle_at_top,#f4e7d2_0%,#efe5d8_24%,#e7e6e1_56%,#dde4e8_100%)]"
   >
     <TransitionRoot v-if="!isForcedPasswordResetFlow" as="template" :show="sidebarOpen">
       <Dialog as="div" class="relative z-50 xl:hidden" @close="sidebarOpen = false">
@@ -184,12 +184,12 @@ watch(
       :class="isForcedPasswordResetFlow ? 'justify-center' : ''"
     >
       <div
-        class="flex h-[calc(100vh-1.5rem)] w-full overflow-hidden rounded-4xl border border-white/75 bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(246,249,253,0.96)_100%)] shadow-[0_24px_60px_rgba(19,39,69,0.12)] backdrop-blur lg:h-[calc(100vh-2.5rem)]"
+        class="flex h-[calc(100vh-1.5rem)] w-full overflow-hidden rounded-4xl border border-[#e5dccd] bg-[linear-gradient(180deg,rgba(247,241,233,0.96)_0%,rgba(237,238,233,0.98)_100%)] shadow-[0_24px_60px_rgba(53,64,74,0.14)] backdrop-blur lg:h-[calc(100vh-2.5rem)]"
         :class="isForcedPasswordResetFlow ? 'max-w-5xl' : ''"
       >
         <aside
           v-if="!isForcedPasswordResetFlow"
-          class="hidden min-h-0 h-full xl:flex xl:w-86 xl:shrink-0 xl:flex-col xl:border-r xl:border-white/10 xl:bg-[linear-gradient(180deg,#10232f_0%,#15303f_44%,#173847_100%)]"
+          class="hidden min-h-0 h-full xl:flex xl:w-86 xl:shrink-0 xl:flex-col xl:border-r xl:border-[#223746] xl:bg-[linear-gradient(180deg,#10232f_0%,#173544_48%,#1d4454_100%)]"
         >
           <div class="scrollbar flex h-full flex-col overflow-y-auto p-5 text-white">
             <div
@@ -264,20 +264,20 @@ watch(
 
         <main class="min-w-0 min-h-0 flex-1">
           <div
-            class="flex h-full min-h-full flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.82)_0%,rgba(250,251,254,0.94)_100%)]"
+            class="flex h-full min-h-full flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(245,240,233,0.92)_0%,rgba(236,239,235,0.96)_100%)]"
           >
             <header
               v-if="!isForcedPasswordResetFlow"
-              class="border-b border-pebble/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.78)_0%,rgba(249,250,253,0.72)_100%)] px-4 py-4 sm:px-6 lg:px-8"
+              class="border-b border-[#d7d4cd] bg-[linear-gradient(180deg,rgba(248,243,236,0.94)_0%,rgba(239,239,234,0.88)_100%)] px-4 py-4 sm:px-6 lg:px-8"
             >
               <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div class="flex items-start gap-3">
                   <button
                     type="button"
-                    class="inline-flex rounded-2xl bg-fog p-3 text-onyx xl:hidden"
+                    class="inline-flex items-center justify-center rounded-2xl border border-[#d8d0c3] bg-[linear-gradient(180deg,#f7efe5_0%,#ece7de_100%)] p-3 text-[#203746] shadow-[0_10px_22px_rgba(89,78,63,0.08)] transition hover:border-[#c8b79d] hover:bg-[linear-gradient(180deg,#fbf5ee_0%,#f1ebe2_100%)] xl:hidden"
                     @click="sidebarOpen = true"
                   >
-                    <Icon icon="feather:menu" class="h-5 w-5" />
+                    <Icon icon="solar:hamburger-menu-linear" class="h-5 w-5" />
                   </button>
                   <div class="hidden xl:block">
                     <p class="text-[11px] font-semibold uppercase tracking-[0.28em] text-smoke">
@@ -289,7 +289,7 @@ watch(
 
                 <div class="hidden gap-3 sm:grid-cols-2 lg:flex lg:items-center">
                   <div
-                    class="rounded-2xl border border-pebble bg-[linear-gradient(180deg,#fcfdff_0%,#f3f6fb_100%)] px-4 py-3 shadow-[0_10px_22px_rgba(21,42,78,0.05)]"
+                    class="rounded-2xl border border-[#d7d8d2] bg-[linear-gradient(180deg,#f7f1ea_0%,#eceee9_100%)] px-4 py-3 shadow-[0_10px_22px_rgba(74,82,92,0.06)]"
                   >
                     <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-smoke">
                       Today
@@ -297,7 +297,7 @@ watch(
                     <p class="mt-1 text-sm font-semibold text-onyx">{{ todayLabel }}</p>
                   </div>
                   <div
-                    class="rounded-2xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-4 py-3 shadow-[0_10px_22px_rgba(21,42,78,0.05)]"
+                    class="rounded-2xl border border-[#d7d8d2] bg-[linear-gradient(180deg,#f6efe7_0%,#edf0ec_100%)] px-4 py-3 shadow-[0_10px_22px_rgba(74,82,92,0.06)]"
                   >
                     <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-smoke">
                       Operator
@@ -309,7 +309,7 @@ watch(
             </header>
 
             <section
-              class="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,rgba(255,255,255,0.42)_0%,rgba(244,248,252,0.72)_100%)] px-4 py-5 sm:px-6 lg:px-8 lg:py-8"
+              class="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,rgba(244,239,232,0.58)_0%,rgba(234,238,234,0.86)_100%)] px-4 py-5 sm:px-6 lg:px-8 lg:py-8"
             >
               <RouterView />
             </section>
