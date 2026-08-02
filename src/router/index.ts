@@ -1,6 +1,6 @@
 import BusinessPartnersView from '@/views/BusinessPartnersView.vue'
 import AccountSettingsView from '@/views/AccountSettingsView.vue'
-import ClinicView from '@/views/ClinicView.vue'
+import ClinicView from '@/views/clinics/ClinicView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import LoginView from '@/views/LoginView.vue'
 import SystemLogsView from '@/views/SystemLogsView.vue'
@@ -17,6 +17,7 @@ import OptionsView from '@/views/OptionsView.vue'
 import PartnerMembersView from '@/views/PartnerMembersView.vue'
 import PlansView from '@/views/PlansView.vue'
 import MembershipDetailsView from '@/views/MembershipDetailsView.vue'
+import SingleClinicView from '@/views/clinics/SingleClinicView.vue'
 
 type RouteNavItem = [boolean, { visibleTo: string[] }]
 
@@ -112,6 +113,24 @@ const router = createRouter({
         title: 'Dental Clinic',
         icon: 'feather:briefcase',
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
+      },
+    },
+    {
+      path: '/clinic/add',
+      name: 'addClinic',
+      component: SingleClinicView,
+      meta: {
+        title: 'Add Clinic',
+        navItem: [false, { visibleTo: ['superAdmin', 'admin'] }],
+      },
+    },
+    {
+      path: '/clinic/:id/edit',
+      name: 'editClinic',
+      component: SingleClinicView,
+      meta: {
+        title: 'Edit Clinic',
+        navItem: [false, { visibleTo: ['superAdmin', 'admin'] }],
       },
     },
     {
