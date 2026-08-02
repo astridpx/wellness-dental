@@ -4,6 +4,7 @@ import AppInput from './AppInput.vue'
 import AppLoadingScreen from './AppLoadingScreen.vue'
 import AppModal from './AppModal.vue'
 import AppPagination from './AppPagination.vue'
+import AppSearchSelect from './AppSearchSelect.vue'
 import AppSidebar from './AppSidebar.vue'
 import AppStatValue from './AppStatValue.vue'
 import AppTable from './AppTable.vue'
@@ -17,6 +18,7 @@ export {
   AppLoadingScreen,
   AppModal,
   AppPagination,
+  AppSearchSelect,
   AppSidebar,
   AppStatValue,
   AppTable,
