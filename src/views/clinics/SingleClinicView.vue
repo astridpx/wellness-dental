@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { AppButton, AppInput, AppLoadingScreen } from '@/components/app'
-import { useClinicForm } from '@/composables'
+import { watchDebounced } from '@vueuse/core'
+import { ref, watch } from 'vue'
+import { AppButton, AppInput, AppLoadingScreen, AppSearchSelect } from '@/components/app'
+import { useClinicForm, useDentists } from '@/composables'
 
 const {
   clearError,
@@ -17,8 +19,133 @@ const {
   saving,
   successMessage,
 } = useClinicForm()
+const {
+  applyFilters: applyDentistFilters,
+  dentists,
+  errorMessage: dentistErrorMessage,
+  fetchDentists,
+  filters: dentistFilters,
+  loading: loadingDentists,
+} = useDentists({ perPage: 20 })
 
-const setupSteps = ['Clinic identity', 'Location', 'Contact and schedule', 'Operating status']
+type DentistOption = {
+  value: number
+  label: string
+  description: string
+}
+
+type SelectedDentistDetails = {
+  dentistidno: number
+  dentistname: string
+  prcno: string
+  email: string
+  dentistcode: string
+  isActive: string
+}
+
+const dentistSearch = ref('')
+const dentistOptions = ref<DentistOption[]>([])
+const assignedDentistName = ref('Not assigned yet')
+const selectedDentist = ref<SelectedDentistDetails | null>(null)
+const selectedDentistStatus = ref('')
+
+watch(
+  [
+    dentists,
+    () => clinicData.value.dentistId,
+    () => clinicData.value.dentistname,
+    () => clinicData.value.prcno,
+    () => clinicData.value.email,
+    () => clinicData.value.dentistcode,
+    () => clinicData.value.isActive,
+  ],
+  ([availableDentists, selectedId, dentistname, prcno, email, dentistcode, isActive]) => {
+    const options = availableDentists.map((dentist) => ({
+      value: Number(dentist.dentistidno),
+      label:
+        dentist.dentistname ||
+        [dentist.firstname, dentist.middleinitial, dentist.lastname].filter(Boolean).join(' '),
+      description: [dentist.prcno && `PRC ${dentist.prcno}`, dentist.dentistcode]
+        .filter(Boolean)
+        .join(' · '),
+    }))
+
+    const normalizedSelectedId = selectedId == null ? null : Number(selectedId)
+    const matchedDentist = availableDentists.find(
+      (dentist) => Number(dentist.dentistidno) === normalizedSelectedId,
+    )
+
+    if (matchedDentist) {
+      selectedDentist.value = {
+        dentistidno: Number(matchedDentist.dentistidno),
+        dentistname:
+          matchedDentist.dentistname ||
+          [matchedDentist.firstname, matchedDentist.middleinitial, matchedDentist.lastname]
+            .filter(Boolean)
+            .join(' '),
+        prcno: matchedDentist.prcno || '',
+        email: matchedDentist.email || '',
+        dentistcode: matchedDentist.dentistcode || '',
+        isActive: String(matchedDentist.Isactive ?? ''),
+      }
+    } else if (normalizedSelectedId == null) {
+      selectedDentist.value = null
+    } else if (selectedDentist.value?.dentistidno !== normalizedSelectedId) {
+      selectedDentist.value = {
+        dentistidno: normalizedSelectedId,
+        dentistname: String(dentistname || 'Assigned dentist'),
+        prcno: String(prcno || ''),
+        email: String(email || ''),
+        dentistcode: String(dentistcode || ''),
+        isActive: String(isActive || ''),
+      }
+    }
+
+    if (
+      normalizedSelectedId != null &&
+      !options.some((option) => option.value === normalizedSelectedId)
+    ) {
+      const retainedDentist = selectedDentist.value
+      options.unshift({
+        value: normalizedSelectedId,
+        label: retainedDentist?.dentistname || 'Assigned dentist',
+        description:
+          [retainedDentist?.prcno && `PRC ${retainedDentist.prcno}`, retainedDentist?.dentistcode]
+            .filter(Boolean)
+            .join(' · ') || 'Currently assigned dentist',
+      })
+    }
+
+    dentistOptions.value = options
+    assignedDentistName.value =
+      options.find((option) => option.value === normalizedSelectedId)?.label || 'Not assigned yet'
+    selectedDentistStatus.value = selectedDentist.value
+      ? String(selectedDentist.value.isActive) === '1'
+        ? 'Active'
+        : String(selectedDentist.value.isActive) === '0'
+          ? 'Inactive'
+          : 'Unknown'
+      : ''
+  },
+  { immediate: true },
+)
+
+watchDebounced(
+  dentistSearch,
+  (dentistName) => {
+    dentistFilters.dentistName = dentistName.trim()
+    applyDentistFilters()
+  },
+  { debounce: 400, maxWait: 1000 },
+)
+
+const setupSteps = [
+  'Clinic identity',
+  'Dentist assignment',
+  'Location',
+  'Contact and schedule',
+  'Operating status',
+]
 </script>
 
 <template>
@@ -121,6 +248,10 @@ const setupSteps = ['Clinic identity', 'Location', 'Contact and schedule', 'Oper
               </p>
             </div>
             <div class="rounded-2xl bg-white/8 px-4 py-3">
+              <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Assigned dentist</p>
+              <p class="mt-2 text-sm font-semibold">{{ assignedDentistName }}</p>
+            </div>
+            <div class="rounded-2xl bg-white/8 px-4 py-3">
               <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Location</p>
               <p class="mt-2 text-sm font-semibold">
                 {{ clinicData.city || clinicData.province || 'Not assigned yet' }}
@@ -174,9 +305,56 @@ const setupSteps = ['Clinic identity', 'Location', 'Contact and schedule', 'Oper
         </section>
 
         <section class="rounded-4xl border border-pebble bg-white p-6 shadow-sm">
+          <div class="flex items-center justify-between gap-4">
+            <div>
+              <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
+                Section 2
+              </p>
+              <h2 class="mt-2 text-2xl font-black text-onyx">Dentist assignment</h2>
+            </div>
+            <span class="rounded-full bg-cloud px-3 py-1 text-xs font-semibold text-slate">
+              Required
+            </span>
+          </div>
+
+          <p class="mt-3 text-sm leading-6 text-slate">
+            Search the dentist roster by provider name, PRC number, or dentist code.
+          </p>
+
+          <div v-if="dentistErrorMessage"
+            class="mt-5 flex flex-col gap-3 rounded-xl bg-amber-light px-4 py-3 text-sm text-amber sm:flex-row sm:items-center sm:justify-between">
+            <p>{{ dentistErrorMessage }}</p>
+            <button type="button" class="shrink-0 font-semibold underline underline-offset-4" @click="fetchDentists">
+              Try again
+            </button>
+          </div>
+
+          <div class="mt-6">
+            <AppSearchSelect v-model="clinicData.dentistId" v-model:search="dentistSearch" :options="dentistOptions"
+              :loading="loadingDentists" label="Assigned Dentist" placeholder="Search for a dentist"
+              empty-text="No dentists match your search." />
+          </div>
+
+          <div class="mt-6 grid gap-5 border-t border-pebble pt-6 md:grid-cols-2">
+            <div class="md:col-span-2">
+              <AppInput :model-value="selectedDentist?.dentistname || ''" label="Dentist Name"
+                placeholder="Select a dentist to view their details" readonly />
+            </div>
+            <AppInput :model-value="selectedDentist?.email || ''" label="Email Address"
+              placeholder="No dentist selected" readonly />
+            <AppInput :model-value="selectedDentist?.prcno || ''" label="PRC Number" placeholder="No dentist selected"
+              readonly />
+            <AppInput :model-value="selectedDentist?.dentistcode || ''" label="Dentist Code"
+              placeholder="No dentist selected" readonly />
+            <AppInput :model-value="selectedDentistStatus" label="Account Status" placeholder="No dentist selected"
+              readonly />
+          </div>
+        </section>
+
+        <section class="rounded-4xl border border-pebble bg-white p-6 shadow-sm">
           <div>
             <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
-              Section 2
+              Section 3
             </p>
             <h2 class="mt-2 text-2xl font-black text-onyx">Location details</h2>
           </div>
@@ -196,7 +374,7 @@ const setupSteps = ['Clinic identity', 'Location', 'Contact and schedule', 'Oper
         <section class="rounded-4xl border border-pebble bg-white p-6 shadow-sm">
           <div>
             <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
-              Section 3
+              Section 4
             </p>
             <h2 class="mt-2 text-2xl font-black text-onyx">Contact and schedule</h2>
           </div>
@@ -213,7 +391,7 @@ const setupSteps = ['Clinic identity', 'Location', 'Contact and schedule', 'Oper
         <section class="rounded-4xl border border-pebble bg-white p-6 shadow-sm">
           <div>
             <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
-              Section 4
+              Section 5
             </p>
             <h2 class="mt-2 text-2xl font-black text-onyx">Operating status</h2>
           </div>

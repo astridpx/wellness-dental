@@ -19,6 +19,12 @@ export type ClinicFormData = {
   mobileNumber2: string
   type: string
   providerApp: string
+  dentistId: number | null
+  dentistname: string
+  prcno: string
+  email: string
+  dentistcode: string
+  isActive: string
 }
 
 export type ClinicFormErrorContext = '' | 'load' | 'validation' | 'save'
@@ -39,6 +45,12 @@ const emptyClinicData: ClinicFormData = {
   mobileNumber2: '',
   type: '',
   providerApp: '',
+  dentistId: null,
+  dentistname: '',
+  prcno: '',
+  email: '',
+  dentistcode: '',
+  isActive: '',
 }
 
 export function useClinicForm() {
@@ -82,6 +94,12 @@ export function useClinicForm() {
       mobileNumber2: clinic.MobileNumber2 || '',
       type: clinic.type || '',
       providerApp: clinic.provider_app || '',
+      dentistId: clinic.dentistId == null ? null : Number(clinic.dentistId),
+      dentistname: clinic.dentistname || '',
+      prcno: clinic.prcno || '',
+      email: clinic.email || '',
+      dentistcode: clinic.dentistcode || '',
+      isActive: clinic.isActive == null ? '' : String(clinic.isActive),
     }
   }
 
@@ -121,6 +139,7 @@ export function useClinicForm() {
     if (!clinicData.value.clinicName.trim()) return 'Clinic name is required.'
     if (!clinicData.value.clinicCode.trim()) return 'Clinic code is required.'
     if (!clinicData.value.address.trim()) return 'Clinic address is required.'
+    if (clinicData.value.dentistId == null) return 'Please assign a dentist.'
     return ''
   }
 
@@ -148,6 +167,7 @@ export function useClinicForm() {
       MobileNumber2: clinicData.value.mobileNumber2.trim(),
       type: clinicData.value.type.trim(),
       provider_app: clinicData.value.providerApp.trim(),
+      dentistId: clinicData.value.dentistId,
     }
   }
 

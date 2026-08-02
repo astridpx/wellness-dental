@@ -35,6 +35,7 @@ export type Dentist = {
 
 type UseDentistsOptions = {
   immediate?: boolean
+  perPage?: number
 }
 
 export function useDentists(options: UseDentistsOptions = {}) {
@@ -45,12 +46,12 @@ export function useDentists(options: UseDentistsOptions = {}) {
   const loading = ref(immediate)
   const errorMessage = ref('')
   const currentPage = ref(1)
-  const perPage = ref(10)
+  const perPage = ref(options.perPage ?? 10)
   const totalEntries = ref(0)
   const totalPages = ref(1)
   const filters = reactive({
     dentistId: '',
-    name: '',
+    dentistName: '',
     email: '',
     prcno: '',
     code: '',
@@ -66,7 +67,7 @@ export function useDentists(options: UseDentistsOptions = {}) {
     })
 
     if (filters.dentistId) params.set('dentistIdNo', filters.dentistId)
-    if (filters.name) params.set('dentistName', filters.name)
+    if (filters.dentistName) params.set('dentistName', filters.dentistName)
     if (filters.email) params.set('email', filters.email)
     if (filters.prcno) params.set('prcno', filters.prcno)
     if (filters.code) params.set('dentistCode', filters.code)

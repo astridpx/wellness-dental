@@ -22,6 +22,12 @@ export type Clinic = {
   MobileNumber2: string
   type: string
   provider_app: string
+  dentistId: number | null
+  dentistname?: string | null
+  prcno?: string | null
+  email?: string | null
+  dentistcode?: string | null
+  isActive?: string | number | null
 }
 
 type UseClinicsOptions = {
