@@ -107,8 +107,8 @@ export function usePartnerMembers() {
     businessPartnerName: '',
     companyCode: '',
     companyName: '',
+    sheetName: '',
     remarks: '',
-    markAsCurrent: true,
   })
 
   const batchStats = computed(() => ({
@@ -209,8 +209,8 @@ export function usePartnerMembers() {
     formData.append('file', file)
     formData.append('companyCode', uploadForm.companyCode.trim())
     formData.append('companyName', uploadForm.companyName.trim())
-    formData.append('markAsCurrent', String(uploadForm.markAsCurrent))
 
+    if (uploadForm.sheetName.trim()) formData.append('sheetName', uploadForm.sheetName.trim())
     if (uploadForm.remarks.trim()) formData.append('remarks', uploadForm.remarks.trim())
 
     const result = await request<PartnerMemberBatch>(
@@ -231,7 +231,7 @@ export function usePartnerMembers() {
       return false
     }
 
-    uploadSuccess.value = `Batch uploaded for ${uploadForm.companyCode.trim() || 'partner members'}.`
+    uploadSuccess.value = `Member rows imported for ${uploadForm.companyCode.trim() || 'partner members'}.`
     batchCurrentPage.value = 1
     await fetchBatches()
     if (selectedBatch.value) {
@@ -307,8 +307,8 @@ export function usePartnerMembers() {
     uploadForm.businessPartnerName = ''
     uploadForm.companyCode = ''
     uploadForm.companyName = ''
+    uploadForm.sheetName = ''
     uploadForm.remarks = ''
-    uploadForm.markAsCurrent = true
     uploadError.value = ''
     uploadSuccess.value = ''
   }

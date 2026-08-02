@@ -1,13 +1,8 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
-import {
-  AppButton,
-  AppInput,
-  AppLoadingScreen,
-  AppTable,
-  AppTextArea,
-} from '@/components/app'
+import * as XLSX from 'xlsx'
+import { AppButton, AppInput, AppLoadingScreen, AppTable, AppTextArea } from '@/components/app'
 import { useBusinessPartners, usePartnerMembers } from '@/composables'
 
 const {
@@ -40,22 +35,20 @@ const {
   selectBatch,
   resetUploadForm,
 } = usePartnerMembers()
-const {
-  businessPartners,
-  loadingBusinessPartners,
-} = useBusinessPartners()
+const { businessPartners, loadingBusinessPartners } = useBusinessPartners()
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const selectedUploadFile = ref<File | null>(null)
 const selectedBusinessPartnerId = ref('')
+const availableSheetNames = ref<string[]>([])
 
-const uploadReady = computed(
-  () =>
-    Boolean(
-      selectedUploadFile.value &&
-        uploadForm.companyCode.trim() &&
-      uploadForm.companyName.trim(),
-    ),
+const uploadReady = computed(() =>
+  Boolean(
+    selectedUploadFile.value &&
+    uploadForm.companyCode.trim() &&
+    uploadForm.companyName.trim() &&
+    uploadForm.sheetName.trim(),
+  ),
 )
 
 const activeBusinessPartners = computed(() =>
@@ -66,14 +59,46 @@ function openFilePicker() {
   fileInputRef.value?.click()
 }
 
-function handleFileSelection(event: Event) {
+async function handleFileSelection(event: Event) {
   const target = event.target as HTMLInputElement
-  selectedUploadFile.value = target.files?.[0] || null
+  const file = target.files?.[0] || null
+
+  selectedUploadFile.value = file
+  availableSheetNames.value = []
+  uploadForm.sheetName = ''
+
+  if (!file) return
+
+  uploadError.value = ''
+  uploadSuccess.value = ''
+
+  try {
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' })
+    availableSheetNames.value = workbook.SheetNames || []
+    uploadForm.sheetName = availableSheetNames.value[0] || ''
+
+    if (!availableSheetNames.value.length) {
+      uploadError.value = 'The selected Excel file does not contain any worksheet.'
+    }
+  } catch {
+    selectedUploadFile.value = null
+    if (fileInputRef.value) fileInputRef.value.value = ''
+    uploadError.value =
+      'We could not read that Excel file. Please choose a valid .xlsx or .xls file.'
+  }
 }
 
 function clearSelectedFile() {
   selectedUploadFile.value = null
+  availableSheetNames.value = []
+  uploadForm.sheetName = ''
   if (fileInputRef.value) fileInputRef.value.value = ''
+}
+
+function resetUploadState() {
+  resetUploadForm()
+  clearSelectedFile()
+  selectedBusinessPartnerId.value = ''
 }
 
 async function submitUpload() {
@@ -148,8 +173,8 @@ watch(selectedBusinessPartnerId, (value) => {
               Business partner member batches
             </h1>
             <p class="mt-3 max-w-3xl text-sm leading-6 text-slate">
-              Upload Excel lists from external partners, keep batch history per company, and track
-              which members are already paid inside the system.
+              Read partner Excel lists, insert the member rows into the system, keep batch history
+              per company, and track which members are already paid.
             </p>
           </div>
 
@@ -159,21 +184,27 @@ watch(selectedBusinessPartnerId, (value) => {
                 Imported batches
               </p>
               <p class="mt-3 text-3xl font-black text-onyx">{{ batchStats.totalBatches }}</p>
-              <p class="mt-2 text-sm text-slate">Historical upload sets stored in the workspace.</p>
+              <p class="mt-2 text-sm text-slate">
+                Historical import batches stored in the database.
+              </p>
             </div>
             <div class="rounded-[1.4rem] border border-pebble bg-white/88 px-5 py-4 shadow-sm">
               <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">
                 Active batches
               </p>
               <p class="mt-3 text-3xl font-black text-onyx">{{ batchStats.currentBatches }}</p>
-              <p class="mt-2 text-sm text-slate">Current partner lists marked as the live source.</p>
+              <p class="mt-2 text-sm text-slate">
+                Current partner lists marked as the live source.
+              </p>
             </div>
             <div class="rounded-[1.4rem] border border-pebble bg-white/88 px-5 py-4 shadow-sm">
               <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">
                 Visible members
               </p>
               <p class="mt-3 text-3xl font-black text-onyx">{{ recordStats.totalMembers }}</p>
-              <p class="mt-2 text-sm text-slate">Rows currently shown for the selected batch view.</p>
+              <p class="mt-2 text-sm text-slate">
+                Rows currently shown for the selected batch view.
+              </p>
             </div>
           </div>
         </div>
@@ -188,8 +219,8 @@ watch(selectedBusinessPartnerId, (value) => {
             <div>
               <p class="text-sm font-bold text-onyx">Import workflow</p>
               <p class="mt-1 text-sm leading-6 text-slate">
-                Each upload becomes a batch. You can review the rows later, mark a batch as current,
-                and update payment status without retyping the Excel manually.
+                Each import becomes a batch. We read the Excel contents, save the member rows, then
+                let you review them later and update payment status without retyping anything.
               </p>
             </div>
           </div>
@@ -198,9 +229,6 @@ watch(selectedBusinessPartnerId, (value) => {
             <div class="rounded-2xl border border-pebble bg-cloud px-4 py-4 text-sm text-onyx">
               Excel headers expected: <strong>`No.`</strong>, <strong>`AREA/LOCATION`</strong>,
               <strong>`ID NO.`</strong>, <strong>`FULL NAME`</strong>, <strong>`CARD NO.`</strong>
-            </div>
-            <div class="rounded-2xl border border-pebble bg-cloud px-4 py-4 text-sm text-onyx">
-              Uploaders can mark a batch as current so future record lookups use the latest file.
             </div>
           </div>
         </div>
@@ -215,7 +243,8 @@ watch(selectedBusinessPartnerId, (value) => {
           </p>
           <h2 class="mt-2 text-xl font-black text-onyx">Import a new partner Excel file</h2>
           <p class="mt-1 text-sm text-slate">
-            Upload a batch and preserve partner, company, source file, and payment-tracking state.
+            Read the Excel contents and create a member batch with partner, company, and
+            payment-tracking state.
           </p>
         </div>
         <div
@@ -281,7 +310,9 @@ watch(selectedBusinessPartnerId, (value) => {
           </div>
         </div>
 
-        <div class="rounded-[1.5rem] border border-pebble bg-[linear-gradient(145deg,#f8f1e6_0%,#eef3ee_100%)] p-5">
+        <div
+          class="rounded-[1.5rem] border border-pebble bg-[linear-gradient(145deg,#f8f1e6_0%,#eef3ee_100%)] p-5"
+        >
           <input
             ref="fileInputRef"
             type="file"
@@ -290,7 +321,9 @@ watch(selectedBusinessPartnerId, (value) => {
             @change="handleFileSelection"
           />
 
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Excel source</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">
+            Excel import source
+          </p>
 
           <button
             type="button"
@@ -298,7 +331,7 @@ watch(selectedBusinessPartnerId, (value) => {
             @click="openFilePicker"
           >
             <Icon icon="feather:file-plus" class="h-5 w-5" />
-            {{ selectedUploadFile ? 'Replace Excel file' : 'Choose Excel file' }}
+            {{ selectedUploadFile ? 'Replace Excel file' : 'Choose Excel file to import' }}
           </button>
 
           <div
@@ -320,12 +353,26 @@ watch(selectedBusinessPartnerId, (value) => {
                 Remove
               </button>
             </div>
-          </div>
 
-          <label class="mt-4 flex items-center gap-3 rounded-2xl bg-white/70 px-4 py-3 text-sm text-onyx">
-            <input v-model="uploadForm.markAsCurrent" type="checkbox" class="h-4 w-4 accent-[#aa7f27]" />
-            Mark this upload as the current batch for this company
-          </label>
+            <div v-if="availableSheetNames.length" class="mt-4">
+              <label class="mb-2 block text-sm font-medium text-onyx">Worksheet to import</label>
+              <select
+                v-model="uploadForm.sheetName"
+                class="w-full rounded-xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fafcff_100%)] px-4 py-3.5 text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+              >
+                <option
+                  v-for="sheetName in availableSheetNames"
+                  :key="sheetName"
+                  :value="sheetName"
+                >
+                  {{ sheetName }}
+                </option>
+              </select>
+              <p class="mt-2 text-xs text-slate">
+                Choose which worksheet in this workbook should be imported.
+              </p>
+            </div>
+          </div>
 
           <p v-if="uploadError" class="mt-4 rounded-xl bg-ruby-light px-4 py-3 text-sm text-ruby">
             {{ uploadError }}
@@ -349,9 +396,9 @@ watch(selectedBusinessPartnerId, (value) => {
                 class="h-4 w-4"
                 :class="uploadingBatch ? 'animate-spin' : ''"
               />
-              {{ uploadingBatch ? 'Uploading...' : 'Upload Batch' }}
+              {{ uploadingBatch ? 'Importing...' : 'Import Batch' }}
             </AppButton>
-            <AppButton btn-theme="outline" class="normal-case" @click="resetUploadForm(); clearSelectedFile(); selectedBusinessPartnerId = ''">
+            <AppButton btn-theme="outline" class="normal-case" @click="resetUploadState">
               Reset
             </AppButton>
           </div>
@@ -413,11 +460,15 @@ watch(selectedBusinessPartnerId, (value) => {
             <tr v-if="!batches.length">
               <td colspan="6" class="w-full py-14! text-center!">
                 <div class="flex w-full flex-col items-center">
-                  <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-fog text-smoke">
+                  <span
+                    class="flex h-12 w-12 items-center justify-center rounded-2xl bg-fog text-smoke"
+                  >
                     <Icon icon="feather:archive" class="h-5 w-5" />
                   </span>
                   <p class="mt-3 font-semibold text-onyx">No batches found</p>
-                  <p class="mt-1 text-sm text-slate">Upload the first Excel file to start tracking members.</p>
+                  <p class="mt-1 text-sm text-slate">
+                    Import the first Excel file to start tracking members.
+                  </p>
                 </div>
               </td>
             </tr>
@@ -456,9 +507,7 @@ watch(selectedBusinessPartnerId, (value) => {
               <td>
                 <span
                   class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
-                  :class="
-                    batch.isCurrent ? 'bg-emerald-light text-emerald' : 'bg-fog text-slate'
-                  "
+                  :class="batch.isCurrent ? 'bg-emerald-light text-emerald' : 'bg-fog text-slate'"
                 >
                   {{ batch.isCurrent ? 'Current' : 'Historical' }}
                 </span>
@@ -481,7 +530,9 @@ watch(selectedBusinessPartnerId, (value) => {
                     @click.stop="markBatchAsCurrent(batch)"
                   >
                     <Icon
-                      :icon="settingCurrentBatchId === batch.id ? 'feather:loader' : 'feather:bookmark'"
+                      :icon="
+                        settingCurrentBatchId === batch.id ? 'feather:loader' : 'feather:bookmark'
+                      "
                       class="size-4"
                       :class="settingCurrentBatchId === batch.id ? 'animate-spin' : ''"
                     />
@@ -536,8 +587,14 @@ watch(selectedBusinessPartnerId, (value) => {
             <option value="false">Unpaid only</option>
           </select>
         </div>
-        <label class="flex items-center gap-3 rounded-xl border border-pebble bg-cloud px-4 py-3 text-sm text-onyx">
-          <input v-model="recordFilters.currentOnly" type="checkbox" class="h-4 w-4 accent-[#aa7f27]" />
+        <label
+          class="flex items-center gap-3 rounded-xl border border-pebble bg-cloud px-4 py-3 text-sm text-onyx"
+        >
+          <input
+            v-model="recordFilters.currentOnly"
+            type="checkbox"
+            class="h-4 w-4 accent-[#aa7f27]"
+          />
           Current batches only
         </label>
       </div>
@@ -564,7 +621,9 @@ watch(selectedBusinessPartnerId, (value) => {
             <tr v-if="!records.length">
               <td colspan="7" class="w-full py-14! text-center!">
                 <div class="flex w-full flex-col items-center">
-                  <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-fog text-smoke">
+                  <span
+                    class="flex h-12 w-12 items-center justify-center rounded-2xl bg-fog text-smoke"
+                  >
                     <Icon icon="feather:users" class="h-5 w-5" />
                   </span>
                   <p class="mt-3 font-semibold text-onyx">No imported members found</p>
@@ -579,14 +638,18 @@ watch(selectedBusinessPartnerId, (value) => {
               <td>
                 <div>
                   <p class="font-semibold text-onyx">{{ record.fullName }}</p>
-                  <p class="mt-1 text-xs text-slate">{{ record.companyCode || selectedBatch?.companyCode }}</p>
+                  <p class="mt-1 text-xs text-slate">
+                    {{ record.companyCode || selectedBatch?.companyCode }}
+                  </p>
                 </div>
               </td>
               <td>{{ record.cardNo }}</td>
               <td>
                 <span
                   class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
-                  :class="record.paid ? 'bg-emerald-light text-emerald' : 'bg-amber-light text-amber'"
+                  :class="
+                    record.paid ? 'bg-emerald-light text-emerald' : 'bg-amber-light text-amber'
+                  "
                 >
                   {{ record.paid ? 'Paid' : 'Unpaid' }}
                 </span>
@@ -605,7 +668,13 @@ watch(selectedBusinessPartnerId, (value) => {
                     @click="updatePaymentStatus(record, !record.paid)"
                   >
                     <Icon
-                      :icon="updatingRecordId === record.id ? 'feather:loader' : record.paid ? 'feather:rotate-ccw' : 'feather:check-circle'"
+                      :icon="
+                        updatingRecordId === record.id
+                          ? 'feather:loader'
+                          : record.paid
+                            ? 'feather:rotate-ccw'
+                            : 'feather:check-circle'
+                      "
                       class="size-4"
                       :class="updatingRecordId === record.id ? 'animate-spin' : ''"
                     />
