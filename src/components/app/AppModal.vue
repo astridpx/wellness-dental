@@ -39,7 +39,7 @@ defineEmits(['close'])
       </TransitionChild>
 
       <div class="fixed inset-0 overflow-y-auto">
-        <div class="flex min-h-full items-end justify-center p-4 sm:items-center">
+        <div class="flex min-h-full items-center justify-center p-4">
           <TransitionChild
             as="template"
             enter="ease-out duration-300"

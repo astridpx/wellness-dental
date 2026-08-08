@@ -70,12 +70,13 @@ export function usePartnerMembers() {
   const batches = ref<PartnerMemberBatch[]>([])
   const records = ref<PartnerMemberRecord[]>([])
   const selectedBatch = ref<PartnerMemberBatch | null>(null)
+  const recordScope = ref<'selected' | 'all'>('selected')
 
   const loadingBatches = ref(true)
   const loadingRecords = ref(true)
   const uploadingBatch = ref(false)
   const updatingRecordId = ref<number | null>(null)
-  const settingCurrentBatchId = ref<number | null>(null)
+  const markingPaidBatchId = ref<number | null>(null)
 
   const batchError = ref('')
   const recordError = ref('')
@@ -93,13 +94,11 @@ export function usePartnerMembers() {
   const batchFilters = reactive({
     companyCode: '',
     companyName: '',
-    isCurrent: '',
   })
 
   const recordFilters = reactive({
     search: '',
     paid: '',
-    currentOnly: false,
   })
 
   const uploadForm = reactive({
@@ -113,7 +112,7 @@ export function usePartnerMembers() {
 
   const batchStats = computed(() => ({
     totalBatches: batchTotalEntries.value,
-    currentBatches: batches.value.filter((batch) => batch.isCurrent).length,
+    activeBatches: batchTotalEntries.value,
     totalMembers: batches.value.reduce((sum, batch) => sum + Number(batch.totalRows || 0), 0),
   }))
 
@@ -136,7 +135,6 @@ export function usePartnerMembers() {
 
     if (batchFilters.companyCode.trim()) params.set('companyCode', batchFilters.companyCode.trim())
     if (batchFilters.companyName.trim()) params.set('companyName', batchFilters.companyName.trim())
-    if (batchFilters.isCurrent) params.set('isCurrent', batchFilters.isCurrent)
 
     const result = await request<PartnerMemberBatch[]>(
       `/wellness/partnerMembers/batches?${params.toString()}`,
@@ -177,10 +175,11 @@ export function usePartnerMembers() {
       sortOrder: 'asc',
     })
 
-    if (selectedBatch.value?.id) params.set('batchId', String(selectedBatch.value.id))
+    if (recordScope.value === 'selected' && selectedBatch.value?.id) {
+      params.set('batchId', String(selectedBatch.value.id))
+    }
     if (recordFilters.search.trim()) params.set('search', recordFilters.search.trim())
     if (recordFilters.paid) params.set('paid', recordFilters.paid)
-    if (recordFilters.currentOnly) params.set('currentOnly', 'true')
 
     const result = await request<PartnerMemberRecord[]>(
       `/wellness/partnerMembers/records?${params.toString()}`,
@@ -263,41 +262,55 @@ export function usePartnerMembers() {
 
     if (!result.ok) {
       recordError.value = result.error
-      return
+      return false
     }
 
     await fetchRecords()
     await fetchBatches()
+    return true
   }
 
-  async function markBatchAsCurrent(batch: PartnerMemberBatch) {
-    settingCurrentBatchId.value = batch.id
+  async function updateBatchPaymentStatus(batch: PartnerMemberBatch, paid: boolean) {
+    markingPaidBatchId.value = batch.id
     batchError.value = ''
+    recordError.value = ''
 
     const result = await request<PartnerMemberBatch>(
-      `/wellness/partnerMembers/batches/${batch.id}/set-current`,
+      `/wellness/partnerMembers/batches/${batch.id}/payment`,
       {
         method: 'PATCH',
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          paid,
+        }),
       },
       {
         includeContentType: true,
       },
     )
 
-    settingCurrentBatchId.value = null
+    markingPaidBatchId.value = null
 
     if (!result.ok) {
-      batchError.value = result.error
-      return
+      const message = result.error || `Unable to mark this batch as ${paid ? 'paid' : 'unpaid'}.`
+      batchError.value = message
+      recordError.value = message
+      return false
     }
 
     await fetchBatches()
     await fetchRecords()
+    return true
   }
 
   function selectBatch(batch: PartnerMemberBatch) {
     selectedBatch.value = batch
+    recordScope.value = 'selected'
+    recordCurrentPage.value = 1
+    fetchRecords()
+  }
+
+  function selectAllBatches() {
+    recordScope.value = 'all'
     recordCurrentPage.value = 1
     fetchRecords()
   }
@@ -314,7 +327,7 @@ export function usePartnerMembers() {
   }
 
   watch(
-    () => [batchFilters.companyCode, batchFilters.companyName, batchFilters.isCurrent],
+    () => [batchFilters.companyCode, batchFilters.companyName],
     () => {
       batchCurrentPage.value = 1
       fetchBatches()
@@ -326,7 +339,7 @@ export function usePartnerMembers() {
   })
 
   watch(
-    () => [recordFilters.search, recordFilters.paid, recordFilters.currentOnly],
+    () => [recordFilters.search, recordFilters.paid],
     () => {
       recordCurrentPage.value = 1
       fetchRecords()
@@ -346,11 +359,12 @@ export function usePartnerMembers() {
     batches,
     records,
     selectedBatch,
+    recordScope,
     loadingBatches,
     loadingRecords,
     uploadingBatch,
     updatingRecordId,
-    settingCurrentBatchId,
+    markingPaidBatchId,
     batchError,
     recordError,
     uploadError,
@@ -370,8 +384,9 @@ export function usePartnerMembers() {
     fetchRecords,
     uploadBatch,
     updatePaymentStatus,
-    markBatchAsCurrent,
+    updateBatchPaymentStatus,
     selectBatch,
+    selectAllBatches,
     resetUploadForm,
   }
 }

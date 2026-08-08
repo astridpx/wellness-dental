@@ -10,6 +10,7 @@ import AppStatValue from './AppStatValue.vue'
 import AppTable from './AppTable.vue'
 import AppTextArea from './AppTextArea.vue'
 import AppTooltip from './AppTooltip.vue'
+import AppToast from './AppToast.vue'
 
 export {
   AppButton,
@@ -24,4 +25,5 @@ export {
   AppTable,
   AppTextArea,
   AppTooltip,
+  AppToast,
 }
