@@ -16,7 +16,6 @@ type LedgerTab = 'dentist' | 'partner'
 const router = useRouter()
 const activeTab = ref<LedgerTab>('dentist')
 const showFilterDialog = ref(false)
-const dentistPaymentTarget = ref<{ record: DentalAvailmentRecord; paid: boolean } | null>(null)
 const partnerPaymentTarget = ref<{
   record: PartnerMemberRecord
   paid: boolean
@@ -35,8 +34,6 @@ const {
   unpaidAmount: visibleDentistPayable,
   totalEntries: dentistTotalEntries,
   totalPages: dentistTotalPages,
-  updateDoctorPaymentStatus,
-  updatingPaymentId,
 } = useDentalAvailmentHistory()
 
 const {
@@ -83,24 +80,33 @@ function isDoctorPaid(record?: DentalAvailmentRecord | null) {
   return value === true || Number(value || 0) === 1
 }
 
-function openDentistPaymentDialog(record: DentalAvailmentRecord, paid: boolean) {
-  if (updatingPaymentId.value) return
-  dentistPaymentTarget.value = { record, paid }
+function isDoctorCancelled(record: DentalAvailmentRecord) {
+  const status = String(record.status || 'VALID')
+    .trim()
+    .toUpperCase()
+
+  return ['CANCELLED', 'CANCELED', 'INVALID', 'I'].includes(status)
 }
 
-function closeDentistPaymentDialog() {
-  if (updatingPaymentId.value) return
-  dentistPaymentTarget.value = null
-}
+function getDoctorPaymentStatus(record: DentalAvailmentRecord) {
+  if (isDoctorCancelled(record)) {
+    return {
+      label: 'Cancelled',
+      className: 'bg-ruby-light text-ruby',
+    }
+  }
 
-async function confirmDentistPayment() {
-  if (!dentistPaymentTarget.value) return
+  if (isDoctorPaid(record)) {
+    return {
+      label: 'Paid',
+      className: 'bg-emerald-light text-emerald',
+    }
+  }
 
-  const updated = await updateDoctorPaymentStatus(
-    dentistPaymentTarget.value.record,
-    dentistPaymentTarget.value.paid,
-  )
-  if (updated) dentistPaymentTarget.value = null
+  return {
+    label: 'Unpaid',
+    className: 'bg-amber-light text-amber',
+  }
 }
 
 function openPartnerPaymentDialog(record: PartnerMemberRecord, paid: boolean) {
@@ -234,55 +240,6 @@ function clearActiveFilters() {
           <Icon icon="feather:rotate-ccw" class="h-4 w-4" />
           Clear fields
         </button>
-      </div>
-    </template>
-  </AppDialog>
-
-  <AppDialog
-    :title="dentistPaymentTarget?.paid ? 'Mark dentist as paid' : 'Mark dentist as unpaid'"
-    :show="Boolean(dentistPaymentTarget)"
-    :disabled="Boolean(updatingPaymentId)"
-    :confirm-label="
-      updatingPaymentId
-        ? 'Saving...'
-        : dentistPaymentTarget?.paid
-          ? 'Mark Dentist Paid'
-          : 'Mark Dentist Unpaid'
-    "
-    @close="closeDentistPaymentDialog"
-    @confirm="confirmDentistPayment"
-  >
-    <template #dialog-content>
-      <div v-if="dentistPaymentTarget" class="space-y-4">
-        <div class="rounded-[1.5rem] border border-emerald/15 bg-emerald-light p-5">
-          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald">
-            Dentist payment
-          </p>
-          <p class="mt-2 text-sm leading-6 text-slate">
-            This tracks whether the dentist or clinic has been paid for this availment row.
-          </p>
-        </div>
-        <div class="grid gap-3 sm:grid-cols-2">
-          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Approval</p>
-            <p class="mt-2 font-mono text-sm font-bold text-onyx">
-              {{ dentistPaymentTarget.record.approvalno }}
-            </p>
-          </div>
-          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Amount</p>
-            <p class="mt-2 text-sm font-bold text-onyx">
-              {{ formatMoney(dentistPaymentTarget.record.amount) }}
-            </p>
-          </div>
-          <div class="rounded-2xl border border-pebble bg-white px-4 py-4 sm:col-span-2">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Dentist / Clinic</p>
-            <p class="mt-2 text-sm font-bold text-onyx">
-              {{ dentistPaymentTarget.record.dentistname || 'N/A' }} ·
-              {{ dentistPaymentTarget.record.clinicname || 'N/A' }}
-            </p>
-          </div>
-        </div>
       </div>
     </template>
   </AppDialog>
@@ -473,8 +430,7 @@ function clearActiveFilters() {
             'Procedure',
             'Availment Date',
             'Amount',
-            'Payment',
-            'Action',
+            'Status',
           ]"
           :total-entries="dentistTotalEntries"
           :total-pages="dentistTotalPages"
@@ -483,7 +439,7 @@ function clearActiveFilters() {
         >
           <template #trs>
             <tr v-if="!dentistRows.length">
-              <td colspan="8" class="py-12! text-center! text-sm text-slate">
+              <td colspan="7" class="py-12! text-center! text-sm text-slate">
                 No dentist payment rows found.
               </td>
             </tr>
@@ -505,43 +461,10 @@ function clearActiveFilters() {
               <td>
                 <span
                   class="rounded-full px-3 py-1 text-xs font-semibold"
-                  :class="
-                    isDoctorPaid(record)
-                      ? 'bg-emerald-light text-emerald'
-                      : 'bg-amber-light text-amber'
-                  "
+                  :class="getDoctorPaymentStatus(record).className"
                 >
-                  {{ isDoctorPaid(record) ? 'Paid' : 'Unpaid' }}
+                  {{ getDoctorPaymentStatus(record).label }}
                 </span>
-              </td>
-              <td>
-                <div class="flex flex-wrap justify-end gap-2">
-                  <button
-                    v-if="(record.status || 'VALID') === 'VALID'"
-                    type="button"
-                    class="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
-                    :class="
-                      isDoctorPaid(record)
-                        ? 'border border-[#cbd7dd] bg-[linear-gradient(180deg,#edf5f7_0%,#e2ecef_100%)] text-[#2d5562] shadow-[0_10px_20px_rgba(54,89,99,0.08)] hover:border-[#9bb6bf]'
-                        : 'border border-emerald/20 bg-emerald-light text-emerald hover:border-emerald/40 hover:bg-white'
-                    "
-                    :disabled="updatingPaymentId === record.dentalid"
-                    @click="openDentistPaymentDialog(record, !isDoctorPaid(record))"
-                  >
-                    <Icon
-                      :icon="
-                        updatingPaymentId === record.dentalid
-                          ? 'feather:loader'
-                          : isDoctorPaid(record)
-                            ? 'feather:rotate-ccw'
-                            : 'feather:check-circle'
-                      "
-                      class="h-4 w-4"
-                      :class="{ 'animate-spin': updatingPaymentId === record.dentalid }"
-                    />
-                    {{ isDoctorPaid(record) ? 'Mark Unpaid' : 'Mark Paid' }}
-                  </button>
-                </div>
               </td>
             </tr>
           </template>

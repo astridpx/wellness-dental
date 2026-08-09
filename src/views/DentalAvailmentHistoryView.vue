@@ -6,7 +6,6 @@ import {
   AppDialog,
   AppInput,
   AppLoadingScreen,
-  AppModal,
   AppSearchSelect,
   AppTable,
   AppTextArea,
@@ -19,23 +18,20 @@ const {
   cancelAvailment,
   cancellingId,
   clearFilters,
-  closeApprovalDetails,
   currentPage,
   errorMessage,
   filters,
   applyFilters,
   loading,
-  lookingUp,
-  lookupErrorMessage,
-  openApprovalDetails,
   records,
-  selectedApproval,
   stats,
   successMessage,
   totalEntries,
   totalPages,
   updateAvailment,
   updateDoctorPaymentStatus,
+  uncancelAvailment,
+  uncancellingId,
   updatingId,
   updatingPaymentId,
 } = useDentalAvailmentHistory()
@@ -50,6 +46,7 @@ const { clinics, fetchClinics, filters: clinicFilters, loading: loadingClinics }
 
 const showFilterDialog = ref(false)
 const cancelTarget = ref<DentalAvailmentRecord | null>(null)
+const uncancelTarget = ref<DentalAvailmentRecord | null>(null)
 const editTarget = ref<DentalAvailmentRecord | null>(null)
 const paymentTarget = ref<{ record: DentalAvailmentRecord; paid: boolean } | null>(null)
 const selectedProcedureId = ref<string | number | null>(null)
@@ -132,10 +129,30 @@ async function confirmCancel() {
   if (cancelled) cancelTarget.value = null
 }
 
+function openUncancelDialog(record: DentalAvailmentRecord) {
+  uncancelTarget.value = record
+}
+
+function closeUncancelDialog() {
+  if (uncancellingId.value) return
+  uncancelTarget.value = null
+}
+
+async function confirmUncancel() {
+  if (!uncancelTarget.value) return
+  const restored = await uncancelAvailment(uncancelTarget.value)
+  if (restored) uncancelTarget.value = null
+}
+
 function isDoctorPaid(record?: DentalAvailmentRecord | null) {
   if (!record) return false
   const value = record.IfPaid ?? record.ifPaid ?? record.ifpaid
   return value === true || Number(value || 0) === 1
+}
+
+function isValidAvailment(record?: DentalAvailmentRecord | null) {
+  if (!record) return false
+  return String(record.status || 'VALID').toUpperCase() === 'VALID'
 }
 
 function openPaymentDialog(record: DentalAvailmentRecord, paid: boolean) {
@@ -164,6 +181,8 @@ function normalizeDateInput(value?: string | null) {
 }
 
 function openEditDialog(record: DentalAvailmentRecord) {
+  if (!isValidAvailment(record) || updatingId.value) return
+
   editTarget.value = record
   editForm.availDate = normalizeDateInput(record.availdate)
   editForm.procedures = record.procedures || ''
@@ -182,6 +201,10 @@ function openEditDialog(record: DentalAvailmentRecord) {
   procedureSearch.value = ''
   dentistSearch.value = ''
   clinicSearch.value = ''
+}
+
+function handleRowEdit(record: DentalAvailmentRecord) {
+  openEditDialog(record)
 }
 
 function closeEditDialog() {
@@ -379,6 +402,48 @@ watch(clinicSearch, (search) => {
   </AppDialog>
 
   <AppDialog
+    title="Uncancel Availment"
+    :show="Boolean(uncancelTarget)"
+    :disabled="Boolean(uncancellingId)"
+    :confirm-label="uncancellingId ? 'Restoring...' : 'Confirm Uncancel'"
+    @close="closeUncancelDialog"
+    @confirm="confirmUncancel"
+  >
+    <template #dialog-content>
+      <div class="space-y-4">
+        <div class="rounded-[1.5rem] border border-emerald/15 bg-emerald-light p-5">
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald">
+            Restore availment
+          </p>
+          <p class="mt-2 text-sm leading-6 text-slate">
+            This will restore the selected availment row by setting the transaction back to active.
+          </p>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Approval</p>
+            <p class="mt-2 font-mono text-sm font-bold text-onyx">
+              {{ uncancelTarget?.approvalno || 'N/A' }}
+            </p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Procedure</p>
+            <p class="mt-2 text-sm font-bold text-onyx">
+              {{ uncancelTarget?.procedures || 'N/A' }}
+            </p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4 sm:col-span-2">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Member</p>
+            <p class="mt-2 text-sm font-bold text-onyx">
+              {{ uncancelTarget?.membername || 'N/A' }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </template>
+  </AppDialog>
+
+  <AppDialog
     :title="paymentTarget?.paid ? 'Mark dentist as paid' : 'Mark dentist as unpaid'"
     :show="Boolean(paymentTarget)"
     :disabled="Boolean(updatingPaymentId)"
@@ -510,87 +575,6 @@ watch(clinicSearch, (search) => {
     </template>
   </AppDialog>
 
-  <AppModal
-    :show="Boolean(selectedApproval) || lookingUp || Boolean(lookupErrorMessage)"
-    title="Approval Details"
-    subtitle="Procedure rows under one approval number"
-    max-width="sm:max-w-5xl"
-    @close="closeApprovalDetails"
-  >
-    <div class="space-y-5 p-6">
-      <AppLoadingScreen
-        v-if="lookingUp"
-        title="Loading approval"
-        message="Please wait while we load the approval rows."
-      />
-
-      <p
-        v-else-if="lookupErrorMessage"
-        class="rounded-xl bg-ruby-light px-4 py-3 text-sm text-ruby"
-      >
-        {{ lookupErrorMessage }}
-      </p>
-
-      <template v-else-if="selectedApproval">
-        <section
-          class="grid gap-4 rounded-[1.5rem] border border-pebble bg-cloud p-5 md:grid-cols-4"
-        >
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Approval</p>
-            <p class="mt-2 font-mono text-lg font-black text-onyx">
-              {{ selectedApproval.approvalNo }}
-            </p>
-          </div>
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Member</p>
-            <p class="mt-2 text-sm font-bold text-onyx">
-              {{ selectedApproval.memberName || 'N/A' }}
-            </p>
-          </div>
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Items</p>
-            <p class="mt-2 text-lg font-black text-onyx">{{ selectedApproval.itemCount }}</p>
-          </div>
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Total</p>
-            <p class="mt-2 text-lg font-black text-onyx">
-              {{ formatMoney(selectedApproval.totalAmount) }}
-            </p>
-          </div>
-        </section>
-
-        <div class="overflow-hidden rounded-[1.5rem] border border-pebble bg-white">
-          <div class="overflow-x-auto">
-            <table class="w-full min-w-180 table-auto">
-              <thead
-                class="border-b border-pebble bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5fb_100%)]"
-              >
-                <tr>
-                  <th class="px-5 py-4 text-left text-sm font-semibold text-onyx">Procedure</th>
-                  <th class="px-5 py-4 text-left text-sm font-semibold text-onyx">Tooth</th>
-                  <th class="px-5 py-4 text-left text-sm font-semibold text-onyx">Dentist</th>
-                  <th class="px-5 py-4 text-left text-sm font-semibold text-onyx">Clinic</th>
-                  <th class="px-5 py-4 text-right text-sm font-semibold text-onyx">Amount</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-pebble/65">
-                <tr v-for="row in selectedApproval.rows" :key="row.dentalid">
-                  <td class="px-5 py-4 text-sm font-bold text-onyx">{{ row.procedures }}</td>
-                  <td class="px-5 py-4 text-sm text-slate">{{ row.toothno || 'N/A' }}</td>
-                  <td class="px-5 py-4 text-sm text-slate">{{ row.dentistname || 'N/A' }}</td>
-                  <td class="px-5 py-4 text-sm text-slate">{{ row.clinicname || 'N/A' }}</td>
-                  <td class="px-5 py-4 text-right text-sm font-bold text-onyx">
-                    {{ formatMoney(row.amount) }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </template>
-    </div>
-  </AppModal>
-
   <div class="space-y-6">
     <section
       class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#fff5e6_0%,#ffffff_44%,#f7fbff_100%)] shadow-sm"
@@ -664,8 +648,8 @@ watch(clinicSearch, (search) => {
         <div>
           <h2 class="text-xl font-black text-onyx">Approval Row History</h2>
           <p class="mt-1 text-sm text-slate">
-            Browse each saved procedure row and use the row actions for details, edits, or
-            cancellation.
+            Browse each saved procedure row. Select a valid row to edit it, or use the row actions
+            for payment updates and cancellation.
           </p>
         </div>
         <div class="rounded-full bg-cloud px-3 py-1 text-xs font-bold text-slate">
@@ -697,7 +681,17 @@ watch(clinicSearch, (search) => {
             </td>
           </tr>
 
-          <tr v-for="record in records" v-else :key="record.dentalid">
+          <tr
+            v-for="record in records"
+            v-else
+            :key="record.dentalid"
+            :class="isValidAvailment(record) ? 'cursor-pointer' : ''"
+            :tabindex="isValidAvailment(record) ? 0 : undefined"
+            :role="isValidAvailment(record) ? 'button' : undefined"
+            @click="handleRowEdit(record)"
+            @keydown.enter="handleRowEdit(record)"
+            @keydown.space.prevent="handleRowEdit(record)"
+          >
             <td>
               <span class="font-mono text-sm font-black text-onyx">{{ record.approvalno }}</span>
             </td>
@@ -735,7 +729,7 @@ watch(clinicSearch, (search) => {
               <span
                 class="rounded-full px-3 py-1 text-xs font-semibold"
                 :class="
-                  (record.status || 'VALID') === 'VALID'
+                  isValidAvailment(record)
                     ? 'bg-emerald-light text-emerald'
                     : 'bg-ruby-light text-ruby'
                 "
@@ -746,17 +740,7 @@ watch(clinicSearch, (search) => {
             <td>
               <div class="flex flex-wrap justify-end gap-2">
                 <button
-                  type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#d8c5a0] bg-[linear-gradient(180deg,#f8eddc_0%,#efe1cb_100%)] px-3.5 py-2 text-xs font-semibold text-[#8c6320] shadow-[0_10px_20px_rgba(176,138,52,0.12)] transition hover:border-[#c59a42] hover:bg-[linear-gradient(180deg,#fcf4e8_0%,#f3e5ce_100%)] hover:text-[#6f4a13]"
-                  title="View approval"
-                  aria-label="View approval"
-                  @click="openApprovalDetails(record.approvalno)"
-                >
-                  <Icon icon="feather:eye" class="h-4 w-4" />
-                  View
-                </button>
-                <button
-                  v-if="(record.status || 'VALID') === 'VALID'"
+                  v-if="isValidAvailment(record)"
                   type="button"
                   class="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
                   :class="
@@ -767,7 +751,7 @@ watch(clinicSearch, (search) => {
                   title="Update dentist payment"
                   aria-label="Update dentist payment"
                   :disabled="updatingPaymentId === record.dentalid"
-                  @click="openPaymentDialog(record, !isDoctorPaid(record))"
+                  @click.stop="openPaymentDialog(record, !isDoctorPaid(record))"
                 >
                   <Icon
                     :icon="
@@ -783,29 +767,13 @@ watch(clinicSearch, (search) => {
                   {{ isDoctorPaid(record) ? 'Mark Unpaid' : 'Mark Paid' }}
                 </button>
                 <button
-                  v-if="(record.status || 'VALID') === 'VALID'"
-                  type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-sapphire/20 bg-sapphire-light px-3.5 py-2 text-xs font-semibold text-sapphire transition hover:border-sapphire/40 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-                  title="Edit availment"
-                  aria-label="Edit availment"
-                  :disabled="updatingId === record.dentalid"
-                  @click="openEditDialog(record)"
-                >
-                  <Icon
-                    :icon="updatingId === record.dentalid ? 'feather:loader' : 'feather:edit-2'"
-                    class="h-4 w-4"
-                    :class="{ 'animate-spin': updatingId === record.dentalid }"
-                  />
-                  Edit
-                </button>
-                <button
-                  v-if="(record.status || 'VALID') === 'VALID'"
+                  v-if="isValidAvailment(record)"
                   type="button"
                   class="inline-flex items-center gap-2 rounded-full border border-ruby/20 bg-ruby-light px-3.5 py-2 text-xs font-semibold text-ruby transition hover:bg-ruby hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                   title="Cancel availment"
                   aria-label="Cancel availment"
                   :disabled="cancellingId === record.dentalid"
-                  @click="openCancelDialog(record)"
+                  @click.stop="openCancelDialog(record)"
                 >
                   <Icon
                     :icon="cancellingId === record.dentalid ? 'feather:loader' : 'feather:x-circle'"
@@ -813,6 +781,24 @@ watch(clinicSearch, (search) => {
                     :class="{ 'animate-spin': cancellingId === record.dentalid }"
                   />
                   Cancel
+                </button>
+                <button
+                  v-else
+                  type="button"
+                  class="inline-flex items-center gap-2 rounded-full border border-emerald/20 bg-emerald-light px-3.5 py-2 text-xs font-semibold text-emerald transition hover:border-emerald/40 hover:bg-white"
+                  title="Uncancel availment"
+                  aria-label="Uncancel availment"
+                  :disabled="uncancellingId === record.dentalid"
+                  @click.stop="openUncancelDialog(record)"
+                >
+                  <Icon
+                    :icon="
+                      uncancellingId === record.dentalid ? 'feather:loader' : 'feather:rotate-ccw'
+                    "
+                    class="h-4 w-4"
+                    :class="{ 'animate-spin': uncancellingId === record.dentalid }"
+                  />
+                  {{ uncancellingId === record.dentalid ? 'Restoring...' : 'Uncancel' }}
                 </button>
               </div>
             </td>

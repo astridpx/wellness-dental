@@ -24,6 +24,7 @@ export function useDentalAvailmentHistory() {
   const loading = ref(true)
   const lookingUp = ref(false)
   const cancellingId = ref<number | null>(null)
+  const uncancellingId = ref<number | null>(null)
   const updatingId = ref<number | null>(null)
   const updatingPaymentId = ref<number | null>(null)
   const errorMessage = ref('')
@@ -171,6 +172,33 @@ export function useDentalAvailmentHistory() {
     return true
   }
 
+  async function uncancelAvailment(record: DentalAvailmentRecord) {
+    uncancellingId.value = record.dentalid
+    errorMessage.value = ''
+    successMessage.value = ''
+
+    const result = await request<DentalAvailmentRecord>(
+      `/wellness/dentalAvailments/${record.dentalid}/uncancel`,
+      {
+        method: 'PATCH',
+      },
+    )
+
+    uncancellingId.value = null
+
+    if (!result.ok) {
+      errorMessage.value = result.error || 'Unable to uncancel dental availment.'
+      return false
+    }
+
+    successMessage.value = `Availment ${record.approvalno} was restored.`
+    await fetchHistory()
+    if (selectedApproval.value?.approvalNo === record.approvalno) {
+      await openApprovalDetails(record.approvalno)
+    }
+    return true
+  }
+
   async function updateAvailment(
     record: DentalAvailmentRecord,
     payload: {
@@ -279,6 +307,8 @@ export function useDentalAvailmentHistory() {
     successMessage,
     totalEntries,
     totalPages,
+    uncancelAvailment,
+    uncancellingId,
     paidRows,
     unpaidRows,
     unpaidAmount,
