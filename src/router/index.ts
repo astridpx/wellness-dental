@@ -2,6 +2,8 @@ import BusinessPartnersView from '@/views/BusinessPartnersView.vue'
 import AccountSettingsView from '@/views/AccountSettingsView.vue'
 import ClinicView from '@/views/clinics/ClinicView.vue'
 import DashboardView from '@/views/DashboardView.vue'
+import DentalAvailmentsView from '@/views/DentalAvailmentsView.vue'
+import DentalAvailmentHistoryView from '@/views/DentalAvailmentHistoryView.vue'
 import LoginView from '@/views/LoginView.vue'
 import SystemLogsView from '@/views/SystemLogsView.vue'
 import UserLogsView from '@/views/UserLogsView.vue'
@@ -60,6 +62,26 @@ const router = createRouter({
       meta: {
         title: 'Transaction',
         icon: 'feather:credit-card',
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
+      },
+    },
+    {
+      path: '/dental-availments',
+      name: 'dentalAvailments',
+      component: DentalAvailmentsView,
+      meta: {
+        title: 'Dental Availments',
+        icon: 'feather:file-text',
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
+      },
+    },
+    {
+      path: '/dental-availment-history',
+      name: 'dentalAvailmentHistory',
+      component: DentalAvailmentHistoryView,
+      meta: {
+        title: 'Availment History',
+        icon: 'feather:clock',
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
