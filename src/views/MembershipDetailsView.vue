@@ -63,6 +63,20 @@ function confirmFilters() {
   showFilterModal.value = false
   applyFilters()
 }
+
+function getPaymentRemittanceStatus(payment: { remittedWell?: string | null }) {
+  if (payment.remittedWell) {
+    return {
+      label: 'Remitted',
+      className: 'bg-emerald-light text-emerald',
+    }
+  }
+
+  return {
+    label: 'Not remitted',
+    className: 'bg-ruby-light text-ruby',
+  }
+}
 </script>
 
 <template>
@@ -91,14 +105,8 @@ function confirmFilters() {
           <AppInput
             v-model="filters.search"
             label="Quick Search"
-            placeholder="Member, card number, birth date, policy"
+            placeholder="Member, card number, or birth date"
             icon="feather:search"
-          />
-          <AppInput
-            v-model="filters.planholderId"
-            label="Planholder ID"
-            placeholder="e.g. 102938"
-            icon="feather:hash"
           />
           <AppInput
             v-model="filters.memberName"
@@ -117,12 +125,6 @@ function confirmFilters() {
             label="Plan Code"
             placeholder="e.g. XNT003"
             icon="feather:tag"
-          />
-          <AppInput
-            v-model="filters.policyNumber"
-            label="Policy Number"
-            placeholder="e.g. POL-000123"
-            icon="feather:file-text"
           />
           <div class="md:col-span-2">
             <label class="mb-2 block text-sm font-medium text-onyx">Status</label>
@@ -153,13 +155,13 @@ function confirmFilters() {
   <AppModal
     :show="showPaymentsModal"
     title="Membership Payment History"
-    subtitle="Verified payment records"
+    subtitle="Payment records for the shared main planholder group"
     max-width="sm:max-w-5xl"
     @close="closePaymentsModal"
   >
     <div class="space-y-6 p-6">
       <section
-        class="grid gap-4 rounded-[1.5rem] border border-pebble bg-[linear-gradient(135deg,#fff8ef_0%,#ffffff_100%)] p-5 md:grid-cols-4"
+        class="grid gap-4 rounded-[1.5rem] border border-pebble bg-[linear-gradient(135deg,#fff8ef_0%,#ffffff_100%)] p-5 md:grid-cols-2"
       >
         <div>
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-smoke">Member</p>
@@ -168,12 +170,6 @@ function confirmFilters() {
         <div>
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-smoke">Plan Code</p>
           <p class="mt-2 text-sm font-bold text-onyx">{{ selectedMember?.planCode || 'N/A' }}</p>
-        </div>
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-smoke">Covered Until</p>
-          <p class="mt-2 text-sm font-bold text-onyx">
-            {{ formatDate(selectedMember?.coveredUntil) }}
-          </p>
         </div>
       </section>
 
@@ -194,7 +190,7 @@ function confirmFilters() {
       <AppLoadingScreen
         v-if="loadingPayments"
         title="Loading payment history"
-        message="Please wait while we verify cleared membership payments."
+        message="Please wait while we load membership payment records."
       />
 
       <div
@@ -202,14 +198,16 @@ function confirmFilters() {
         class="overflow-hidden rounded-[1.5rem] border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fbfcff_100%)] shadow-[0_18px_34px_rgba(21,42,78,0.06)]"
       >
         <div class="overflow-x-auto">
-          <table class="w-full min-w-170 table-auto">
+          <table class="w-full min-w-230 table-auto">
             <thead
               class="border-b border-pebble bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5fb_100%)]"
             >
               <tr>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Period</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Reference #</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Plan</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Membership Fee</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Remittance</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Received</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Posted</th>
               </tr>
@@ -231,7 +229,22 @@ function confirmFilters() {
                   </span>
                 </td>
                 <td class="px-6 py-4 align-top text-onyx">
-                  {{ formatCurrency(selectedMember?.dentalPremium) }}
+                  <span
+                    class="inline-flex rounded-full bg-sapphire-light px-3 py-1 text-xs font-bold tracking-[0.08em] text-sapphire"
+                  >
+                    {{ payment.planCode || 'N/A' }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 align-top text-onyx">
+                  {{ formatCurrency(payment.membershipFee) }}
+                </td>
+                <td class="px-6 py-4 align-top text-onyx">
+                  <span
+                    class="inline-flex rounded-full px-3 py-1 text-xs font-bold"
+                    :class="getPaymentRemittanceStatus(payment).className"
+                  >
+                    {{ getPaymentRemittanceStatus(payment).label }}
+                  </span>
                 </td>
                 <td class="px-6 py-4 align-top text-onyx">
                   {{ formatDate(payment.dateReceived) }}
@@ -239,17 +252,16 @@ function confirmFilters() {
                 <td class="px-6 py-4 align-top text-onyx">{{ formatDate(payment.datePosted) }}</td>
               </tr>
               <tr v-if="!paymentRecords.length">
-                <td colspan="5" class="w-full px-6 py-14 text-center text-onyx">
+                <td colspan="7" class="w-full px-6 py-14 text-center text-onyx">
                   <div class="flex w-full flex-col items-center">
                     <span
                       class="flex h-12 w-12 items-center justify-center rounded-2xl bg-fog text-smoke"
                     >
                       <Icon icon="feather:credit-card" class="h-5 w-5" />
                     </span>
-                    <p class="mt-3 font-semibold text-onyx">No cleared payments found</p>
+                    <p class="mt-3 font-semibold text-onyx">No payments found</p>
                     <p class="mt-1 text-sm text-slate">
-                      This member is on a dental-premium plan but has no visible cleared payment
-                      history yet.
+                      This member group has no visible dental-premium payment history yet.
                     </p>
                   </div>
                 </td>
@@ -312,14 +324,16 @@ function confirmFilters() {
           <p class="mt-2 text-3xl font-black text-onyx">{{ stats.totalVisibleMembers }}</p>
         </div>
         <div class="bg-white px-6 py-5">
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Active in list</p>
-          <p class="mt-2 text-3xl font-black text-onyx">{{ stats.activeMembers }}</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">
+            Not remitted members
+          </p>
+          <p class="mt-2 text-3xl font-black text-onyx">{{ stats.unremittedMembers }}</p>
         </div>
         <div class="bg-white px-6 py-5">
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">
-            With cleared payments
+            Remitted members
           </p>
-          <p class="mt-2 text-3xl font-black text-onyx">{{ stats.withPayments }}</p>
+          <p class="mt-2 text-3xl font-black text-onyx">{{ stats.remittedMembers }}</p>
         </div>
       </div>
     </section>
@@ -388,7 +402,6 @@ function confirmFilters() {
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Member</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Company</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Plan</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Covered Until</th>
                 <th class="px-6 py-4 text-right text-sm font-semibold text-onyx">Action</th>
               </tr>
             </thead>
@@ -402,7 +415,7 @@ function confirmFilters() {
                   <div class="min-w-60">
                     <p class="font-semibold text-onyx">{{ member.memberName }}</p>
                     <p class="mt-1 text-xs text-slate">
-                      {{ member.policyNumber || member.imsCardNumber || 'No policy/card number' }}
+                      {{ member.imsCardNumber || 'No card number' }}
                     </p>
                   </div>
                 </td>
@@ -423,9 +436,6 @@ function confirmFilters() {
                     </p>
                   </div>
                 </td>
-                <td class="px-6 py-4 align-top text-onyx">
-                  <span class="whitespace-nowrap">{{ formatDate(member.coveredUntil) }}</span>
-                </td>
                 <td class="px-6 py-4 align-top text-right text-onyx">
                   <button
                     type="button"
@@ -438,7 +448,7 @@ function confirmFilters() {
                 </td>
               </tr>
               <tr v-if="totalEntries <= 0">
-                <td colspan="5" class="w-full px-6 py-14 text-center text-onyx">
+                <td colspan="4" class="w-full px-6 py-14 text-center text-onyx">
                   <div class="flex w-full flex-col items-center">
                     <span
                       class="flex h-12 w-12 items-center justify-center rounded-2xl bg-fog text-smoke"

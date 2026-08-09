@@ -54,8 +54,16 @@ const selectedUploadFile = ref<File | null>(null)
 const selectedBusinessPartnerId = ref('')
 const availableSheetNames = ref<string[]>([])
 const showUploadPanel = ref(false)
-const batchPaymentConfirmation = ref<{ batch: PartnerMemberBatch; paid: boolean } | null>(null)
-const recordPaymentConfirmation = ref<{ record: PartnerMemberRecord; paid: boolean } | null>(null)
+const batchPaymentConfirmation = ref<{
+  batch: PartnerMemberBatch
+  paid: boolean
+  paymentReference: string
+} | null>(null)
+const recordPaymentConfirmation = ref<{
+  record: PartnerMemberRecord
+  paid: boolean
+  paymentReference: string
+} | null>(null)
 const toast = ref({
   show: false,
   variant: 'success',
@@ -136,7 +144,7 @@ async function submitUpload() {
 function openBatchPaymentConfirmation(paid: boolean, batch = selectedBatch.value) {
   if (!batch || markingPaidBatchId.value) return
 
-  batchPaymentConfirmation.value = { batch, paid }
+  batchPaymentConfirmation.value = { batch, paid, paymentReference: '' }
 }
 
 function closeBatchPaymentConfirmation() {
@@ -148,8 +156,8 @@ function closeBatchPaymentConfirmation() {
 async function confirmBatchPaymentStatus() {
   if (!batchPaymentConfirmation.value) return
 
-  const { batch, paid } = batchPaymentConfirmation.value
-  const updated = await updateBatchPaymentStatus(batch, paid)
+  const { batch, paid, paymentReference } = batchPaymentConfirmation.value
+  const updated = await updateBatchPaymentStatus(batch, paid, paymentReference)
 
   if (!updated) {
     toast.value = {
@@ -159,7 +167,7 @@ async function confirmBatchPaymentStatus() {
       message:
         recordError.value ||
         batchError.value ||
-        `Unable to mark this batch as ${paid ? 'paid' : 'unpaid'}.`,
+        `Unable to mark this batch as ${paid ? 'received' : 'pending'}.`,
     }
     return
   }
@@ -167,8 +175,8 @@ async function confirmBatchPaymentStatus() {
   toast.value = {
     show: true,
     variant: 'success',
-    title: paid ? 'Batch marked as paid' : 'Batch marked as unpaid',
-    message: `${batch.batchCode} now has all members marked ${paid ? 'paid' : 'unpaid'}.`,
+    title: paid ? 'Batch marked as received' : 'Batch marked as pending',
+    message: `${batch.batchCode} now has all members marked ${paid ? 'received' : 'pending'}.`,
   }
   batchPaymentConfirmation.value = null
 }
@@ -176,7 +184,11 @@ async function confirmBatchPaymentStatus() {
 function openRecordPaymentConfirmation(record: PartnerMemberRecord, paid: boolean) {
   if (updatingRecordId.value) return
 
-  recordPaymentConfirmation.value = { record, paid }
+  recordPaymentConfirmation.value = {
+    record,
+    paid,
+    paymentReference: paid ? record.paymentReference || '' : '',
+  }
 }
 
 function closeRecordPaymentConfirmation() {
@@ -188,15 +200,16 @@ function closeRecordPaymentConfirmation() {
 async function confirmRecordPaymentStatus() {
   if (!recordPaymentConfirmation.value) return
 
-  const { record, paid } = recordPaymentConfirmation.value
-  const updated = await updatePaymentStatus(record, paid)
+  const { record, paid, paymentReference } = recordPaymentConfirmation.value
+  const updated = await updatePaymentStatus(record, paid, paymentReference)
 
   if (!updated) {
     toast.value = {
       show: true,
       variant: 'error',
       title: 'Member was not updated',
-      message: recordError.value || `Unable to mark this member as ${paid ? 'paid' : 'unpaid'}.`,
+      message:
+        recordError.value || `Unable to mark this member as ${paid ? 'received' : 'pending'}.`,
     }
     return
   }
@@ -204,8 +217,8 @@ async function confirmRecordPaymentStatus() {
   toast.value = {
     show: true,
     variant: 'success',
-    title: paid ? 'Member marked as paid' : 'Member marked as unpaid',
-    message: `${record.fullName} is now marked ${paid ? 'paid' : 'unpaid'}.`,
+    title: paid ? 'Member marked as received' : 'Member marked as pending',
+    message: `${record.fullName} is now marked ${paid ? 'received' : 'pending'}.`,
   }
   recordPaymentConfirmation.value = null
 }
@@ -265,7 +278,7 @@ watch(selectedBusinessPartnerId, (value) => {
             </h1>
             <p class="mt-3 max-w-3xl text-sm leading-6 text-slate">
               Read partner Excel lists, add the member rows into the active partner list, and track
-              which members are already paid.
+              payment status for service billing.
             </p>
           </div>
 
@@ -330,8 +343,8 @@ watch(selectedBusinessPartnerId, (value) => {
           </p>
           <h2 class="mt-2 text-xl font-black text-onyx">Import a new partner Excel file</h2>
           <p class="mt-1 text-sm text-slate">
-            Read the Excel contents and create a member batch with partner, company, and
-            payment-tracking state.
+            Read the Excel contents and create a member batch with partner, company, and payment
+            tracking state.
           </p>
         </div>
         <button
@@ -584,8 +597,8 @@ watch(selectedBusinessPartnerId, (value) => {
               <td>
                 <div class="space-y-1">
                   <p class="font-semibold text-onyx">{{ batch.totalRows }} total</p>
-                  <p class="text-xs text-emerald">{{ batch.paidRows }} paid</p>
-                  <p class="text-xs text-amber">{{ batch.unpaidRows }} unpaid</p>
+                  <p class="text-xs text-emerald">{{ batch.paidRows }} received</p>
+                  <p class="text-xs text-amber">{{ batch.unpaidRows }} pending</p>
                 </div>
               </td>
               <td>
@@ -610,7 +623,7 @@ watch(selectedBusinessPartnerId, (value) => {
                       class="size-4"
                       :class="markingPaidBatchId === batch.id ? 'animate-spin' : ''"
                     />
-                    {{ markingPaidBatchId === batch.id ? 'Saving...' : 'Mark All Paid' }}
+                    {{ markingPaidBatchId === batch.id ? 'Saving...' : 'Mark All Received' }}
                   </button>
                   <button
                     v-if="batch.paidRows > 0"
@@ -626,7 +639,7 @@ watch(selectedBusinessPartnerId, (value) => {
                       class="size-4"
                       :class="markingPaidBatchId === batch.id ? 'animate-spin' : ''"
                     />
-                    {{ markingPaidBatchId === batch.id ? 'Saving...' : 'Mark All Unpaid' }}
+                    {{ markingPaidBatchId === batch.id ? 'Saving...' : 'Mark All Pending' }}
                   </button>
                 </div>
               </td>
@@ -678,7 +691,7 @@ watch(selectedBusinessPartnerId, (value) => {
               class="size-4"
               :class="markingPaidBatchId === selectedBatch.id ? 'animate-spin' : ''"
             />
-            {{ markingPaidBatchId === selectedBatch.id ? 'Saving...' : 'Mark All Paid' }}
+            {{ markingPaidBatchId === selectedBatch.id ? 'Saving...' : 'Mark All Received' }}
           </button>
           <button
             v-if="selectedBatch.paidRows > 0"
@@ -694,7 +707,7 @@ watch(selectedBusinessPartnerId, (value) => {
               class="size-4"
               :class="markingPaidBatchId === selectedBatch.id ? 'animate-spin' : ''"
             />
-            {{ markingPaidBatchId === selectedBatch.id ? 'Saving...' : 'Mark All Unpaid' }}
+            {{ markingPaidBatchId === selectedBatch.id ? 'Saving...' : 'Mark All Pending' }}
           </button>
         </div>
         <div
@@ -719,8 +732,8 @@ watch(selectedBusinessPartnerId, (value) => {
             class="w-full rounded-xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fafcff_100%)] px-4 py-3.5 text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
           >
             <option value="">All payment states</option>
-            <option value="true">Paid only</option>
-            <option value="false">Unpaid only</option>
+            <option value="true">Received only</option>
+            <option value="false">Pending only</option>
           </select>
         </div>
         <div class="flex rounded-xl border border-pebble bg-cloud p-1">
@@ -763,7 +776,15 @@ watch(selectedBusinessPartnerId, (value) => {
 
       <div v-else class="overflow-hidden rounded-[1.5rem] border border-pebble">
         <AppTable
-          :theads="['Area / Location', 'ID No.', 'Full Name', 'Card No.', 'Paid', 'Action']"
+          :theads="[
+            'Area / Location',
+            'ID No.',
+            'Full Name',
+            'Card No.',
+            'Payment',
+            'Reference No.',
+            'Action',
+          ]"
           :total-entries="recordTotalEntries"
           :total-pages="recordTotalPages"
           :current-page="recordCurrentPage"
@@ -771,7 +792,7 @@ watch(selectedBusinessPartnerId, (value) => {
         >
           <template #trs>
             <tr v-if="!records.length">
-              <td colspan="6" class="w-full py-14! text-center!">
+              <td colspan="7" class="w-full py-14! text-center!">
                 <div class="flex w-full flex-col items-center">
                   <span
                     class="flex h-12 w-12 items-center justify-center rounded-2xl bg-fog text-smoke"
@@ -803,7 +824,12 @@ watch(selectedBusinessPartnerId, (value) => {
                     record.paid ? 'bg-emerald-light text-emerald' : 'bg-amber-light text-amber'
                   "
                 >
-                  {{ record.paid ? 'Paid' : 'Unpaid' }}
+                  {{ record.paid ? 'Received' : 'Pending' }}
+                </span>
+              </td>
+              <td>
+                <span class="font-mono text-xs font-semibold text-slate">
+                  {{ record.paymentReference || 'N/A' }}
                 </span>
               </td>
               <td class="px-5 py-4">
@@ -834,8 +860,8 @@ watch(selectedBusinessPartnerId, (value) => {
                       updatingRecordId === record.id
                         ? 'Saving...'
                         : record.paid
-                          ? 'Mark Unpaid'
-                          : 'Mark Paid'
+                          ? 'Mark Pending'
+                          : 'Mark Received'
                     }}
                   </button>
                 </div>
@@ -848,8 +874,10 @@ watch(selectedBusinessPartnerId, (value) => {
 
     <AppModal
       :show="Boolean(batchPaymentConfirmation)"
-      :title="batchPaymentConfirmation?.paid ? 'Mark batch as paid' : 'Mark batch as unpaid'"
-      subtitle="Payment confirmation"
+      :title="
+        batchPaymentConfirmation?.paid ? 'Mark batch as received' : 'Mark batch as pending payment'
+      "
+      subtitle="Payment received confirmation"
       max-width="sm:max-w-lg"
       @close="closeBatchPaymentConfirmation"
     >
@@ -886,13 +914,13 @@ watch(selectedBusinessPartnerId, (value) => {
               </p>
             </div>
             <div>
-              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Paid</p>
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Received</p>
               <p class="mt-1 font-bold text-emerald">
                 {{ batchPaymentConfirmation.batch.paidRows }}
               </p>
             </div>
             <div>
-              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Unpaid</p>
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Pending</p>
               <p class="mt-1 font-bold text-amber">
                 {{ batchPaymentConfirmation.batch.unpaidRows }}
               </p>
@@ -902,7 +930,18 @@ watch(selectedBusinessPartnerId, (value) => {
 
         <p class="text-sm leading-6 text-slate">
           This will mark every member in this batch as
-          {{ batchPaymentConfirmation.paid ? 'paid' : 'unpaid' }} and refresh the batch totals.
+          {{ batchPaymentConfirmation.paid ? 'received' : 'pending' }} and refresh the batch totals.
+        </p>
+
+        <AppInput
+          v-if="batchPaymentConfirmation.paid"
+          v-model="batchPaymentConfirmation.paymentReference"
+          label="Payment Reference No."
+          placeholder="Required reference no."
+          icon="feather:hash"
+        />
+        <p v-else class="rounded-xl bg-fog px-4 py-3 text-sm text-slate">
+          Existing payment reference numbers for this batch will be cleared.
         </p>
       </div>
 
@@ -919,7 +958,12 @@ watch(selectedBusinessPartnerId, (value) => {
           <AppButton
             btn-theme="primary"
             class="normal-case"
-            :disabled="Boolean(markingPaidBatchId)"
+            :disabled="
+              Boolean(markingPaidBatchId) ||
+              Boolean(
+                batchPaymentConfirmation?.paid && !batchPaymentConfirmation.paymentReference.trim(),
+              )
+            "
             @click="confirmBatchPaymentStatus"
           >
             <Icon
@@ -937,8 +981,8 @@ watch(selectedBusinessPartnerId, (value) => {
               markingPaidBatchId
                 ? 'Saving...'
                 : batchPaymentConfirmation?.paid
-                  ? 'Mark All Paid'
-                  : 'Mark All Unpaid'
+                  ? 'Mark All Received'
+                  : 'Mark All Pending'
             }}
           </AppButton>
         </div>
@@ -947,8 +991,12 @@ watch(selectedBusinessPartnerId, (value) => {
 
     <AppModal
       :show="Boolean(recordPaymentConfirmation)"
-      :title="recordPaymentConfirmation?.paid ? 'Mark member as paid' : 'Mark member as unpaid'"
-      subtitle="Payment confirmation"
+      :title="
+        recordPaymentConfirmation?.paid
+          ? 'Mark member as received'
+          : 'Mark member as pending payment'
+      "
+      subtitle="Payment received confirmation"
       max-width="sm:max-w-lg"
       @close="closeRecordPaymentConfirmation"
     >
@@ -990,7 +1038,19 @@ watch(selectedBusinessPartnerId, (value) => {
         </div>
 
         <p class="text-sm leading-6 text-slate">
-          This will mark this member as {{ recordPaymentConfirmation.paid ? 'paid' : 'unpaid' }}.
+          This will mark this member as
+          {{ recordPaymentConfirmation.paid ? 'received' : 'pending' }}.
+        </p>
+
+        <AppInput
+          v-if="recordPaymentConfirmation.paid"
+          v-model="recordPaymentConfirmation.paymentReference"
+          label="Payment Reference No."
+          placeholder="Required reference no."
+          icon="feather:hash"
+        />
+        <p v-else class="rounded-xl bg-fog px-4 py-3 text-sm text-slate">
+          This member's payment reference number will be cleared.
         </p>
       </div>
 
@@ -1007,7 +1067,13 @@ watch(selectedBusinessPartnerId, (value) => {
           <AppButton
             btn-theme="primary"
             class="normal-case"
-            :disabled="Boolean(updatingRecordId)"
+            :disabled="
+              Boolean(updatingRecordId) ||
+              Boolean(
+                recordPaymentConfirmation?.paid &&
+                !recordPaymentConfirmation.paymentReference.trim(),
+              )
+            "
             @click="confirmRecordPaymentStatus"
           >
             <Icon
@@ -1025,8 +1091,8 @@ watch(selectedBusinessPartnerId, (value) => {
               updatingRecordId
                 ? 'Saving...'
                 : recordPaymentConfirmation?.paid
-                  ? 'Mark Paid'
-                  : 'Mark Unpaid'
+                  ? 'Mark Received'
+                  : 'Mark Pending'
             }}
           </AppButton>
         </div>

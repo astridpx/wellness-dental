@@ -14,9 +14,9 @@ import UserView from '@/views/users/UserView.vue'
 import SingleDentistView from '@/views/dentists/SingleDentistView.vue'
 import SingleUserView from '@/views/users/SingleUserView.vue'
 import TransactionView from '@/views/transactions/TransactionView.vue'
-import SingleTransactionView from '@/views/transactions/SingleTransactionView.vue'
 import OptionsView from '@/views/OptionsView.vue'
 import PartnerMembersView from '@/views/PartnerMembersView.vue'
+import PaymentExtractionView from '@/views/PaymentExtractionView.vue'
 import PlansView from '@/views/PlansView.vue'
 import MembershipDetailsView from '@/views/MembershipDetailsView.vue'
 import SingleClinicView from '@/views/clinics/SingleClinicView.vue'
@@ -60,7 +60,7 @@ const router = createRouter({
       name: 'transactions',
       component: TransactionView,
       meta: {
-        title: 'Transaction',
+        title: 'Transactions',
         icon: 'feather:credit-card',
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
@@ -84,18 +84,6 @@ const router = createRouter({
         icon: 'feather:clock',
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
-    },
-    {
-      path: '/transactions/add',
-      name: 'addTransaction',
-      component: SingleTransactionView,
-      meta: { title: 'Add Transaction', navItem: [false, { visibleTo: ['superAdmin', 'admin'] }] },
-    },
-    {
-      path: '/transactions/:id/edit',
-      name: 'editTransaction',
-      component: SingleTransactionView,
-      meta: { title: 'Edit Transaction', navItem: [false, { visibleTo: ['superAdmin', 'admin'] }] },
     },
     {
       path: '/dentists',
@@ -173,6 +161,16 @@ const router = createRouter({
         title: 'IMS Membership Details',
         icon: 'feather:shield',
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
+      },
+    },
+    {
+      path: '/payment-extraction',
+      name: 'paymentExtraction',
+      component: PaymentExtractionView,
+      meta: {
+        title: 'IMS Wellness Payables',
+        icon: 'feather:download-cloud',
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
       },
     },
     {

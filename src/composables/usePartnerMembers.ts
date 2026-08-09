@@ -16,6 +16,8 @@ type BatchMetadata = PaginationMetadata & {
 type RecordMetadata = PaginationMetadata & {
   sortBy?: string
   sortOrder?: string
+  paidRows?: number
+  unpaidRows?: number
 }
 
 export type PartnerMemberBatch = {
@@ -90,6 +92,8 @@ export function usePartnerMembers() {
   const recordCurrentPage = ref(1)
   const recordTotalEntries = ref(0)
   const recordTotalPages = ref(1)
+  const recordPaidEntries = ref(0)
+  const recordUnpaidEntries = ref(0)
 
   const batchFilters = reactive({
     companyCode: '',
@@ -98,6 +102,7 @@ export function usePartnerMembers() {
 
   const recordFilters = reactive({
     search: '',
+    companyCode: '',
     paid: '',
   })
 
@@ -118,8 +123,8 @@ export function usePartnerMembers() {
 
   const recordStats = computed(() => ({
     totalMembers: recordTotalEntries.value,
-    paidMembers: records.value.filter((record) => record.paid).length,
-    unpaidMembers: records.value.filter((record) => !record.paid).length,
+    paidMembers: recordPaidEntries.value,
+    unpaidMembers: recordUnpaidEntries.value,
   }))
 
   async function fetchBatches() {
@@ -179,6 +184,9 @@ export function usePartnerMembers() {
       params.set('batchId', String(selectedBatch.value.id))
     }
     if (recordFilters.search.trim()) params.set('search', recordFilters.search.trim())
+    if (recordFilters.companyCode.trim()) {
+      params.set('companyCode', recordFilters.companyCode.trim())
+    }
     if (recordFilters.paid) params.set('paid', recordFilters.paid)
 
     const result = await request<PartnerMemberRecord[]>(
@@ -190,6 +198,10 @@ export function usePartnerMembers() {
     if (!result.ok) {
       recordError.value = result.error
       records.value = []
+      recordTotalEntries.value = 0
+      recordTotalPages.value = 1
+      recordPaidEntries.value = 0
+      recordUnpaidEntries.value = 0
       return
     }
 
@@ -197,6 +209,8 @@ export function usePartnerMembers() {
     records.value = result.data || []
     recordTotalEntries.value = Number(metadata.totalEntries || 0)
     recordTotalPages.value = Number(metadata.totalPages || 1)
+    recordPaidEntries.value = Number(metadata.paidRows || 0)
+    recordUnpaidEntries.value = Number(metadata.unpaidRows || 0)
   }
 
   async function uploadBatch(file: File) {
@@ -241,7 +255,11 @@ export function usePartnerMembers() {
     return true
   }
 
-  async function updatePaymentStatus(record: PartnerMemberRecord, paid: boolean) {
+  async function updatePaymentStatus(
+    record: PartnerMemberRecord,
+    paid: boolean,
+    paymentReference = '',
+  ) {
     updatingRecordId.value = record.id
     recordError.value = ''
 
@@ -251,6 +269,7 @@ export function usePartnerMembers() {
         method: 'PATCH',
         body: JSON.stringify({
           paid,
+          paymentReference: paymentReference.trim() || undefined,
         }),
       },
       {
@@ -270,7 +289,11 @@ export function usePartnerMembers() {
     return true
   }
 
-  async function updateBatchPaymentStatus(batch: PartnerMemberBatch, paid: boolean) {
+  async function updateBatchPaymentStatus(
+    batch: PartnerMemberBatch,
+    paid: boolean,
+    paymentReference = '',
+  ) {
     markingPaidBatchId.value = batch.id
     batchError.value = ''
     recordError.value = ''
@@ -281,6 +304,7 @@ export function usePartnerMembers() {
         method: 'PATCH',
         body: JSON.stringify({
           paid,
+          paymentReference: paymentReference.trim() || undefined,
         }),
       },
       {
@@ -291,7 +315,8 @@ export function usePartnerMembers() {
     markingPaidBatchId.value = null
 
     if (!result.ok) {
-      const message = result.error || `Unable to mark this batch as ${paid ? 'paid' : 'unpaid'}.`
+      const message =
+        result.error || `Unable to mark this batch as ${paid ? 'remitted' : 'unremitted'}.`
       batchError.value = message
       recordError.value = message
       return false
@@ -339,7 +364,7 @@ export function usePartnerMembers() {
   })
 
   watch(
-    () => [recordFilters.search, recordFilters.paid],
+    () => [recordFilters.search, recordFilters.companyCode, recordFilters.paid],
     () => {
       recordCurrentPage.value = 1
       fetchRecords()
@@ -375,6 +400,8 @@ export function usePartnerMembers() {
     recordCurrentPage,
     recordTotalEntries,
     recordTotalPages,
+    recordPaidEntries,
+    recordUnpaidEntries,
     batchFilters,
     recordFilters,
     uploadForm,

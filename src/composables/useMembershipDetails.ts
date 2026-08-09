@@ -6,35 +6,34 @@ type PaginationMetadata = {
   perPage?: number
   totalEntries?: number
   totalPages?: number
+  remittedMembers?: number
+  unremittedMembers?: number
 }
 
 export type MembershipRecord = {
   planholderId: string
+  mainPlanholderId?: string | null
   memberName: string
-  policyNumber?: string | null
   officeCode?: string | null
   company?: string | null
   planCode?: string | null
   dentalPremium?: number | string | null
   birthDate?: string | null
   sex?: string | null
-  civilStatus?: string | null
   effectiveDate?: string | null
   lastPaymentDate?: string | null
   startCoverDate?: string | null
-  expiryDate?: string | null
-  cancelledDate?: string | null
-  typeCancelled?: string | null
   imsCardNumber?: string | null
-  totalAmountPaid?: number | string | null
-  employeeNumber?: string | null
   status?: string | null
-  coveredUntil?: string | null
+  remittedPaymentCount?: number | string | null
+  unremittedPaymentCount?: number | string | null
 }
 
 export type MembershipPaymentRecord = {
   paymentCollectionId: number
   planholderId: string
+  mainPlanholderId?: string | null
+  planCode?: string | null
   paymentPeriod?: string | null
   referenceNumber?: string | null
   membershipFee?: number | string | null
@@ -42,6 +41,7 @@ export type MembershipPaymentRecord = {
   dateReceived?: string | null
   datePosted?: string | null
   dateClearedByFinance?: string | null
+  remittedWell?: string | null
   orNumber?: string | null
   orDate?: string | null
   remarks?: string | null
@@ -64,6 +64,8 @@ export function useMembershipDetails() {
   const currentPage = ref(1)
   const totalEntries = ref(0)
   const totalPages = ref(1)
+  const remittedMembers = ref(0)
+  const unremittedMembers = ref(0)
 
   const paymentCurrentPage = ref(1)
   const paymentTotalEntries = ref(0)
@@ -71,21 +73,16 @@ export function useMembershipDetails() {
 
   const filters = reactive({
     search: '',
-    planholderId: '',
     memberName: '',
     company: '',
     planCode: '',
-    policyNumber: '',
     status: '',
   })
 
   const stats = computed(() => ({
     totalVisibleMembers: totalEntries.value,
-    activeMembers: members.value.filter((member) => {
-      const normalizedStatus = String(member.status || '').trim().toLowerCase()
-      return normalizedStatus === 'active'
-    }).length,
-    withPayments: members.value.filter((member) => Boolean(member.coveredUntil)).length,
+    unremittedMembers: unremittedMembers.value,
+    remittedMembers: remittedMembers.value,
   }))
 
   async function fetchMembers() {
@@ -95,16 +92,14 @@ export function useMembershipDetails() {
     const params = new URLSearchParams({
       page: String(currentPage.value),
       perPage: '10',
-      sortBy: 'memberName',
-      sortOrder: 'asc',
+      sortBy: 'planholderId',
+      sortOrder: 'desc',
     })
 
     if (filters.search.trim()) params.set('search', filters.search.trim())
-    if (filters.planholderId.trim()) params.set('planholderId', filters.planholderId.trim())
     if (filters.memberName.trim()) params.set('memberName', filters.memberName.trim())
     if (filters.company.trim()) params.set('company', filters.company.trim())
     if (filters.planCode.trim()) params.set('planCode', filters.planCode.trim())
-    if (filters.policyNumber.trim()) params.set('policyNumber', filters.policyNumber.trim())
     if (filters.status.trim()) params.set('status', filters.status.trim())
 
     const result = await request<MembershipRecord[]>(
@@ -118,6 +113,8 @@ export function useMembershipDetails() {
       members.value = []
       totalEntries.value = 0
       totalPages.value = 1
+      remittedMembers.value = 0
+      unremittedMembers.value = 0
       return
     }
 
@@ -125,6 +122,8 @@ export function useMembershipDetails() {
     members.value = result.data || []
     totalEntries.value = Number(metadata.totalEntries || 0)
     totalPages.value = Number(metadata.totalPages || 1)
+    remittedMembers.value = Number(metadata.remittedMembers || 0)
+    unremittedMembers.value = Number(metadata.unremittedMembers || 0)
   }
 
   async function fetchPaymentRecords() {
@@ -133,12 +132,14 @@ export function useMembershipDetails() {
     loadingPayments.value = true
     paymentErrorMessage.value = ''
 
+    const paymentGroupId =
+      selectedMember.value.mainPlanholderId || selectedMember.value.planholderId
     const params = new URLSearchParams({
       page: String(paymentCurrentPage.value),
       perPage: '10',
       sortBy: 'paymentCollectionId',
       sortOrder: 'desc',
-      planholderId: selectedMember.value.planholderId,
+      mainPlanholderId: paymentGroupId,
     })
 
     const result = await request<MembershipPaymentRecord[]>(
@@ -172,11 +173,9 @@ export function useMembershipDetails() {
 
   function clearFilters() {
     filters.search = ''
-    filters.planholderId = ''
     filters.memberName = ''
     filters.company = ''
     filters.planCode = ''
-    filters.policyNumber = ''
     filters.status = ''
     applyFilters()
   }

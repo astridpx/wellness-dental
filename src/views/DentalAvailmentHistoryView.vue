@@ -35,7 +35,9 @@ const {
   totalEntries,
   totalPages,
   updateAvailment,
+  updateDoctorPaymentStatus,
   updatingId,
+  updatingPaymentId,
 } = useDentalAvailmentHistory()
 const { procedures, loadingProcedures } = useProcedures()
 const {
@@ -49,6 +51,7 @@ const { clinics, fetchClinics, filters: clinicFilters, loading: loadingClinics }
 const showFilterDialog = ref(false)
 const cancelTarget = ref<DentalAvailmentRecord | null>(null)
 const editTarget = ref<DentalAvailmentRecord | null>(null)
+const paymentTarget = ref<{ record: DentalAvailmentRecord; paid: boolean } | null>(null)
 const selectedProcedureId = ref<string | number | null>(null)
 const procedureSearch = ref('')
 const selectedDentistId = ref<string | number | null>(null)
@@ -127,6 +130,32 @@ async function confirmCancel() {
   if (!cancelTarget.value) return
   const cancelled = await cancelAvailment(cancelTarget.value)
   if (cancelled) cancelTarget.value = null
+}
+
+function isDoctorPaid(record?: DentalAvailmentRecord | null) {
+  if (!record) return false
+  const value = record.IfPaid ?? record.ifPaid ?? record.ifpaid
+  return value === true || Number(value || 0) === 1
+}
+
+function openPaymentDialog(record: DentalAvailmentRecord, paid: boolean) {
+  if (updatingPaymentId.value) return
+  paymentTarget.value = { record, paid }
+}
+
+function closePaymentDialog() {
+  if (updatingPaymentId.value) return
+  paymentTarget.value = null
+}
+
+async function confirmPaymentStatus() {
+  if (!paymentTarget.value) return
+
+  const updated = await updateDoctorPaymentStatus(
+    paymentTarget.value.record,
+    paymentTarget.value.paid,
+  )
+  if (updated) paymentTarget.value = null
 }
 
 function normalizeDateInput(value?: string | null) {
@@ -342,6 +371,57 @@ watch(clinicSearch, (search) => {
             <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Member</p>
             <p class="mt-2 text-sm font-bold text-onyx">
               {{ cancelTarget?.membername || 'N/A' }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </template>
+  </AppDialog>
+
+  <AppDialog
+    :title="paymentTarget?.paid ? 'Mark dentist as paid' : 'Mark dentist as unpaid'"
+    :show="Boolean(paymentTarget)"
+    :disabled="Boolean(updatingPaymentId)"
+    :confirm-label="
+      updatingPaymentId
+        ? 'Saving...'
+        : paymentTarget?.paid
+          ? 'Mark Dentist Paid'
+          : 'Mark Dentist Unpaid'
+    "
+    @close="closePaymentDialog"
+    @confirm="confirmPaymentStatus"
+  >
+    <template #dialog-content>
+      <div class="space-y-4">
+        <div
+          class="rounded-[1.5rem] border border-emerald/15 bg-[linear-gradient(135deg,#ecfdf5_0%,#ffffff_100%)] p-5"
+        >
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald">
+            Dentist payment
+          </p>
+          <p class="mt-2 text-sm leading-6 text-slate">
+            This tracks whether the dentist/clinic has already been paid for this availment row.
+          </p>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Approval</p>
+            <p class="mt-2 font-mono text-sm font-bold text-onyx">
+              {{ paymentTarget?.record.approvalno || 'N/A' }}
+            </p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Procedure</p>
+            <p class="mt-2 text-sm font-bold text-onyx">
+              {{ paymentTarget?.record.procedures || 'N/A' }}
+            </p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4 sm:col-span-2">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Dentist / Clinic</p>
+            <p class="mt-2 text-sm font-bold text-onyx">
+              {{ paymentTarget?.record.dentistname || 'N/A' }} ·
+              {{ paymentTarget?.record.clinicname || 'N/A' }}
             </p>
           </div>
         </div>
@@ -601,6 +681,7 @@ watch(clinicSearch, (search) => {
           'Procedure',
           'Dentist / Clinic',
           'Amount',
+          'Dentist Payment',
           'Status',
           'Actions',
         ]"
@@ -611,7 +692,7 @@ watch(clinicSearch, (search) => {
       >
         <template #trs>
           <tr v-if="!records.length">
-            <td colspan="8" class="py-10! text-center! text-sm text-slate">
+            <td colspan="9" class="py-10! text-center! text-sm text-slate">
               No availment history found.
             </td>
           </tr>
@@ -642,6 +723,18 @@ watch(clinicSearch, (search) => {
               <span
                 class="rounded-full px-3 py-1 text-xs font-semibold"
                 :class="
+                  isDoctorPaid(record)
+                    ? 'bg-emerald-light text-emerald'
+                    : 'bg-amber-light text-amber'
+                "
+              >
+                {{ isDoctorPaid(record) ? 'Paid' : 'Unpaid' }}
+              </span>
+            </td>
+            <td>
+              <span
+                class="rounded-full px-3 py-1 text-xs font-semibold"
+                :class="
                   (record.status || 'VALID') === 'VALID'
                     ? 'bg-emerald-light text-emerald'
                     : 'bg-ruby-light text-ruby'
@@ -661,6 +754,33 @@ watch(clinicSearch, (search) => {
                 >
                   <Icon icon="feather:eye" class="h-4 w-4" />
                   View
+                </button>
+                <button
+                  v-if="(record.status || 'VALID') === 'VALID'"
+                  type="button"
+                  class="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
+                  :class="
+                    isDoctorPaid(record)
+                      ? 'border border-[#cbd7dd] bg-[linear-gradient(180deg,#edf5f7_0%,#e2ecef_100%)] text-[#2d5562] shadow-[0_10px_20px_rgba(54,89,99,0.08)] hover:border-[#9bb6bf]'
+                      : 'border border-emerald/20 bg-emerald-light text-emerald hover:border-emerald/40 hover:bg-white'
+                  "
+                  title="Update dentist payment"
+                  aria-label="Update dentist payment"
+                  :disabled="updatingPaymentId === record.dentalid"
+                  @click="openPaymentDialog(record, !isDoctorPaid(record))"
+                >
+                  <Icon
+                    :icon="
+                      updatingPaymentId === record.dentalid
+                        ? 'feather:loader'
+                        : isDoctorPaid(record)
+                          ? 'feather:rotate-ccw'
+                          : 'feather:check-circle'
+                    "
+                    class="h-4 w-4"
+                    :class="{ 'animate-spin': updatingPaymentId === record.dentalid }"
+                  />
+                  {{ isDoctorPaid(record) ? 'Mark Unpaid' : 'Mark Paid' }}
                 </button>
                 <button
                   v-if="(record.status || 'VALID') === 'VALID'"
