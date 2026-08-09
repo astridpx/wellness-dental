@@ -1,15 +1,11 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import type { MembershipPaymentRecord, MembershipRecord } from '@/types'
+import type {
+  MembershipPaginationMetadata,
+  MembershipPaymentRecord,
+  MembershipRecord,
+  PaginationMetadata,
+} from '@/types'
 import { useWellnessApi } from './useWellnessApi'
-
-type PaginationMetadata = {
-  page?: number
-  perPage?: number
-  totalEntries?: number
-  totalPages?: number
-  remittedMembers?: number
-  unremittedMembers?: number
-}
 
 export function useMembershipDetails() {
   const { request } = useWellnessApi()
@@ -82,7 +78,7 @@ export function useMembershipDetails() {
       return
     }
 
-    const metadata = (result.metadata || {}) as PaginationMetadata
+    const metadata = (result.metadata || {}) as MembershipPaginationMetadata
     members.value = result.data || []
     totalEntries.value = Number(metadata.totalEntries || 0)
     totalPages.value = Number(metadata.totalPages || 1)

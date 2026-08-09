@@ -1,25 +1,11 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import type { PartnerMemberBatch, PartnerMemberRecord } from '@/types'
+import type {
+  PartnerMemberBatch,
+  PartnerMemberRecord,
+  PartnerRecordPaginationMetadata,
+  SortablePaginationMetadata,
+} from '@/types'
 import { useWellnessApi } from './useWellnessApi'
-
-type PaginationMetadata = {
-  page?: number
-  perPage?: number
-  totalEntries?: number
-  totalPages?: number
-}
-
-type BatchMetadata = PaginationMetadata & {
-  sortBy?: string
-  sortOrder?: string
-}
-
-type RecordMetadata = PaginationMetadata & {
-  sortBy?: string
-  sortOrder?: string
-  paidRows?: number
-  unpaidRows?: number
-}
 
 export function usePartnerMembers() {
   const { request } = useWellnessApi()
@@ -108,7 +94,7 @@ export function usePartnerMembers() {
       return
     }
 
-    const metadata = (result.metadata || {}) as BatchMetadata
+    const metadata = (result.metadata || {}) as SortablePaginationMetadata
     batches.value = result.data || []
     batchTotalEntries.value = Number(metadata.totalEntries || 0)
     batchTotalPages.value = Number(metadata.totalPages || 1)
@@ -160,7 +146,7 @@ export function usePartnerMembers() {
       return
     }
 
-    const metadata = (result.metadata || {}) as RecordMetadata
+    const metadata = (result.metadata || {}) as PartnerRecordPaginationMetadata
     records.value = result.data || []
     recordTotalEntries.value = Number(metadata.totalEntries || 0)
     recordTotalPages.value = Number(metadata.totalPages || 1)

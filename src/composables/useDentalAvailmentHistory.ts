@@ -1,17 +1,11 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import type { DentalAvailmentApproval, DentalAvailmentRecord } from '@/types'
+import type {
+  DentalAvailmentApproval,
+  DentalAvailmentHistoryPaginationMetadata,
+  DentalAvailmentRecord,
+} from '@/types'
 import { useDentalAvailments } from './useDentalAvailments'
 import { useWellnessApi } from './useWellnessApi'
-
-type PaginationMetadata = {
-  page?: number
-  perPage?: number
-  totalEntries?: number
-  totalPages?: number
-  paidRows?: number
-  unpaidRows?: number
-  unpaidAmount?: number
-}
 
 export function useDentalAvailmentHistory() {
   const { request } = useWellnessApi()
@@ -93,7 +87,7 @@ export function useDentalAvailmentHistory() {
       return
     }
 
-    const metadata = (result.metadata || {}) as PaginationMetadata
+    const metadata = (result.metadata || {}) as DentalAvailmentHistoryPaginationMetadata
     records.value = result.data || []
     totalEntries.value = Number(metadata.totalEntries || 0)
     totalPages.value = Number(metadata.totalPages || 1)
