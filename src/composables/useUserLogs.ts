@@ -1,4 +1,5 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { APP_PER_PAGE } from '@/constants/app'
 import type { UserLogRow } from '@/types'
 import { useWellnessApi } from './useWellnessApi'
 
@@ -9,7 +10,7 @@ export function useUserLogs() {
   const loading = ref(true)
   const errorMessage = ref('')
   const currentPage = ref(1)
-  const perPage = ref(10)
+  const perPage = ref(APP_PER_PAGE)
   const totalEntries = ref(0)
   const totalPages = ref(1)
 

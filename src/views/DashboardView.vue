@@ -3,51 +3,21 @@ import { Icon } from '@iconify/vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { AppStatValue, AppTable } from '@/components/app'
+import { APP_PER_PAGE } from '@/constants/app'
 import { useAuth, useDentists, usePlans, useWellnessApi } from '@/composables'
-
-type OverviewCard = {
-  label: string
-  value: number | string
-  note: string
-  tone: string
-  icon: string
-  loading: boolean
-}
-
-type ActivityItem = {
-  title: string
-  detail: string
-  icon: string
-}
-
-type DirectoryRow = {
-  id: string
-  module: string
-  count: number
-  status: string
-  route: string
-  note: string
-  loading: boolean
-}
-
-type UserSummaryResponse = {
-  id: number
-}
-
-type PartnerBatchSummaryResponse = {
-  id: number
-}
-
-type BusinessPartnerSummaryResponse = {
-  id: number
-}
+import type {
+  ActivityItem,
+  DirectoryRow,
+  OverviewCard,
+  SummaryEntityResponse,
+} from '@/types'
 
 const router = useRouter()
 const { getStoredRoles } = useAuth()
 const { request } = useWellnessApi()
 
 const currentPage = ref(1)
-const perPage = ref(5)
+const perPage = ref(APP_PER_PAGE)
 
 const { loading: loadingDentists, totalEntries: dentistTotalEntries } = useDentists()
 const { loading: loadingPlans, totalEntries: planTotalEntries } = usePlans()
@@ -320,7 +290,7 @@ async function fetchUsersCount() {
   if (!canViewUsers.value) return
 
   loadingUsersCount.value = true
-  const result = await request<UserSummaryResponse[]>('/wellness/users?page=1&perPage=1')
+  const result = await request<SummaryEntityResponse[]>('/wellness/users?page=1&perPage=1')
   usersCount.value = result.ok ? Number(result.metadata?.totalEntries || 0) : 0
   loadingUsersCount.value = false
 }
@@ -329,7 +299,7 @@ async function fetchPartnerBatchCount() {
   if (!canViewPartnerBatches.value) return
 
   loadingPartnerBatchCount.value = true
-  const result = await request<PartnerBatchSummaryResponse[]>(
+  const result = await request<SummaryEntityResponse[]>(
     '/wellness/partnerMembers/batches?page=1&perPage=1',
   )
   partnerBatchCount.value = result.ok ? Number(result.metadata?.totalEntries || 0) : 0
@@ -340,7 +310,7 @@ async function fetchBusinessPartnerCount() {
   if (!canViewBusinessPartners.value) return
 
   loadingBusinessPartnerCount.value = true
-  const result = await request<BusinessPartnerSummaryResponse[]>(
+  const result = await request<SummaryEntityResponse[]>(
     '/wellness/businessPartners?perPage=100',
   )
   businessPartnerCount.value = result.ok && Array.isArray(result.data) ? result.data.length : 0
@@ -386,7 +356,7 @@ onMounted(() => {
             </div>
 
             <div
-              class="w-full max-w-[280px] rounded-[1.6rem] border border-pebble bg-[linear-gradient(145deg,#fff8ea_0%,#ffffff_100%)] p-5 shadow-sm"
+              class="w-full max-w-70 rounded-[1.6rem] border border-pebble bg-[linear-gradient(145deg,#fff8ea_0%,#ffffff_100%)] p-5 shadow-sm"
             >
               <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
                 Workspace mode

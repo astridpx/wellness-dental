@@ -11,22 +11,8 @@ import {
   AppTable,
 } from '@/components/app'
 import { useAuth, usePaymentModes, useProcedures } from '@/composables'
-import type { PaymentModeOption, ProcedureOption } from '@/types'
+import type { OptionCategory, OptionItem, PaymentModeOption, ProcedureOption } from '@/types'
 import { formatCurrency } from '@/utils'
-
-type OptionCategory = 'Procedures' | 'Payment Modes'
-
-type OptionItem = {
-  id: number
-  category: OptionCategory
-  name: string
-  code: string
-  description: string
-  price?: number
-  active: boolean
-  monthInterval?: number
-  quantity?: number
-}
 
 const categories: Array<{ name: OptionCategory; icon: string; description: string }> = [
   {
