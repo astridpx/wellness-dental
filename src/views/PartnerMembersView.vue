@@ -130,6 +130,52 @@ function resetUploadState() {
   selectedBusinessPartnerId.value = ''
 }
 
+function padDatePart(value: number) {
+  return String(value).padStart(2, '0')
+}
+
+function sanitizeReferenceCompanyCode(value?: string | null) {
+  return (
+    String(value || 'PARTNER')
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '')
+      .slice(0, 24) || 'PARTNER'
+  )
+}
+
+function generatePaymentReference(companyCode?: string | null) {
+  const now = new Date()
+  const date = [
+    now.getFullYear(),
+    padDatePart(now.getMonth() + 1),
+    padDatePart(now.getDate()),
+  ].join('')
+  const time = [
+    padDatePart(now.getHours()),
+    padDatePart(now.getMinutes()),
+    padDatePart(now.getSeconds()),
+  ].join('')
+
+  return `${sanitizeReferenceCompanyCode(companyCode)}-PAY-${date}-${time}`
+}
+
+function generateBatchPaymentReference() {
+  if (!batchPaymentConfirmation.value) return
+
+  batchPaymentConfirmation.value.paymentReference = generatePaymentReference(
+    batchPaymentConfirmation.value.batch.companyCode,
+  )
+}
+
+function generateRecordPaymentReference() {
+  if (!recordPaymentConfirmation.value) return
+
+  recordPaymentConfirmation.value.paymentReference = generatePaymentReference(
+    recordPaymentConfirmation.value.record.companyCode || selectedBatch.value?.companyCode,
+  )
+}
+
 async function submitUpload() {
   if (!selectedUploadFile.value) return
 
@@ -144,7 +190,11 @@ async function submitUpload() {
 function openBatchPaymentConfirmation(paid: boolean, batch = selectedBatch.value) {
   if (!batch || markingPaidBatchId.value) return
 
-  batchPaymentConfirmation.value = { batch, paid, paymentReference: '' }
+  batchPaymentConfirmation.value = {
+    batch,
+    paid,
+    paymentReference: paid ? generatePaymentReference(batch.companyCode) : '',
+  }
 }
 
 function closeBatchPaymentConfirmation() {
@@ -187,7 +237,10 @@ function openRecordPaymentConfirmation(record: PartnerMemberRecord, paid: boolea
   recordPaymentConfirmation.value = {
     record,
     paid,
-    paymentReference: paid ? record.paymentReference || '' : '',
+    paymentReference: paid
+      ? record.paymentReference ||
+        generatePaymentReference(record.companyCode || selectedBatch.value?.companyCode)
+      : '',
   }
 }
 
@@ -933,13 +986,22 @@ watch(selectedBusinessPartnerId, (value) => {
           {{ batchPaymentConfirmation.paid ? 'received' : 'pending' }} and refresh the batch totals.
         </p>
 
-        <AppInput
-          v-if="batchPaymentConfirmation.paid"
-          v-model="batchPaymentConfirmation.paymentReference"
-          label="Payment Reference No."
-          placeholder="Required reference no."
-          icon="feather:hash"
-        />
+        <div v-if="batchPaymentConfirmation.paid" class="space-y-2">
+          <AppInput
+            v-model="batchPaymentConfirmation.paymentReference"
+            label="Payment Reference No."
+            placeholder="Required reference no."
+            icon="feather:hash"
+          />
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 text-sm font-semibold text-tangerine transition hover:text-tangerine-dark"
+            @click="generateBatchPaymentReference"
+          >
+            <Icon icon="feather:refresh-cw" class="h-4 w-4" />
+            Generate reference
+          </button>
+        </div>
         <p v-else class="rounded-xl bg-fog px-4 py-3 text-sm text-slate">
           Existing payment reference numbers for this batch will be cleared.
         </p>
@@ -1042,13 +1104,22 @@ watch(selectedBusinessPartnerId, (value) => {
           {{ recordPaymentConfirmation.paid ? 'received' : 'pending' }}.
         </p>
 
-        <AppInput
-          v-if="recordPaymentConfirmation.paid"
-          v-model="recordPaymentConfirmation.paymentReference"
-          label="Payment Reference No."
-          placeholder="Required reference no."
-          icon="feather:hash"
-        />
+        <div v-if="recordPaymentConfirmation.paid" class="space-y-2">
+          <AppInput
+            v-model="recordPaymentConfirmation.paymentReference"
+            label="Payment Reference No."
+            placeholder="Required reference no."
+            icon="feather:hash"
+          />
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 text-sm font-semibold text-tangerine transition hover:text-tangerine-dark"
+            @click="generateRecordPaymentReference"
+          >
+            <Icon icon="feather:refresh-cw" class="h-4 w-4" />
+            Generate reference
+          </button>
+        </div>
         <p v-else class="rounded-xl bg-fog px-4 py-3 text-sm text-slate">
           This member's payment reference number will be cleared.
         </p>
