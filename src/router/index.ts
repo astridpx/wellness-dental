@@ -5,6 +5,7 @@ import DashboardView from '@/views/DashboardView.vue'
 import DentalAvailmentsView from '@/views/DentalAvailmentsView.vue'
 import DentalAvailmentHistoryView from '@/views/DentalAvailmentHistoryView.vue'
 import LoginView from '@/views/LoginView.vue'
+import ReportsView from '@/views/ReportsView.vue'
 import SystemLogsView from '@/views/SystemLogsView.vue'
 import UserLogsView from '@/views/UserLogsView.vue'
 import { createRouter, createWebHistory } from 'vue-router'
@@ -82,6 +83,16 @@ const router = createRouter({
       meta: {
         title: 'Availment History',
         icon: 'feather:clock',
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
+      },
+    },
+    {
+      path: '/reports',
+      name: 'reports',
+      component: ReportsView,
+      meta: {
+        title: 'Reports',
+        icon: 'feather:bar-chart-2',
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
