@@ -11,7 +11,7 @@ import {
   AppTable,
 } from '@/components/app'
 import { useAuth, usePaymentModes, useProcedures } from '@/composables'
-import type { PaymentModeOption, ProcedureOption } from '@/composables'
+import type { PaymentModeOption, ProcedureOption } from '@/types'
 import { formatCurrency } from '@/utils'
 
 type OptionCategory = 'Procedures' | 'Payment Modes'

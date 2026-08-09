@@ -1,7 +1,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import type { RoleOption } from '@/types'
 import { useWellnessApi } from './useWellnessApi'
-import type { RoleOption } from './useUsersList'
 
 type UserResponse = {
   id: number

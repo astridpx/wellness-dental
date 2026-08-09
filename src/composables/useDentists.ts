@@ -1,37 +1,6 @@
 import { onMounted, reactive, ref, watch } from 'vue'
+import type { Dentist } from '@/types'
 import { useWellnessApi } from './useWellnessApi'
-
-export type Dentist = {
-  dentistidno: number
-  lastname: string
-  firstname: string
-  middleinitial: string
-  specialization: string
-  prcno: string
-  TWLB: string
-  OP: string
-  STE: string
-  TF: string
-  AD: string
-  RJ: string
-  LC: string
-  PF: string
-  CON: string
-  contactno: string
-  email: string
-  modeofpayment: string
-  bankacct: string
-  acctname: string
-  remarks: string | null
-  agent: string
-  dentistname: string
-  date_added: string
-  addedby: string
-  Isactive: string
-  PPE_ICF: number
-  CAN: number
-  dentistcode: string
-}
 
 type UseDentistsOptions = {
   immediate?: boolean

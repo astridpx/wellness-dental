@@ -1,26 +1,8 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useDentists, type Dentist } from './useDentists'
+import type { Dentist, DentistFormData, DentistFormErrorContext } from '@/types'
+import { useDentists } from './useDentists'
 import { useWellnessApi } from './useWellnessApi'
-
-export type DentistFormData = {
-  license: string
-  firstname: string
-  lastname: string
-  middleInitial: string
-  email: string
-  phone: string
-  specialty: string
-  dentistCode: string
-  modeOfPayment: string
-  bankAccount: string
-  accountName: string
-  agent: string
-  remarks: string
-  status: 'Active' | 'Inactive' | 'Unknown'
-}
-
-export type DentistFormErrorContext = '' | 'load' | 'validation' | 'save'
 
 const emptyDentistData: DentistFormData = {
   license: '',

@@ -1,3 +1,4 @@
+import type { ApiResult } from '@/types'
 import { useAuth } from './useAuth'
 
 const baseURL = import.meta.env.VITE_APP_MAIN_API_BASE_URL
@@ -10,14 +11,6 @@ type ApiEnvelope<T> = {
 
 type RequestOptions = {
   includeContentType?: boolean
-}
-
-export type ApiResult<T> = {
-  ok: boolean
-  data: T | null
-  error: string
-  metadata?: Record<string, unknown>
-  unauthorized?: boolean
 }
 
 export function useWellnessApi() {

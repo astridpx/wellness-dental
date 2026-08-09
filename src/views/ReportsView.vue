@@ -3,7 +3,8 @@ import { Icon } from '@iconify/vue'
 import * as XLSX from 'xlsx'
 import { computed, onMounted, ref, watch } from 'vue'
 import { AppButton, AppInput, AppLoadingScreen, AppSearchSelect, AppTable } from '@/components/app'
-import { useAvailmentReports, useDentists, type AvailmentReportMode } from '@/composables'
+import { useAvailmentReports, useDentists } from '@/composables'
+import type { AvailmentReportMode } from '@/types'
 import { formatDate, formatDateTime, formatMoney } from '@/utils'
 
 const {

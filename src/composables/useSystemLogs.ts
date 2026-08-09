@@ -1,12 +1,6 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import type { SystemLogRow } from '@/types'
 import { useWellnessApi } from './useWellnessApi'
-
-export type SystemLogRow = {
-  id: number
-  createdAt: string
-  activity: string
-  success: boolean
-}
 
 export function useSystemLogs() {
   const { request } = useWellnessApi()

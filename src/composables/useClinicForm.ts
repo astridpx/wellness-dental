@@ -1,33 +1,14 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { CLINICS_ENDPOINT, useClinics, type Clinic } from './useClinics'
+import {
+  DEFAULT_CLINIC_TYPE_CODE,
+  type Clinic,
+  type ClinicFormData,
+  type ClinicFormErrorContext,
+  normalizeClinicTypeCode,
+} from '@/types'
+import { CLINICS_ENDPOINT, useClinics } from './useClinics'
 import { useWellnessApi } from './useWellnessApi'
-
-export type ClinicFormData = {
-  clinicName: string
-  address: string
-  city: string
-  province: string
-  contactNumber: string
-  schedule: string
-  clinicCode: string
-  longitude: string
-  latitude: string
-  status: 'Active' | 'Inactive' | 'Unknown'
-  isAccredited: boolean
-  mobileNumber1: string
-  mobileNumber2: string
-  type: string
-  providerApp: string
-  dentistId: number | null
-  dentistname: string
-  prcno: string
-  email: string
-  dentistcode: string
-  isActive: string
-}
-
-export type ClinicFormErrorContext = '' | 'load' | 'validation' | 'save'
 
 const emptyClinicData: ClinicFormData = {
   clinicName: '',
@@ -43,7 +24,7 @@ const emptyClinicData: ClinicFormData = {
   isAccredited: false,
   mobileNumber1: '',
   mobileNumber2: '',
-  type: '',
+  type: DEFAULT_CLINIC_TYPE_CODE,
   providerApp: '',
   dentistId: null,
   dentistname: '',
@@ -92,7 +73,7 @@ export function useClinicForm() {
       isAccredited: Number(clinic.iaccredited) === 1,
       mobileNumber1: clinic.MobileNumber1 || '',
       mobileNumber2: clinic.MobileNumber2 || '',
-      type: clinic.type || '',
+      type: normalizeClinicTypeCode(clinic.type),
       providerApp: clinic.provider_app || '',
       dentistId: clinic.dentistId == null ? null : Number(clinic.dentistId),
       dentistname: clinic.dentistname || '',
@@ -165,7 +146,7 @@ export function useClinicForm() {
       iaccredited: clinicData.value.isAccredited ? 1 : 0,
       MobileNumber1: clinicData.value.mobileNumber1.trim(),
       MobileNumber2: clinicData.value.mobileNumber2.trim(),
-      type: clinicData.value.type.trim(),
+      type: normalizeClinicTypeCode(clinicData.value.type),
       provider_app: clinicData.value.providerApp.trim(),
       dentistId: clinicData.value.dentistId,
     }

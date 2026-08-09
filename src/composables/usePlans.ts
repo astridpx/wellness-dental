@@ -1,13 +1,7 @@
 import { onMounted, reactive, ref, watch } from 'vue'
+import type { DentalPlan } from '@/types'
 import { useWellnessApi } from './useWellnessApi'
 import qs from 'qs'
-
-export type DentalPlan = {
-  PlanTypeID: number
-  PlanCode: string
-  DentalPrem1: number
-  PlanClass: string
-}
 
 export function usePlans() {
   const { request } = useWellnessApi()

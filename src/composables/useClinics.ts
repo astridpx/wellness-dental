@@ -1,34 +1,8 @@
 import { onMounted, reactive, ref, watch } from 'vue'
+import type { Clinic } from '@/types'
 import { useWellnessApi } from './useWellnessApi'
 
 export const CLINICS_ENDPOINT = '/wellness/clinics'
-
-export type Clinic = {
-  clinicidno: string // clinic unique id
-  clinicname: string
-  address: string
-  city: string
-  province: string
-  contactno: string
-  schedule: string
-  cliniccode: string
-  date_added: string
-  Addedby: string
-  longtitude: string
-  latitude: string
-  status: number
-  iaccredited: number
-  MobileNumber1: string
-  MobileNumber2: string
-  type: string
-  provider_app: string
-  dentistId: number | null
-  dentistname?: string | null
-  prcno?: string | null
-  email?: string | null
-  dentistcode?: string | null
-  isActive?: string | number | null
-}
 
 type UseClinicsOptions = {
   immediate?: boolean

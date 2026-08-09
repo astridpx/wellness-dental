@@ -1,4 +1,5 @@
 import { onMounted, ref } from 'vue'
+import type { PaymentModeOption } from '@/types'
 import { useWellnessApi } from './useWellnessApi'
 
 type PaymentModeResponse = {
@@ -7,16 +8,6 @@ type PaymentModeResponse = {
   code: string
   description: string | null
   isActive: boolean
-}
-
-export type PaymentModeOption = {
-  id: number
-  category: 'Payment Modes'
-  name: string
-  code: string
-  description: string
-  price?: number
-  active: boolean
 }
 
 type SavePaymentModeInput = {

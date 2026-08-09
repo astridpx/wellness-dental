@@ -12,7 +12,7 @@ import {
   AppToast,
 } from '@/components/app'
 import { useBusinessPartners, usePartnerMembers } from '@/composables'
-import type { PartnerMemberBatch, PartnerMemberRecord } from '@/composables/usePartnerMembers'
+import type { PartnerMemberBatch, PartnerMemberRecord } from '@/types'
 import { formatDateTime } from '@/utils'
 
 const {

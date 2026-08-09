@@ -1,4 +1,5 @@
 import { onMounted, ref } from 'vue'
+import type { BusinessPartnerOption } from '@/types'
 import { useWellnessApi } from './useWellnessApi'
 
 type BusinessPartnerResponse = {
@@ -7,14 +8,6 @@ type BusinessPartnerResponse = {
   code: string
   description: string | null
   isActive: boolean
-}
-
-export type BusinessPartnerOption = {
-  id: number
-  name: string
-  code: string
-  description: string
-  active: boolean
 }
 
 type SaveBusinessPartnerInput = {

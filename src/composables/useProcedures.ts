@@ -1,4 +1,5 @@
 import { onMounted, ref } from 'vue'
+import type { ProcedureOption } from '@/types'
 import { useWellnessApi } from './useWellnessApi'
 
 type ProcedureResponse = {
@@ -10,18 +11,6 @@ type ProcedureResponse = {
   quantity: number
   defaultPrice: number | null
   isActive: boolean
-}
-
-export type ProcedureOption = {
-  id: number
-  category: 'Procedures'
-  name: string
-  code: string
-  description: string
-  price?: number
-  active: boolean
-  monthInterval: number
-  quantity: number
 }
 
 type SaveProcedureInput = {

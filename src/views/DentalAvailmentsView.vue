@@ -10,7 +10,7 @@ import {
   AppToast,
 } from '@/components/app'
 import { useClinics, useDentalAvailments, useDentists, useProcedures } from '@/composables'
-import type { DentalAvailmentMemberOption, DentalMemberSearchScope } from '@/composables'
+import type { DentalAvailmentMemberOption, DentalMemberSearchScope } from '@/types'
 import { formatDate, formatMoney } from '@/utils'
 
 const {

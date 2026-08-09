@@ -3,12 +3,8 @@ import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { AppButton, AppDialog, AppInput, AppLoadingScreen, AppTable } from '@/components/app'
-import {
-  useDentalAvailmentHistory,
-  usePartnerMembers,
-  type DentalAvailmentRecord,
-  type PartnerMemberRecord,
-} from '@/composables'
+import { useDentalAvailmentHistory, usePartnerMembers } from '@/composables'
+import type { DentalAvailmentRecord, PartnerMemberRecord } from '@/types'
 import { formatDate, formatDateTime, formatMoney } from '@/utils'
 
 type LedgerTab = 'dentist' | 'partner'

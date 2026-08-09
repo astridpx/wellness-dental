@@ -11,7 +11,7 @@ import {
   AppTextArea,
 } from '@/components/app'
 import { useClinics, useDentalAvailmentHistory, useDentists, useProcedures } from '@/composables'
-import type { DentalAvailmentRecord } from '@/composables'
+import type { DentalAvailmentRecord } from '@/types'
 import { formatDate, formatMoney } from '@/utils'
 
 const {

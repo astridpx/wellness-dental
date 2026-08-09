@@ -1,9 +1,6 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import {
-  useDentalAvailments,
-  type DentalAvailmentApproval,
-  type DentalAvailmentRecord,
-} from './useDentalAvailments'
+import type { DentalAvailmentApproval, DentalAvailmentRecord } from '@/types'
+import { useDentalAvailments } from './useDentalAvailments'
 import { useWellnessApi } from './useWellnessApi'
 
 type PaginationMetadata = {

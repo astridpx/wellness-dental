@@ -4,7 +4,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { AppButton, AppInput, AppLoadingScreen, AppModal, AppStatValue } from '@/components/app'
 import { useBusinessPartners } from '@/composables'
-import type { BusinessPartnerOption } from '@/composables'
+import type { BusinessPartnerOption } from '@/types'
 
 type StatusFilter = 'all' | 'active' | 'inactive'
 
