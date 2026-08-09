@@ -104,8 +104,13 @@ const summaryCards = computed(() => [
 </script>
 
 <template>
-  <AppDialog title="Filter Clinics" :show="showDialog" confirm-label="Apply Filters" @close="showDialog = false"
-    @confirm="confirmFilters">
+  <AppDialog
+    title="Filter Clinics"
+    :show="showDialog"
+    confirm-label="Apply Filters"
+    @close="showDialog = false"
+    @confirm="confirmFilters"
+  >
     <template #dialog-content>
       <div class="space-y-5">
         <div class="rounded-[1.5rem] border border-pebble bg-cloud p-5">
@@ -118,15 +123,25 @@ const summaryCards = computed(() => [
         </div>
 
         <div class="grid gap-5">
-          <AppInput v-model="draftFilters.clinicName" label="Clinic Name" placeholder="Wellness Dental Clinic"
-            icon="feather:briefcase" />
-          <AppInput v-model="draftFilters.clinicCode" label="Clinic Code" placeholder="WDC-MKT-001"
-            icon="feather:tag" />
+          <AppInput
+            v-model="draftFilters.clinicName"
+            label="Clinic Name"
+            placeholder="Wellness Dental Clinic"
+            icon="feather:briefcase"
+          />
+          <AppInput
+            v-model="draftFilters.clinicCode"
+            label="Clinic Code"
+            placeholder="WDC-MKT-001"
+            icon="feather:tag"
+          />
         </div>
 
-        <button type="button"
+        <button
+          type="button"
           class="inline-flex items-center gap-2 text-sm font-semibold text-slate transition hover:text-tangerine"
-          @click="clearFilterFields">
+          @click="clearFilterFields"
+        >
           <Icon icon="feather:rotate-ccw" class="h-4 w-4" />
           Clear fields
         </button>
@@ -136,7 +151,8 @@ const summaryCards = computed(() => [
 
   <div class="space-y-6">
     <section
-      class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#fff7ed_0%,#ffffff_48%,#f8fbff_100%)] p-6 shadow-sm lg:p-8">
+      class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#fff7ed_0%,#ffffff_48%,#f8fbff_100%)] p-6 shadow-sm lg:p-8"
+    >
       <div class="flex flex-col gap-6">
         <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div class="max-w-2xl">
@@ -154,8 +170,10 @@ const summaryCards = computed(() => [
             <AppButton btn-theme="outline" class="px-5 py-3 normal-case" @click="openFilters">
               <Icon icon="feather:filter" class="h-4 w-4" />
               Filter clinics
-              <span v-if="activeFilterCount"
-                class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-tangerine px-1.5 text-[10px] font-bold text-white">
+              <span
+                v-if="activeFilterCount"
+                class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-tangerine px-1.5 text-[10px] font-bold text-white"
+              >
                 {{ activeFilterCount }}
               </span>
             </AppButton>
@@ -168,8 +186,11 @@ const summaryCards = computed(() => [
         </div>
 
         <div class="grid gap-4 md:grid-cols-3">
-          <article v-for="card in summaryCards" :key="card.label"
-            class="rounded-[1.5rem] border border-pebble bg-white p-5 shadow-sm">
+          <article
+            v-for="card in summaryCards"
+            :key="card.label"
+            class="rounded-[1.5rem] border border-pebble bg-white p-5 shadow-sm"
+          >
             <div class="flex items-center justify-between gap-3">
               <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate">
                 {{ card.label }}
@@ -196,39 +217,60 @@ const summaryCards = computed(() => [
             Select a clinic to review its complete setup or update its information.
           </p>
         </div>
-        <button v-if="activeFilterCount" type="button"
-          class="text-sm font-semibold text-sapphire transition hover:text-tangerine" @click="clearFilters">
+        <button
+          v-if="activeFilterCount"
+          type="button"
+          class="text-sm font-semibold text-sapphire transition hover:text-tangerine"
+          @click="clearFilters"
+        >
           Clear filters
         </button>
       </div>
 
-      <div v-if="errorMessage"
-        class="mt-5 flex flex-col gap-3 rounded-xl bg-ruby-light px-4 py-3 text-sm text-ruby sm:flex-row sm:items-center sm:justify-between">
+      <div
+        v-if="errorMessage"
+        class="mt-5 flex flex-col gap-3 rounded-xl bg-ruby-light px-4 py-3 text-sm text-ruby sm:flex-row sm:items-center sm:justify-between"
+      >
         <p>{{ errorMessage }}</p>
-        <button type="button" class="shrink-0 font-semibold underline underline-offset-4" @click="fetchClinics">
+        <button
+          type="button"
+          class="shrink-0 font-semibold underline underline-offset-4"
+          @click="fetchClinics"
+        >
           Try again
         </button>
       </div>
 
-      <AppLoadingScreen v-if="loading" class="mt-5" title="Loading clinic directory"
-        message="Please wait while we retrieve clinic profiles, locations, and operating details." />
+      <AppLoadingScreen
+        v-if="loading"
+        class="mt-5"
+        title="Loading clinic directory"
+        message="Please wait while we retrieve clinic profiles, locations, and operating details."
+      />
 
       <div v-else class="mt-5">
-        <AppTable :theads="[
-          'Clinic',
-          'Location',
-          'Clinic Code',
-          'Contact',
-          'Accreditation',
-          'Status',
-          'Action',
-        ]" :total-entries="totalEntries" :total-pages="totalPages" :current-page="currentPage"
-          @update-pg-num="currentPage = $event">
+        <AppTable
+          :theads="[
+            'Clinic',
+            'Location',
+            'Clinic Code',
+            'Contact',
+            'Accreditation',
+            'Status',
+            'Action',
+          ]"
+          :total-entries="totalEntries"
+          :total-pages="totalPages"
+          :current-page="currentPage"
+          @update-pg-num="currentPage = $event"
+        >
           <template #trs>
             <tr v-if="!clinics.length">
               <td colspan="7" class="w-full py-14! text-center!">
                 <div class="flex w-full flex-col items-center">
-                  <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-fog text-smoke">
+                  <span
+                    class="flex h-12 w-12 items-center justify-center rounded-2xl bg-fog text-smoke"
+                  >
                     <Icon icon="feather:search" class="h-5 w-5" />
                   </span>
                   <p class="mt-3 font-semibold text-onyx">No clinics found</p>
@@ -237,8 +279,13 @@ const summaryCards = computed(() => [
               </td>
             </tr>
 
-            <tr v-for="clinic in clinics" v-else :key="clinic.clinicidno || clinic.cliniccode" class="cursor-pointer"
-              @click="router.push(`/clinic/${clinic.clinicidno}/edit`)">
+            <tr
+              v-for="clinic in clinics"
+              v-else
+              :key="clinic.clinicidno || clinic.cliniccode"
+              class="cursor-pointer"
+              @click="router.push(`/clinic/${clinic.clinicidno}/edit`)"
+            >
               <td>
                 <p class="font-semibold text-nowrap text-onyx">{{ clinic.clinicname }}</p>
                 <p class="mt-1 text-xs uppercase tracking-[0.16em] text-smoke">
@@ -259,24 +306,31 @@ const summaryCards = computed(() => [
                 </p>
               </td>
               <td>
-                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold text-nowrap"
-                  :class="accreditationStatus(clinic.iaccredited).classes">
+                <span
+                  class="inline-flex rounded-full px-3 py-1 text-xs font-semibold text-nowrap"
+                  :class="accreditationStatus(clinic.iaccredited).classes"
+                >
                   {{ accreditationStatus(clinic.iaccredited).label }}
                 </span>
               </td>
               <td>
-                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
-                  :class="clinicStatus(clinic.status).classes">
+                <span
+                  class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
+                  :class="clinicStatus(clinic.status).classes"
+                >
                   {{ clinicStatus(clinic.status).label }}
                 </span>
               </td>
               <td class="px-5 py-4">
                 <div class="flex justify-end">
-                  <span
-                    class="inline-flex items-center gap-2 rounded-full border border-[#cbd7dd] bg-[linear-gradient(180deg,#edf5f7_0%,#e2ecef_100%)] px-3.5 py-2 text-xs font-semibold tracking-[0.03em] text-[#2d5562] shadow-[0_10px_20px_rgba(54,89,99,0.08)]">
-                    <Icon icon="feather:external-link" class="size-4" />
-                    Open
-                  </span>
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-2 rounded-full border border-[#d8c5a0] bg-[linear-gradient(180deg,#f8eddc_0%,#efe1cb_100%)] px-3.5 py-2 text-xs font-semibold text-[#8c6320] shadow-[0_10px_20px_rgba(176,138,52,0.12)] transition hover:border-[#c59a42] hover:bg-[linear-gradient(180deg,#fcf4e8_0%,#f3e5ce_100%)] hover:text-[#6f4a13]"
+                    @click.stop="router.push(`/clinic/${clinic.clinicidno}/edit`)"
+                  >
+                    <Icon icon="feather:edit-2" class="size-4" />
+                    Edit
+                  </button>
                 </div>
               </td>
             </tr>

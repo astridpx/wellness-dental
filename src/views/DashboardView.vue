@@ -49,14 +49,8 @@ const { request } = useWellnessApi()
 const currentPage = ref(1)
 const perPage = ref(5)
 
-const {
-  loading: loadingDentists,
-  totalEntries: dentistTotalEntries,
-} = useDentists()
-const {
-  loading: loadingPlans,
-  totalEntries: planTotalEntries,
-} = usePlans()
+const { loading: loadingDentists, totalEntries: dentistTotalEntries } = useDentists()
+const { loading: loadingPlans, totalEntries: planTotalEntries } = usePlans()
 
 const roles = computed(() => getStoredRoles())
 const canViewUsers = computed(() =>
@@ -259,7 +253,9 @@ const paginatedRows = computed(() => {
   return directoryRows.value.slice(start, start + perPage.value)
 })
 
-const totalPages = computed(() => Math.max(1, Math.ceil(directoryRows.value.length / perPage.value)))
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(directoryRows.value.length / perPage.value)),
+)
 
 const actionRail = computed<ActivityItem[]>(() => {
   const items: ActivityItem[] = [
@@ -303,7 +299,8 @@ const summaryFeed = computed<ActivityItem[]>(() => {
     },
     {
       title: 'Live counts only',
-      detail: 'Cards and tables here use counts from existing pages instead of placeholder figures.',
+      detail:
+        'Cards and tables here use counts from existing pages instead of placeholder figures.',
       icon: 'feather:refresh-cw',
     },
   ]
@@ -401,11 +398,11 @@ onMounted(() => {
               </p>
               <button
                 type="button"
-                class="mt-4 inline-flex items-center gap-2 rounded-full bg-tangerine-light px-3 py-1 text-xs font-semibold text-tangerine transition hover:bg-[#f4dfbf]"
+                class="mt-4 inline-flex items-center gap-2 rounded-full border border-[#d8c5a0] bg-[linear-gradient(180deg,#f8eddc_0%,#efe1cb_100%)] px-3.5 py-2 text-xs font-semibold text-[#8c6320] shadow-[0_10px_20px_rgba(176,138,52,0.12)] transition hover:border-[#c59a42] hover:bg-[linear-gradient(180deg,#fcf4e8_0%,#f3e5ce_100%)] hover:text-[#6f4a13]"
                 @click="openRoute('/plans')"
               >
-                <span class="size-1.5 rounded-full bg-tangerine" />
-                Open plan directory
+                <Icon icon="feather:external-link" class="size-4" />
+                Open Plans
               </button>
             </div>
           </div>
@@ -503,10 +500,11 @@ onMounted(() => {
         </div>
         <button
           type="button"
-          class="text-sm font-semibold text-sapphire transition hover:text-tangerine"
+          class="inline-flex items-center gap-2 rounded-full border border-[#d8c5a0] bg-[linear-gradient(180deg,#f8eddc_0%,#efe1cb_100%)] px-3.5 py-2 text-xs font-semibold text-[#8c6320] shadow-[0_10px_20px_rgba(176,138,52,0.12)] transition hover:border-[#c59a42] hover:bg-[linear-gradient(180deg,#fcf4e8_0%,#f3e5ce_100%)] hover:text-[#6f4a13]"
           @click="openRoute('/dentists')"
         >
-          Open provider directory
+          <Icon icon="feather:external-link" class="size-4" />
+          Open Providers
         </button>
       </div>
 
@@ -528,11 +526,7 @@ onMounted(() => {
               <td>
                 <span
                   class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
-                  :class="
-                    row.loading
-                      ? 'bg-fog text-slate'
-                      : 'bg-emerald-light text-emerald'
-                  "
+                  :class="row.loading ? 'bg-fog text-slate' : 'bg-emerald-light text-emerald'"
                 >
                   {{ row.status }}
                 </span>
@@ -541,9 +535,10 @@ onMounted(() => {
               <td>
                 <button
                   type="button"
-                  class="text-sm font-semibold text-sapphire transition hover:text-tangerine"
+                  class="inline-flex items-center gap-2 rounded-full border border-[#d8c5a0] bg-[linear-gradient(180deg,#f8eddc_0%,#efe1cb_100%)] px-3.5 py-2 text-xs font-semibold text-[#8c6320] shadow-[0_10px_20px_rgba(176,138,52,0.12)] transition hover:border-[#c59a42] hover:bg-[linear-gradient(180deg,#fcf4e8_0%,#f3e5ce_100%)] hover:text-[#6f4a13]"
                   @click="openRoute(row.route)"
                 >
+                  <Icon icon="feather:external-link" class="size-4" />
                   Open
                 </button>
               </td>

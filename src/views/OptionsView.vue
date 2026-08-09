@@ -8,9 +8,11 @@ import {
   AppLoadingScreen,
   AppModal,
   AppStatValue,
+  AppTable,
 } from '@/components/app'
 import { useAuth, usePaymentModes, useProcedures } from '@/composables'
 import type { PaymentModeOption, ProcedureOption } from '@/composables'
+import { formatCurrency } from '@/utils'
 
 type OptionCategory = 'Procedures' | 'Payment Modes'
 
@@ -103,6 +105,11 @@ const isPaymentModesSelected = computed(() => selectedCategory.value === 'Paymen
 const isProceduresSelected = computed(() => selectedCategory.value === 'Procedures')
 const loadingSummary = computed(() => loadingProcedures.value || loadingPaymentModes.value)
 const canDeleteManagedOptions = computed(() => getStoredRoles().includes('superAdmin'))
+const tableHeaders = computed(() =>
+  isProceduresSelected.value
+    ? ['Option', 'Code', 'Interval', 'Quantity', 'Price', 'Status', 'Actions']
+    : ['Option', 'Code', 'Status', 'Actions'],
+)
 const errorMessage = computed(
   () => localErrorMessage.value || procedureErrorMessage.value || paymentModeErrorMessage.value,
 )
@@ -333,8 +340,7 @@ async function removeOption() {
 }
 
 function formatPrice(price?: number) {
-  if (price === undefined) return '—'
-  return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(price)
+  return formatCurrency(price, '-')
 }
 
 function getProcedureMonthInterval(option: OptionItem): number {
@@ -590,127 +596,75 @@ function getProcedureQuantity(option: OptionItem): number {
             />
           </div>
 
-          <div
-            v-if="filteredOptions.length"
-            class="mt-5 overflow-hidden rounded-2xl border border-pebble"
-          >
-            <div class="overflow-x-auto">
-              <table class="min-w-full">
-                <thead class="border-b border-pebble bg-cloud">
-                  <tr>
-                    <th
-                      class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate"
+          <div v-if="filteredOptions.length" class="mt-5">
+            <AppTable :theads="tableHeaders" :total-entries="filteredOptions.length">
+              <template #trs>
+                <tr v-for="option in filteredOptions" :key="option.id">
+                  <td>
+                    <p class="font-bold text-onyx">{{ option.name }}</p>
+                    <p class="mt-1 max-w-md whitespace-normal text-sm text-slate">
+                      {{ option.description }}
+                    </p>
+                  </td>
+                  <td>
+                    <code class="rounded-md bg-fog px-2 py-1 text-xs font-semibold text-slate">{{
+                      option.code
+                    }}</code>
+                  </td>
+                  <td v-if="selectedCategory === 'Procedures'" class="text-slate">
+                    {{ getProcedureMonthInterval(option) }} month{{
+                      getProcedureMonthInterval(option) === 1 ? '' : 's'
+                    }}
+                  </td>
+                  <td v-if="selectedCategory === 'Procedures'" class="text-slate">
+                    {{ getProcedureQuantity(option) }}
+                  </td>
+                  <td v-if="selectedCategory === 'Procedures'" class="text-slate">
+                    {{ formatPrice(option.price) }}
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold"
+                      :class="
+                        option.active ? 'bg-emerald-light text-emerald' : 'bg-ruby-light text-ruby'
+                      "
+                      @click="confirmStatusChange(option)"
                     >
-                      Option
-                    </th>
-                    <th
-                      class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate"
-                    >
-                      Code
-                    </th>
-                    <th
-                      v-if="selectedCategory === 'Procedures'"
-                      class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate"
-                    >
-                      Interval
-                    </th>
-                    <th
-                      v-if="selectedCategory === 'Procedures'"
-                      class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate"
-                    >
-                      Quantity
-                    </th>
-                    <th
-                      v-if="selectedCategory === 'Procedures'"
-                      class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate"
-                    >
-                      Price
-                    </th>
-                    <th
-                      class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate"
-                    >
-                      Status
-                    </th>
-                    <th
-                      class="px-5 py-4 text-right text-xs font-semibold uppercase tracking-[0.16em] text-slate"
-                    >
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-pebble">
-                  <tr
-                    v-for="option in filteredOptions"
-                    :key="option.id"
-                    class="transition hover:bg-apricot"
-                  >
-                    <td class="px-5 py-4">
-                      <p class="font-bold text-onyx">{{ option.name }}</p>
-                      <p class="mt-1 max-w-md text-sm text-slate">{{ option.description }}</p>
-                    </td>
-                    <td class="px-5 py-4">
-                      <code class="rounded-md bg-fog px-2 py-1 text-xs font-semibold text-slate">{{
-                        option.code
-                      }}</code>
-                    </td>
-                    <td v-if="selectedCategory === 'Procedures'" class="px-5 py-4 text-slate">
-                      {{ getProcedureMonthInterval(option) }} month{{
-                        getProcedureMonthInterval(option) === 1 ? '' : 's'
-                      }}
-                    </td>
-                    <td v-if="selectedCategory === 'Procedures'" class="px-5 py-4 text-slate">
-                      {{ getProcedureQuantity(option) }}
-                    </td>
-                    <td v-if="selectedCategory === 'Procedures'" class="px-5 py-4 text-slate">
-                      {{ formatPrice(option.price) }}
-                    </td>
-                    <td class="px-5 py-4">
+                      <span
+                        class="size-1.5 rounded-full"
+                        :class="option.active ? 'bg-emerald' : 'bg-ruby'"
+                      />
+                      {{ option.active ? 'Active' : 'Inactive' }}
+                    </button>
+                  </td>
+                  <td>
+                    <div class="flex flex-wrap justify-end gap-2">
                       <button
                         type="button"
-                        class="inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold"
-                        :class="
-                          option.active
-                            ? 'bg-emerald-light text-emerald'
-                            : 'bg-ruby-light text-ruby'
-                        "
-                        @click="confirmStatusChange(option)"
+                        class="inline-flex items-center gap-2 rounded-full border border-[#d8c5a0] bg-[linear-gradient(180deg,#f8eddc_0%,#efe1cb_100%)] px-3.5 py-2 text-xs font-semibold text-[#8c6320] shadow-[0_10px_20px_rgba(176,138,52,0.12)] transition hover:border-[#c59a42] hover:bg-[linear-gradient(180deg,#fcf4e8_0%,#f3e5ce_100%)] hover:text-[#6f4a13]"
+                        @click="openEditForm(option)"
                       >
-                        <span
-                          class="size-1.5 rounded-full"
-                          :class="option.active ? 'bg-emerald' : 'bg-ruby'"
-                        />
-                        {{ option.active ? 'Active' : 'Inactive' }}
+                        <Icon icon="feather:edit-2" class="size-4" />
+                        Edit
                       </button>
-                    </td>
-                    <td class="px-5 py-4">
-                      <div class="flex flex-wrap justify-end gap-2">
-                        <button
-                          type="button"
-                          class="inline-flex items-center gap-2 rounded-full border border-[#d8c5a0] bg-[linear-gradient(180deg,#f8eddc_0%,#efe1cb_100%)] px-3.5 py-2 text-xs font-semibold text-[#8c6320] shadow-[0_10px_20px_rgba(176,138,52,0.12)] transition hover:border-[#c59a42] hover:bg-[linear-gradient(180deg,#fcf4e8_0%,#f3e5ce_100%)] hover:text-[#6f4a13]"
-                          @click="openEditForm(option)"
-                        >
-                          <Icon icon="feather:edit-2" class="size-4" />
-                          Edit
-                        </button>
-                        <button
-                          v-if="
-                            canDeleteManagedOptions ||
-                            (option.category !== 'Payment Modes' &&
-                              option.category !== 'Procedures')
-                          "
-                          type="button"
-                          class="inline-flex items-center gap-2 rounded-xl bg-ruby-light px-3 py-2 text-xs font-semibold text-ruby transition hover:bg-ruby-light/80"
-                          @click="confirmDelete(option)"
-                        >
-                          <Icon icon="feather:trash-2" class="size-4" />
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+                      <button
+                        v-if="
+                          canDeleteManagedOptions ||
+                          (option.category !== 'Payment Modes' && option.category !== 'Procedures')
+                        "
+                        type="button"
+                        class="inline-flex items-center gap-2 rounded-xl bg-ruby-light px-3 py-2 text-xs font-semibold text-ruby transition hover:bg-ruby-light/80"
+                        @click="confirmDelete(option)"
+                      >
+                        <Icon icon="feather:trash-2" class="size-4" />
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </AppTable>
           </div>
 
           <div

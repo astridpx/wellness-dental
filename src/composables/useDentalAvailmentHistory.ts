@@ -11,6 +11,9 @@ type PaginationMetadata = {
   perPage?: number
   totalEntries?: number
   totalPages?: number
+  paidRows?: number
+  unpaidRows?: number
+  unpaidAmount?: number
 }
 
 export function useDentalAvailmentHistory() {
@@ -22,6 +25,7 @@ export function useDentalAvailmentHistory() {
   const lookingUp = ref(false)
   const cancellingId = ref<number | null>(null)
   const updatingId = ref<number | null>(null)
+  const updatingPaymentId = ref<number | null>(null)
   const errorMessage = ref('')
   const successMessage = ref('')
   const lookupErrorMessage = ref('')
@@ -29,6 +33,9 @@ export function useDentalAvailmentHistory() {
   const currentPage = ref(1)
   const totalEntries = ref(0)
   const totalPages = ref(1)
+  const paidRows = ref(0)
+  const unpaidRows = ref(0)
+  const unpaidAmount = ref(0)
 
   const filters = reactive({
     approvalNo: '',
@@ -36,6 +43,7 @@ export function useDentalAvailmentHistory() {
     dentistName: '',
     clinicName: '',
     procedure: '',
+    clientCode: '',
     encodedBy: '',
     status: '',
     dateFrom: '',
@@ -64,6 +72,7 @@ export function useDentalAvailmentHistory() {
     if (filters.dentistName.trim()) params.set('dentistName', filters.dentistName.trim())
     if (filters.clinicName.trim()) params.set('clinicName', filters.clinicName.trim())
     if (filters.procedure.trim()) params.set('procedure', filters.procedure.trim())
+    if (filters.clientCode.trim()) params.set('clientCode', filters.clientCode.trim())
     if (filters.encodedBy.trim()) params.set('encodedBy', filters.encodedBy.trim())
     if (filters.status.trim()) params.set('status', filters.status.trim())
     if (filters.dateFrom) params.set('dateFrom', filters.dateFrom)
@@ -80,6 +89,9 @@ export function useDentalAvailmentHistory() {
       records.value = []
       totalEntries.value = 0
       totalPages.value = 1
+      paidRows.value = 0
+      unpaidRows.value = 0
+      unpaidAmount.value = 0
       return
     }
 
@@ -87,6 +99,9 @@ export function useDentalAvailmentHistory() {
     records.value = result.data || []
     totalEntries.value = Number(metadata.totalEntries || 0)
     totalPages.value = Number(metadata.totalPages || 1)
+    paidRows.value = Number(metadata.paidRows || 0)
+    unpaidRows.value = Number(metadata.unpaidRows || 0)
+    unpaidAmount.value = Number(metadata.unpaidAmount || 0)
   }
 
   function applyFilters() {
@@ -104,6 +119,7 @@ export function useDentalAvailmentHistory() {
     filters.dentistName = ''
     filters.clinicName = ''
     filters.procedure = ''
+    filters.clientCode = ''
     filters.encodedBy = ''
     filters.status = ''
     filters.dateFrom = ''
@@ -198,6 +214,38 @@ export function useDentalAvailmentHistory() {
     return true
   }
 
+  async function updateDoctorPaymentStatus(record: DentalAvailmentRecord, paid: boolean) {
+    updatingPaymentId.value = record.dentalid
+    errorMessage.value = ''
+    successMessage.value = ''
+
+    const result = await request<DentalAvailmentRecord>(
+      `/wellness/dentalAvailments/${record.dentalid}/payment`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ paid }),
+      },
+      { includeContentType: true },
+    )
+
+    updatingPaymentId.value = null
+
+    if (!result.ok) {
+      errorMessage.value =
+        result.error || `Unable to mark dentist payment as ${paid ? 'paid' : 'unpaid'}.`
+      return false
+    }
+
+    successMessage.value = `Dentist payment for ${record.approvalno} was marked ${
+      paid ? 'paid' : 'unpaid'
+    }.`
+    await fetchHistory()
+    if (selectedApproval.value?.approvalNo === record.approvalno) {
+      await openApprovalDetails(record.approvalno)
+    }
+    return true
+  }
+
   function closeApprovalDetails() {
     selectedApproval.value = null
     lookupErrorMessage.value = ''
@@ -231,7 +279,12 @@ export function useDentalAvailmentHistory() {
     successMessage,
     totalEntries,
     totalPages,
+    paidRows,
+    unpaidRows,
+    unpaidAmount,
     updateAvailment,
+    updateDoctorPaymentStatus,
+    updatingPaymentId,
     updatingId,
   }
 }

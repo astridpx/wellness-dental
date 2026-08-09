@@ -49,7 +49,7 @@ const emit = defineEmits<{
       </table>
     </div>
 
-    <div class="border-t border-pebble/70 px-6 py-4">
+    <div v-if="totalPages > 1" class="border-t border-pebble/70 px-6 py-4">
       <AppPagination
         :total-entries="totalEntries"
         :total-pages="totalPages"

@@ -20,6 +20,9 @@ export type DentalAvailmentRecord = {
   dateencoded?: string | null
   planholderid?: string | null
   officecode?: string | null
+  IfPaid?: number | boolean | null
+  ifPaid?: number | boolean | null
+  ifpaid?: number | boolean | null
   dtCancelled?: string | null
   CancelledBy?: string | null
   status?: string
