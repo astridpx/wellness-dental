@@ -10,6 +10,7 @@ import {
 } from '@/components/app'
 import { ref } from 'vue'
 import { useUserLogs } from '@/composables'
+import { formatLogDateTime } from '@/utils'
 
 const showDialog = ref(false)
 const {
@@ -23,16 +24,6 @@ const {
   totalEntries,
   totalPages,
 } = useUserLogs()
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value))
-}
 
 function confirmFilters() {
   showDialog.value = false
@@ -145,7 +136,9 @@ function confirmFilters() {
               <td colspan="4" class="text-center text-slate">No user logs found.</td>
             </tr>
             <tr v-for="log in logs" v-else :key="log.id">
-              <td class="whitespace-nowrap text-sm text-slate">{{ formatDate(log.createdAt) }}</td>
+              <td class="whitespace-nowrap text-sm text-slate">
+                {{ formatLogDateTime(log.createdAt) }}
+              </td>
               <td class="font-medium text-onyx">{{ log.email }}</td>
               <td>{{ log.activity }}</td>
               <td>

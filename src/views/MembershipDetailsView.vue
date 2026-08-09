@@ -10,6 +10,7 @@ import {
   AppTable,
 } from '@/components/app'
 import { useMembershipDetails } from '@/composables'
+import { formatCurrency, formatDate } from '@/utils'
 
 const {
   members,
@@ -38,19 +39,6 @@ const activeFilterCount = computed(
   () => Object.values(filters).filter((value) => value.trim()).length,
 )
 
-function formatDate(value?: string | null) {
-  if (!value) return 'N/A'
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(date)
-}
-
 function formatDateOnly(value?: string | null) {
   if (!value) return 'N/A'
 
@@ -65,19 +53,6 @@ function formatDateOnly(value?: string | null) {
 
   const normalized = String(value).trim()
   return normalized.includes('T') ? normalized.split('T')[0] || normalized : normalized
-}
-
-function formatCurrency(value?: number | string | null) {
-  if (value === null || value === undefined || value === '') return 'N/A'
-
-  const amount = Number(value)
-  if (Number.isNaN(amount)) return String(value)
-
-  return new Intl.NumberFormat('en-PH', {
-    style: 'currency',
-    currency: 'PHP',
-    minimumFractionDigits: 2,
-  }).format(amount)
 }
 
 function openFilters() {

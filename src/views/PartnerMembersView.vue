@@ -13,6 +13,7 @@ import {
 } from '@/components/app'
 import { useBusinessPartners, usePartnerMembers } from '@/composables'
 import type { PartnerMemberBatch, PartnerMemberRecord } from '@/composables/usePartnerMembers'
+import { formatDateTime } from '@/utils'
 
 const {
   batches,
@@ -213,18 +214,6 @@ function closeToast() {
   toast.value.show = false
 }
 
-function formatDate(value?: string | null) {
-  if (!value) return 'N/A'
-
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(value))
-}
-
 function formatFileSize(value?: number | null) {
   if (!value) return 'N/A'
   if (value < 1024) return `${value} B`
@@ -286,9 +275,7 @@ watch(selectedBusinessPartnerId, (value) => {
                 Imported batches
               </p>
               <p class="mt-3 text-3xl font-black text-onyx">{{ batchStats.totalBatches }}</p>
-              <p class="mt-2 text-sm text-slate">
-                Uploaded partner files stored in the database.
-              </p>
+              <p class="mt-2 text-sm text-slate">Uploaded partner files stored in the database.</p>
             </div>
             <div class="rounded-[1.4rem] border border-pebble bg-white/88 px-5 py-4 shadow-sm">
               <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">
@@ -304,9 +291,7 @@ watch(selectedBusinessPartnerId, (value) => {
                 Visible members
               </p>
               <p class="mt-3 text-3xl font-black text-onyx">{{ recordStats.totalMembers }}</p>
-              <p class="mt-2 text-sm text-slate">
-                Rows shown for the selected batch view.
-              </p>
+              <p class="mt-2 text-sm text-slate">Rows shown for the selected batch view.</p>
             </div>
           </div>
         </div>
@@ -605,7 +590,7 @@ watch(selectedBusinessPartnerId, (value) => {
               </td>
               <td>
                 <div>
-                  <p class="font-semibold text-onyx">{{ formatDate(batch.uploadedAt) }}</p>
+                  <p class="font-semibold text-onyx">{{ formatDateTime(batch.uploadedAt) }}</p>
                   <p class="mt-1 text-xs text-slate">{{ batch.uploadedByName }}</p>
                 </div>
               </td>
@@ -660,8 +645,8 @@ watch(selectedBusinessPartnerId, (value) => {
               recordScope === 'all'
                 ? 'Search and review members across all active batch imports.'
                 : selectedBatch
-                ? `Review rows from ${selectedBatch.batchCode} and update payment tracking.`
-                : 'Select a batch to review imported member rows.'
+                  ? `Review rows from ${selectedBatch.batchCode} and update payment tracking.`
+                  : 'Select a batch to review imported member rows.'
             }}
           </p>
         </div>

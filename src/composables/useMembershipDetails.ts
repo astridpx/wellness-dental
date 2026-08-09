@@ -12,6 +12,7 @@ export type MembershipRecord = {
   planholderId: string
   memberName: string
   policyNumber?: string | null
+  officeCode?: string | null
   company?: string | null
   planCode?: string | null
   dentalPremium?: number | string | null
