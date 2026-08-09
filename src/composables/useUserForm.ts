@@ -18,6 +18,8 @@ type UserResponse = {
   roles: string[]
   primaryRole: string
   isActive: boolean
+  isLocked: boolean
+  lockedUntil: string | null
   mustChangePassword: boolean
 }
 
@@ -29,7 +31,9 @@ export function useUserForm() {
   const isEditMode = computed(() => !!route.params.id)
   const loading = ref(Boolean(route.params.id))
   const saving = ref(false)
+  const unlocking = ref(false)
   const errorMessage = ref('')
+  const successMessage = ref('')
   const roles = ref<RoleOption[]>([])
 
   const userData = ref({
@@ -45,6 +49,8 @@ export function useUserForm() {
     department: '',
     jobTitle: '',
     status: 'Active',
+    isLocked: false,
+    lockedUntil: null as string | null,
     mustChangePassword: true,
   })
 
@@ -86,6 +92,8 @@ export function useUserForm() {
       department: user.department || '',
       jobTitle: user.jobTitle || '',
       status: user.isActive ? 'Active' : 'Inactive',
+      isLocked: user.isLocked,
+      lockedUntil: user.lockedUntil,
       mustChangePassword: user.mustChangePassword,
     }
 
@@ -95,6 +103,7 @@ export function useUserForm() {
   async function save() {
     saving.value = true
     errorMessage.value = ''
+    successMessage.value = ''
 
     const payload: Record<string, unknown> = {
       username: userData.value.username,
@@ -145,6 +154,31 @@ export function useUserForm() {
     await router.push('/users')
   }
 
+  async function unlockUser() {
+    if (!isEditMode.value || unlocking.value) return false
+
+    unlocking.value = true
+    errorMessage.value = ''
+    successMessage.value = ''
+
+    const result = await request<UserResponse>(`/wellness/users/${route.params.id}/unlock`, {
+      method: 'PATCH',
+    })
+
+    unlocking.value = false
+
+    if (!result.ok || !result.data) {
+      errorMessage.value = result.error || 'Unable to unlock user.'
+      return false
+    }
+
+    const user = result.data
+    userData.value.isLocked = user.isLocked
+    userData.value.lockedUntil = user.lockedUntil
+    successMessage.value = 'User account has been unlocked.'
+    return true
+  }
+
   function goBackToList() {
     void router.push('/users')
   }
@@ -162,6 +196,9 @@ export function useUserForm() {
     roles,
     save,
     saving,
+    successMessage,
+    unlocking,
+    unlockUser,
     userData,
   }
 }

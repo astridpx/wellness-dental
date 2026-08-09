@@ -3,10 +3,23 @@ import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
 import { AppButton, AppDialog, AppInput, AppLoadingScreen } from '@/components/app'
 import { useUserForm } from '@/composables'
+import { formatDateTime } from '@/utils'
 
-const { errorMessage, goBackToList, isEditMode, loading, roles, save, saving, userData } =
-  useUserForm()
+const {
+  errorMessage,
+  goBackToList,
+  isEditMode,
+  loading,
+  roles,
+  save,
+  saving,
+  successMessage,
+  unlocking,
+  unlockUser,
+  userData,
+} = useUserForm()
 const showSaveDialog = ref(false)
+const showUnlockDialog = ref(false)
 
 const selectedRoleCount = computed(() => userData.value.roleCodes.length)
 const displayName = computed(() => {
@@ -75,6 +88,21 @@ async function confirmSave() {
   await save()
   showSaveDialog.value = false
 }
+
+function openUnlockDialog() {
+  if (!isEditMode.value || !userData.value.isLocked || unlocking.value) return
+  showUnlockDialog.value = true
+}
+
+function closeUnlockDialog() {
+  if (unlocking.value) return
+  showUnlockDialog.value = false
+}
+
+async function confirmUnlock() {
+  const unlocked = await unlockUser()
+  if (unlocked) showUnlockDialog.value = false
+}
 </script>
 
 <template>
@@ -125,6 +153,34 @@ async function confirmSave() {
     </template>
   </AppDialog>
 
+  <AppDialog
+    title="Unlock account"
+    :show="showUnlockDialog"
+    :disabled="unlocking"
+    :confirm-label="unlocking ? 'Unlocking...' : 'Unlock Account'"
+    @close="closeUnlockDialog"
+    @confirm="confirmUnlock"
+  >
+    <template #dialog-content>
+      <div class="space-y-4">
+        <div class="rounded-[1.5rem] border border-ruby/15 bg-ruby-light p-5">
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-ruby">Account unlock</p>
+          <p class="mt-2 text-sm leading-6 text-slate">
+            This clears failed login attempts and removes the lock for
+            <span class="font-bold text-onyx">{{ displayName }}</span
+            >.
+          </p>
+        </div>
+        <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+          <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Locked until</p>
+          <p class="mt-2 text-sm font-bold text-onyx">
+            {{ formatDateTime(userData.lockedUntil, 'Not set') }}
+          </p>
+        </div>
+      </div>
+    </template>
+  </AppDialog>
+
   <div v-if="loading" class="space-y-6">
     <AppLoadingScreen
       title="Loading user profile"
@@ -153,6 +209,9 @@ async function confirmSave() {
 
     <p v-if="errorMessage" class="rounded-xl bg-ruby-light px-4 py-3 text-sm text-ruby">
       {{ errorMessage }}
+    </p>
+    <p v-if="successMessage" class="rounded-xl bg-emerald-light px-4 py-3 text-sm text-emerald">
+      {{ successMessage }}
     </p>
 
     <section
@@ -187,9 +246,15 @@ async function confirmSave() {
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Status</p>
             <p
               class="mt-2 text-2xl font-black"
-              :class="userData.status === 'Active' ? 'text-emerald' : 'text-ruby'"
+              :class="
+                userData.isLocked
+                  ? 'text-ruby'
+                  : userData.status === 'Active'
+                    ? 'text-emerald'
+                    : 'text-ruby'
+              "
             >
-              {{ userData.status }}
+              {{ userData.isLocked ? 'Locked' : userData.status }}
             </p>
           </div>
           <div class="rounded-[1.4rem] border border-pebble bg-white px-5 py-4 shadow-sm">
@@ -346,6 +411,31 @@ async function confirmSave() {
 
             <div class="md:col-span-2">
               <label class="mb-3 block text-sm font-medium text-slate">Account Status</label>
+              <div
+                v-if="isEditMode && userData.isLocked"
+                class="mb-4 flex flex-col gap-3 rounded-xl border border-ruby/20 bg-ruby-light px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div>
+                  <p class="text-sm font-bold text-ruby">Account is locked</p>
+                  <p class="mt-1 text-sm text-slate">
+                    Locked until {{ formatDateTime(userData.lockedUntil, 'Not set') }}.
+                  </p>
+                </div>
+                <AppButton
+                  type="button"
+                  btn-theme="danger"
+                  class="normal-case"
+                  :disabled="unlocking"
+                  @click="openUnlockDialog"
+                >
+                  <Icon
+                    :icon="unlocking ? 'feather:loader' : 'feather:unlock'"
+                    class="h-4 w-4"
+                    :class="{ 'animate-spin': unlocking }"
+                  />
+                  {{ unlocking ? 'Unlocking...' : 'Unlock Account' }}
+                </AppButton>
+              </div>
               <div class="grid gap-3 md:grid-cols-2">
                 <button
                   v-for="option in accountStatusOptions"
