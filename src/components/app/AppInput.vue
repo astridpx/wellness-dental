@@ -27,6 +27,7 @@ const props = defineProps({
   label: String,
   multiple: Boolean,
   accept: String,
+  autocomplete: String,
   fileInputResetClass: Boolean,
   inputClass: {
     type: [String, Array, Object],
@@ -82,6 +83,7 @@ function updateModel(event: Event) {
         :required="required"
         :multiple="multiple"
         :accept="accept"
+        :autocomplete="autocomplete"
         :disabled="disabled"
         :placeholder="placeholder"
         :readonly="readonly"
@@ -134,6 +136,7 @@ function updateModel(event: Event) {
         :required="required"
         :multiple="multiple"
         :accept="accept"
+        :autocomplete="autocomplete"
         :disabled="disabled"
         :placeholder="placeholder"
         :readonly="readonly"

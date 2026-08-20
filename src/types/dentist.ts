@@ -40,8 +40,6 @@ export type DentistFormData = {
   specialty: string
   dentistCode: string
   modeOfPayment: string
-  bankAccount: string
-  accountName: string
   agent: string
   remarks: string
   TWLB: string
@@ -59,3 +57,21 @@ export type DentistFormData = {
 }
 
 export type DentistFormErrorContext = '' | 'load' | 'validation' | 'save'
+
+export type DentistBankAccount = {
+  id: number
+  dentistId: number
+  bankName: string
+  accountName: string
+  accountNumber: string
+  isActive: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type DentistBankAccountInput = {
+  bankName: string
+  accountName: string
+  accountNumber: string
+  isActive: boolean
+}
