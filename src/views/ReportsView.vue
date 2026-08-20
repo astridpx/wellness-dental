@@ -31,8 +31,16 @@ const {
   loading: loadingDentists,
 } = useDentists({ perPage: 20 })
 
+type DentistOption = {
+  value: number
+  label: string
+  description: string
+}
+
 const selectedDentistId = ref<string | number | null>(null)
 const dentistSearch = ref('')
+const dentistOptions = ref<DentistOption[]>([])
+const retainedDentist = ref<DentistOption | null>(null)
 const selectedCompanyCode = ref<string | number | null>(null)
 const companySearch = ref('')
 let dentistSearchTimer: number | undefined
@@ -103,16 +111,6 @@ const imsCompanyOptions = computed(() =>
     description: [company.officeCode, company.mainCompany].filter(Boolean).join(' | '),
   })),
 )
-const dentistOptions = computed(() =>
-  dentists.value.map((dentist) => ({
-    value: dentist.dentistidno,
-    label: dentist.dentistname,
-    description: [dentist.dentistcode, dentist.prcno, dentist.specialization]
-      .filter(Boolean)
-      .join(' | '),
-  })),
-)
-
 const excelColumns = [
   ['no', 'No.'],
   ['companyName', 'Company Name'],
@@ -205,10 +203,46 @@ watch(companySearch, (search) => {
   }, 350)
 })
 
-watch(selectedDentistId, (value) => {
-  const selected = dentists.value.find((dentist) => String(dentist.dentistidno) === String(value))
-  form.dentist = selected?.dentistname || ''
-})
+watch(
+  [dentists, selectedDentistId],
+  ([availableDentists, selectedId]) => {
+    const options: DentistOption[] = availableDentists.map((dentist) => ({
+      value: Number(dentist.dentistidno),
+      label:
+        dentist.dentistname ||
+        [dentist.firstname, dentist.middleinitial, dentist.lastname].filter(Boolean).join(' '),
+      description: [dentist.dentistcode, dentist.prcno, dentist.specialization]
+        .filter(Boolean)
+        .join(' | '),
+    }))
+    const normalizedSelectedId = selectedId == null ? null : Number(selectedId)
+    const matchedDentist = options.find((option) => option.value === normalizedSelectedId)
+
+    if (matchedDentist) {
+      retainedDentist.value = matchedDentist
+    } else if (normalizedSelectedId == null) {
+      retainedDentist.value = null
+    } else if (retainedDentist.value?.value !== normalizedSelectedId) {
+      retainedDentist.value = {
+        value: normalizedSelectedId,
+        label: form.dentist || 'Selected dentist',
+        description: 'Currently selected dentist',
+      }
+    }
+
+    if (
+      normalizedSelectedId != null &&
+      !options.some((option) => option.value === normalizedSelectedId) &&
+      retainedDentist.value
+    ) {
+      options.unshift(retainedDentist.value)
+    }
+
+    dentistOptions.value = options
+    form.dentist = normalizedSelectedId == null ? '' : retainedDentist.value?.label || ''
+  },
+  { immediate: true },
+)
 
 watch(dentistSearch, (search) => {
   window.clearTimeout(dentistSearchTimer)
