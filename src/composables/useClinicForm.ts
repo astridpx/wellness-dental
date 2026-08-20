@@ -26,12 +26,44 @@ const emptyClinicData: ClinicFormData = {
   mobileNumber2: '',
   type: DEFAULT_CLINIC_TYPE_CODE,
   providerApp: '',
+  TWLB: '',
+  OP: '',
+  STE: '',
+  TF: '',
+  AD: '',
+  RJ: '',
+  LC: '',
+  PF: '',
+  CON: '',
   dentistId: null,
   dentistname: '',
   prcno: '',
   email: '',
   dentistcode: '',
   isActive: '',
+}
+
+const clinicFeeFields = [
+  ['TWLB', 'TWLB'],
+  ['OP', 'OP'],
+  ['STE', 'STE'],
+  ['TF', 'TF'],
+  ['AD', 'AD'],
+  ['RJ', 'RJ'],
+  ['LC', 'LC'],
+  ['PF', 'PF'],
+  ['CON', 'CON'],
+] as const
+
+const clinicFeePattern = /^\d+(?:\.\d{2})?$/
+
+function toFormValue(value: string | number | null | undefined) {
+  return value == null ? '' : String(value)
+}
+
+function toNumber(value: string) {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : 0
 }
 
 export function useClinicForm() {
@@ -75,6 +107,15 @@ export function useClinicForm() {
       mobileNumber2: clinic.MobileNumber2 || '',
       type: normalizeClinicTypeCode(clinic.type),
       providerApp: clinic.provider_app || '',
+      TWLB: toFormValue(clinic.TWLB),
+      OP: toFormValue(clinic.OP),
+      STE: toFormValue(clinic.STE),
+      TF: toFormValue(clinic.TF),
+      AD: toFormValue(clinic.AD),
+      RJ: toFormValue(clinic.RJ),
+      LC: toFormValue(clinic.LC),
+      PF: toFormValue(clinic.PF),
+      CON: toFormValue(clinic.CON),
       dentistId: clinic.dentistId == null ? null : Number(clinic.dentistId),
       dentistname: clinic.dentistname || '',
       prcno: clinic.prcno || '',
@@ -121,6 +162,14 @@ export function useClinicForm() {
     if (!clinicData.value.clinicCode.trim()) return 'Clinic code is required.'
     if (!clinicData.value.address.trim()) return 'Clinic address is required.'
     if (clinicData.value.dentistId == null) return 'Please assign a dentist.'
+
+    for (const [field, label] of clinicFeeFields) {
+      const value = clinicData.value[field].trim()
+      if (value && !clinicFeePattern.test(value)) {
+        return `${label} must be a whole number or use two decimal places (for example, 100 or 100.00).`
+      }
+    }
+
     return ''
   }
 
@@ -148,6 +197,15 @@ export function useClinicForm() {
       MobileNumber2: clinicData.value.mobileNumber2.trim(),
       type: normalizeClinicTypeCode(clinicData.value.type),
       provider_app: clinicData.value.providerApp.trim(),
+      TWLB: toNumber(clinicData.value.TWLB),
+      OP: toNumber(clinicData.value.OP),
+      STE: toNumber(clinicData.value.STE),
+      TF: toNumber(clinicData.value.TF),
+      AD: toNumber(clinicData.value.AD),
+      RJ: toNumber(clinicData.value.RJ),
+      LC: toNumber(clinicData.value.LC),
+      PF: toNumber(clinicData.value.PF),
+      CON: toNumber(clinicData.value.CON),
       dentistId: clinicData.value.dentistId,
     }
   }

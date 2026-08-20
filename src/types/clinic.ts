@@ -24,6 +24,15 @@ export type Clinic = {
   MobileNumber2: string
   type: ClinicTypeCode
   provider_app: string
+  TWLB: string | number
+  OP: string | number
+  STE: string | number
+  TF: string | number
+  AD: string | number
+  RJ: string | number
+  LC: string | number
+  PF: string | number
+  CON: string | number
   dentistId: number | null
   dentistname?: string | null
   prcno?: string | null
@@ -48,6 +57,15 @@ export type ClinicFormData = {
   mobileNumber2: string
   type: ClinicTypeCode
   providerApp: string
+  TWLB: string
+  OP: string
+  STE: string
+  TF: string
+  AD: string
+  RJ: string
+  LC: string
+  PF: string
+  CON: string
   dentistId: number | null
   dentistname: string
   prcno: string

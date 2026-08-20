@@ -49,6 +49,18 @@ const assignedDentistName = ref('Not assigned yet')
 const selectedDentist = ref<SelectedDentistDetails | null>(null)
 const selectedDentistStatus = ref('')
 
+const clinicFeeFields = [
+  { key: 'TWLB', label: 'TWLB' },
+  { key: 'OP', label: 'OP' },
+  { key: 'STE', label: 'STE' },
+  { key: 'TF', label: 'TF' },
+  { key: 'AD', label: 'AD' },
+  { key: 'RJ', label: 'RJ' },
+  { key: 'LC', label: 'LC' },
+  { key: 'PF', label: 'PF' },
+  { key: 'CON', label: 'CON' },
+] as const
+
 watch(
   [
     dentists,
@@ -142,6 +154,7 @@ watchDebounced(
 const setupSteps = [
   'Clinic identity',
   'Dentist assignment',
+  'Procedure fee',
   'Location',
   'Contact and schedule',
   'Operating status',
@@ -151,7 +164,8 @@ const setupSteps = [
 <template>
   <section class="space-y-6">
     <section
-      class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#fff7ed_0%,#ffffff_48%,#f8fbff_100%)] shadow-sm">
+      class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#fff7ed_0%,#ffffff_48%,#f8fbff_100%)] shadow-sm"
+    >
       <div class="flex flex-col gap-4 p-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p class="text-[11px] font-semibold uppercase tracking-[0.3em] text-tangerine">
@@ -171,8 +185,12 @@ const setupSteps = [
       </div>
     </section>
 
-    <div v-if="profileMissing" role="alert" aria-live="assertive"
-      class="flex flex-col gap-4 rounded-2xl border border-ruby/20 bg-[linear-gradient(135deg,#fff1f1_0%,#ffffff_100%)] p-5 text-ruby sm:flex-row sm:items-center sm:justify-between">
+    <div
+      v-if="profileMissing"
+      role="alert"
+      aria-live="assertive"
+      class="flex flex-col gap-4 rounded-2xl border border-ruby/20 bg-[linear-gradient(135deg,#fff1f1_0%,#ffffff_100%)] p-5 text-ruby sm:flex-row sm:items-center sm:justify-between"
+    >
       <div class="flex min-w-0 items-start gap-3">
         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ruby-light">
           <Icon icon="feather:alert-triangle" class="h-5 w-5" />
@@ -184,14 +202,23 @@ const setupSteps = [
           </p>
         </div>
       </div>
-      <AppButton btn-theme="outline" type="button" class="shrink-0 normal-case" @click="loadClinicProfile">
+      <AppButton
+        btn-theme="outline"
+        type="button"
+        class="shrink-0 normal-case"
+        @click="loadClinicProfile"
+      >
         <Icon icon="feather:refresh-cw" class="h-4 w-4" />
         Try again
       </AppButton>
     </div>
 
-    <div v-else-if="errorMessage" role="alert" aria-live="assertive"
-      class="flex items-start gap-3 rounded-2xl border border-ruby/20 bg-ruby-light px-5 py-4 text-ruby">
+    <div
+      v-else-if="errorMessage"
+      role="alert"
+      aria-live="assertive"
+      class="flex items-start gap-3 rounded-2xl border border-ruby/20 bg-ruby-light px-5 py-4 text-ruby"
+    >
       <Icon icon="feather:alert-circle" class="mt-0.5 h-5 w-5 shrink-0" />
       <div class="min-w-0 flex-1">
         <p class="font-bold">
@@ -203,23 +230,35 @@ const setupSteps = [
         </p>
         <p class="mt-1 text-sm leading-6">{{ errorMessage }}</p>
       </div>
-      <button type="button"
+      <button
+        type="button"
         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition hover:bg-ruby/10"
-        aria-label="Dismiss error" @click="clearError">
+        aria-label="Dismiss error"
+        @click="clearError"
+      >
         <Icon icon="feather:x" class="h-4 w-4" />
       </button>
     </div>
 
-    <p v-if="successMessage"
+    <p
+      v-if="successMessage"
       class="rounded-2xl border border-emerald/15 bg-emerald-light px-5 py-4 text-sm font-semibold text-emerald"
-      role="status">
+      role="status"
+    >
       {{ successMessage }}
     </p>
 
-    <AppLoadingScreen v-if="loading" title="Loading clinic profile"
-      message="Please wait while we retrieve the clinic's identity, location, and operating details." />
+    <AppLoadingScreen
+      v-if="loading"
+      title="Loading clinic profile"
+      message="Please wait while we retrieve the clinic's identity, location, and operating details."
+    />
 
-    <form v-else-if="!profileMissing" class="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]" @submit.prevent="save">
+    <form
+      v-else-if="!profileMissing"
+      class="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]"
+      @submit.prevent="save"
+    >
       <aside class="space-y-5">
         <div class="rounded-4xl bg-[#122833] p-6 text-white shadow-lg">
           <div class="flex items-center justify-between gap-4">
@@ -271,9 +310,14 @@ const setupSteps = [
             Build sequence
           </p>
           <div class="mt-4 space-y-3">
-            <div v-for="(step, index) in setupSteps" :key="step"
-              class="flex items-center gap-3 rounded-2xl bg-cloud px-4 py-3">
-              <span class="flex h-8 w-8 items-center justify-center rounded-full bg-onyx text-xs font-bold text-white">
+            <div
+              v-for="(step, index) in setupSteps"
+              :key="step"
+              class="flex items-center gap-3 rounded-2xl bg-cloud px-4 py-3"
+            >
+              <span
+                class="flex h-8 w-8 items-center justify-center rounded-full bg-onyx text-xs font-bold text-white"
+              >
                 {{ index + 1 }}
               </span>
               <span class="text-sm font-semibold text-onyx">{{ step }}</span>
@@ -297,10 +341,22 @@ const setupSteps = [
           </div>
 
           <div class="mt-6 grid gap-5 md:grid-cols-2">
-            <AppInput v-model="clinicData.clinicName" label="Clinic Name" placeholder="Wellness Dental Clinic" />
-            <AppInput v-model="clinicData.clinicCode" label="Clinic Code" placeholder="WDC-MKT-001" />
+            <AppInput
+              v-model="clinicData.clinicName"
+              label="Clinic Name"
+              placeholder="Wellness Dental Clinic"
+            />
+            <AppInput
+              v-model="clinicData.clinicCode"
+              label="Clinic Code"
+              placeholder="WDC-MKT-001"
+            />
             <AppInput v-model="clinicData.type" label="Clinic Type" placeholder="Dental" />
-            <AppInput v-model="clinicData.providerApp" label="Provider Application" placeholder="IMS Wellness" />
+            <AppInput
+              v-model="clinicData.providerApp"
+              label="Provider Application"
+              placeholder="IMS Wellness"
+            />
           </div>
         </section>
 
@@ -321,48 +377,117 @@ const setupSteps = [
             Search the dentist roster by provider name, PRC number, or dentist code.
           </p>
 
-          <div v-if="dentistErrorMessage"
-            class="mt-5 flex flex-col gap-3 rounded-xl bg-amber-light px-4 py-3 text-sm text-amber sm:flex-row sm:items-center sm:justify-between">
+          <div
+            v-if="dentistErrorMessage"
+            class="mt-5 flex flex-col gap-3 rounded-xl bg-amber-light px-4 py-3 text-sm text-amber sm:flex-row sm:items-center sm:justify-between"
+          >
             <p>{{ dentistErrorMessage }}</p>
-            <button type="button" class="shrink-0 font-semibold underline underline-offset-4" @click="fetchDentists">
+            <button
+              type="button"
+              class="shrink-0 font-semibold underline underline-offset-4"
+              @click="fetchDentists"
+            >
               Try again
             </button>
           </div>
 
           <div class="mt-6">
-            <AppSearchSelect v-model="clinicData.dentistId" v-model:search="dentistSearch" :options="dentistOptions"
-              :loading="loadingDentists" label="Assigned Dentist" placeholder="Search for a dentist"
-              empty-text="No dentists match your search." />
+            <AppSearchSelect
+              v-model="clinicData.dentistId"
+              v-model:search="dentistSearch"
+              :options="dentistOptions"
+              :loading="loadingDentists"
+              label="Assigned Dentist"
+              placeholder="Search for a dentist"
+              empty-text="No dentists match your search."
+            />
           </div>
 
           <div class="mt-6 grid gap-5 border-t border-pebble pt-6 md:grid-cols-2">
             <div class="md:col-span-2">
-              <AppInput :model-value="selectedDentist?.dentistname || ''" label="Dentist Name"
-                placeholder="Select a dentist to view their details" readonly />
+              <AppInput
+                :model-value="selectedDentist?.dentistname || ''"
+                label="Dentist Name"
+                placeholder="Select a dentist to view their details"
+                readonly
+              />
             </div>
-            <AppInput :model-value="selectedDentist?.email || ''" label="Email Address"
-              placeholder="No dentist selected" readonly />
-            <AppInput :model-value="selectedDentist?.prcno || ''" label="PRC Number" placeholder="No dentist selected"
-              readonly />
-            <AppInput :model-value="selectedDentist?.dentistcode || ''" label="Dentist Code"
-              placeholder="No dentist selected" readonly />
-            <AppInput :model-value="selectedDentistStatus" label="Account Status" placeholder="No dentist selected"
-              readonly />
+            <AppInput
+              :model-value="selectedDentist?.email || ''"
+              label="Email Address"
+              placeholder="No dentist selected"
+              readonly
+            />
+            <AppInput
+              :model-value="selectedDentist?.prcno || ''"
+              label="PRC Number"
+              placeholder="No dentist selected"
+              readonly
+            />
+            <AppInput
+              :model-value="selectedDentist?.dentistcode || ''"
+              label="Dentist Code"
+              placeholder="No dentist selected"
+              readonly
+            />
+            <AppInput
+              :model-value="selectedDentistStatus"
+              label="Account Status"
+              placeholder="No dentist selected"
+              readonly
+            />
+          </div>
+        </section>
+
+        <section class="rounded-4xl border border-pebble bg-white p-6 shadow-sm">
+          <div class="flex items-center justify-between gap-4">
+            <div>
+              <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
+                Section 3
+              </p>
+              <h2 class="mt-2 text-2xl font-black text-onyx">Procedure fee</h2>
+            </div>
+            <span
+              class="rounded-full bg-emerald-light px-3 py-1 text-xs font-semibold text-emerald"
+            >
+              Editable rates
+            </span>
+          </div>
+
+          <p class="mt-3 text-sm leading-6 text-slate">
+            Enter each clinic rate as a whole number or with two decimal places.
+          </p>
+
+          <div class="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <AppInput
+              v-for="field in clinicFeeFields"
+              :key="field.key"
+              v-model="clinicData[field.key]"
+              type="text"
+              inputmode="decimal"
+              pattern="[0-9]+([.][0-9]{2})?"
+              decimal-only
+              :label="field.label"
+              placeholder="100"
+            />
           </div>
         </section>
 
         <section class="rounded-4xl border border-pebble bg-white p-6 shadow-sm">
           <div>
             <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
-              Section 3
+              Section 4
             </p>
             <h2 class="mt-2 text-2xl font-black text-onyx">Location details</h2>
           </div>
 
           <div class="mt-6 grid gap-5 md:grid-cols-2">
             <div class="md:col-span-2">
-              <AppInput v-model="clinicData.address" label="Street Address"
-                placeholder="123 Health Avenue, Barangay Central" />
+              <AppInput
+                v-model="clinicData.address"
+                label="Street Address"
+                placeholder="123 Health Avenue, Barangay Central"
+              />
             </div>
             <AppInput v-model="clinicData.city" label="City" placeholder="Makati City" />
             <AppInput v-model="clinicData.province" label="Province" placeholder="Metro Manila" />
@@ -374,24 +499,39 @@ const setupSteps = [
         <section class="rounded-4xl border border-pebble bg-white p-6 shadow-sm">
           <div>
             <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
-              Section 4
+              Section 5
             </p>
             <h2 class="mt-2 text-2xl font-black text-onyx">Contact and schedule</h2>
           </div>
 
           <div class="mt-6 grid gap-5 md:grid-cols-2">
-            <AppInput v-model="clinicData.contactNumber" label="Contact Number" placeholder="02-8123-4567" />
-            <AppInput v-model="clinicData.mobileNumber1" label="Primary Mobile Number" placeholder="09171234567" />
-            <AppInput v-model="clinicData.mobileNumber2" label="Secondary Mobile Number" placeholder="09981234567" />
-            <AppInput v-model="clinicData.schedule" label="Operating Schedule"
-              placeholder="Monday-Friday, 8:00 AM-5:00 PM" />
+            <AppInput
+              v-model="clinicData.contactNumber"
+              label="Contact Number"
+              placeholder="02-8123-4567"
+            />
+            <AppInput
+              v-model="clinicData.mobileNumber1"
+              label="Primary Mobile Number"
+              placeholder="09171234567"
+            />
+            <AppInput
+              v-model="clinicData.mobileNumber2"
+              label="Secondary Mobile Number"
+              placeholder="09981234567"
+            />
+            <AppInput
+              v-model="clinicData.schedule"
+              label="Operating Schedule"
+              placeholder="Monday-Friday, 8:00 AM-5:00 PM"
+            />
           </div>
         </section>
 
         <section class="rounded-4xl border border-pebble bg-white p-6 shadow-sm">
           <div>
             <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
-              Section 5
+              Section 6
             </p>
             <h2 class="mt-2 text-2xl font-black text-onyx">Operating status</h2>
           </div>
@@ -415,12 +555,25 @@ const setupSteps = [
         </section>
 
         <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <AppButton type="button" btn-theme="outline" class="px-5 py-3 normal-case" @click="goBackToList">
+          <AppButton
+            type="button"
+            btn-theme="outline"
+            class="px-5 py-3 normal-case"
+            @click="goBackToList"
+          >
             Cancel
           </AppButton>
-          <AppButton type="submit" btn-theme="primary" class="px-5 py-3 normal-case" :disabled="saving">
-            <Icon :icon="saving ? 'feather:loader' : 'feather:save'" class="size-4"
-              :class="{ 'animate-spin': saving }" />
+          <AppButton
+            type="submit"
+            btn-theme="primary"
+            class="px-5 py-3 normal-case"
+            :disabled="saving"
+          >
+            <Icon
+              :icon="saving ? 'feather:loader' : 'feather:save'"
+              class="size-4"
+              :class="{ 'animate-spin': saving }"
+            />
             {{ saving ? 'Saving...' : isEditMode ? 'Update clinic setup' : 'Save clinic setup' }}
           </AppButton>
         </div>
