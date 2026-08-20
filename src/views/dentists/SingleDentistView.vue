@@ -314,11 +314,12 @@ const setupSteps = [
               v-for="field in feeFields"
               :key="field.key"
               v-model="dentistData[field.key]"
-              type="number"
-              min="0"
-              step="0.01"
+              type="text"
+              inputmode="decimal"
+              pattern="[0-9]+([.][0-9]{2})?"
+              decimal-only
               :label="field.label"
-              placeholder="0.00"
+              placeholder="100.00"
             />
           </div>
         </section>

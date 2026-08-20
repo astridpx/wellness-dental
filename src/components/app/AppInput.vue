@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, ref, useSlots } from 'vue'
+import type { PropType } from 'vue'
 
 const props = defineProps({
   transparent: {
@@ -16,6 +17,12 @@ const props = defineProps({
   },
   min: [String, Number],
   step: [String, Number],
+  inputmode: String as PropType<
+    'none' | 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url'
+  >,
+  pattern: String,
+  decimalOnly: Boolean,
+  required: Boolean,
   readonly: Boolean,
   label: String,
   multiple: Boolean,
@@ -38,6 +45,22 @@ const hasTrailingSlot = computed(() => Boolean(slots.trailing))
 const inputType = computed(() =>
   isPasswordField.value ? (showPassword.value ? 'text' : 'password') : props.type,
 )
+
+function normalizeDecimal(value: string) {
+  const sanitized = value.replace(/[^\d.]/g, '')
+  const [whole = '', ...decimalParts] = sanitized.split('.')
+  const decimal = decimalParts.join('').slice(0, 2)
+
+  return sanitized.includes('.') ? `${whole || '0'}.${decimal}` : whole
+}
+
+function updateModel(event: Event) {
+  const input = event.target as HTMLInputElement
+  const value = props.decimalOnly ? normalizeDecimal(input.value) : input.value
+
+  if (input.value !== value) input.value = value
+  model.value = value
+}
 </script>
 
 <template>
@@ -50,10 +73,13 @@ const inputType = computed(() =>
       <Icon :icon="icon" class="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate" />
 
       <input
-        v-model="model"
+        :value="model"
         :type="inputType"
         :min="min"
         :step="step"
+        :inputmode="inputmode"
+        :pattern="pattern"
+        :required="required"
         :multiple="multiple"
         :accept="accept"
         :disabled="disabled"
@@ -78,6 +104,7 @@ const inputType = computed(() =>
         ]"
         @focus="$emit('focus', $event)"
         @blur="$emit('blur', $event)"
+        @input="updateModel"
       />
 
       <div
@@ -98,10 +125,13 @@ const inputType = computed(() =>
 
     <div v-else class="relative">
       <input
-        v-model="model"
+        :value="model"
         :type="inputType"
         :min="min"
         :step="step"
+        :inputmode="inputmode"
+        :pattern="pattern"
+        :required="required"
         :multiple="multiple"
         :accept="accept"
         :disabled="disabled"
@@ -124,6 +154,7 @@ const inputType = computed(() =>
         ]"
         @focus="$emit('focus', $event)"
         @blur="$emit('blur', $event)"
+        @input="updateModel"
       />
 
       <div

@@ -32,6 +32,22 @@ const emptyDentistData: DentistFormData = {
   status: 'Active',
 }
 
+const procedureFeeFields = [
+  ['TWLB', 'TWLB'],
+  ['OP', 'OP'],
+  ['STE', 'STE'],
+  ['TF', 'TF'],
+  ['AD', 'AD'],
+  ['RJ', 'RJ'],
+  ['LC', 'LC'],
+  ['PF', 'PF'],
+  ['CON', 'CON'],
+  ['ppeIcf', 'PPE / ICF'],
+  ['can', 'CAN'],
+] as const
+
+const procedureFeePattern = /^\d+(?:\.\d{2})?$/
+
 function toFormValue(value: string | number | null | undefined) {
   return value == null ? '' : String(value)
 }
@@ -127,6 +143,14 @@ export function useDentistForm() {
     if (!dentistData.value.firstname.trim()) return 'First name is required.'
     if (!dentistData.value.lastname.trim()) return 'Last name is required.'
     if (!dentistData.value.license.trim()) return 'PRC license number is required.'
+
+    for (const [field, label] of procedureFeeFields) {
+      const value = dentistData.value[field].trim()
+      if (value && !procedureFeePattern.test(value)) {
+        return `${label} must be a whole number or use two decimal places (for example, 100 or 100.00).`
+      }
+    }
+
     return ''
   }
 
@@ -204,7 +228,7 @@ export function useDentistForm() {
       ? 'Dentist profile updated successfully.'
       : 'Dentist profile created successfully.'
     if (isEditMode.value) await fetchDentists()
-    else dentistData.value = emptyDentistData
+    else dentistData.value = { ...emptyDentistData }
     return true
   }
 
