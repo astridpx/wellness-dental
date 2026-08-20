@@ -44,6 +44,17 @@ export type DentistFormData = {
   accountName: string
   agent: string
   remarks: string
+  TWLB: string
+  OP: string
+  STE: string
+  TF: string
+  AD: string
+  RJ: string
+  LC: string
+  PF: string
+  CON: string
+  ppeIcf: string
+  can: string
   status: 'Active' | 'Inactive' | 'Unknown'
 }
 

@@ -18,7 +18,27 @@ const emptyDentistData: DentistFormData = {
   accountName: '',
   agent: '',
   remarks: '',
+  TWLB: '',
+  OP: '',
+  STE: '',
+  TF: '',
+  AD: '',
+  RJ: '',
+  LC: '',
+  PF: '',
+  CON: '',
+  ppeIcf: '',
+  can: '',
   status: 'Active',
+}
+
+function toFormValue(value: string | number | null | undefined) {
+  return value == null ? '' : String(value)
+}
+
+function toNumber(value: string) {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : 0
 }
 
 export function useDentistForm() {
@@ -55,6 +75,17 @@ export function useDentistForm() {
       accountName: dentist.acctname || '',
       agent: dentist.agent || '',
       remarks: dentist.remarks || '',
+      TWLB: toFormValue(dentist.TWLB),
+      OP: toFormValue(dentist.OP),
+      STE: toFormValue(dentist.STE),
+      TF: toFormValue(dentist.TF),
+      AD: toFormValue(dentist.AD),
+      RJ: toFormValue(dentist.RJ),
+      LC: toFormValue(dentist.LC),
+      PF: toFormValue(dentist.PF),
+      CON: toFormValue(dentist.CON),
+      ppeIcf: toFormValue(dentist.PPE_ICF),
+      can: toFormValue(dentist.CAN),
       status:
         dentist.Isactive === '1' ? 'Active' : dentist.Isactive === '0' ? 'Inactive' : 'Unknown',
     }
@@ -108,15 +139,15 @@ export function useDentistForm() {
       middleinitial: dentistData.value.middleInitial.trim(),
       specialization: dentistData.value.specialty.trim(),
       prcno: dentistData.value.license.trim(),
-      TWLB: current?.TWLB || '',
-      OP: current?.OP || '',
-      STE: current?.STE || '',
-      TF: current?.TF || '',
-      AD: current?.AD || '',
-      RJ: current?.RJ || '',
-      LC: current?.LC || '',
-      PF: current?.PF || '',
-      CON: current?.CON || '',
+      TWLB: dentistData.value.TWLB.trim(),
+      OP: dentistData.value.OP.trim(),
+      STE: dentistData.value.STE.trim(),
+      TF: dentistData.value.TF.trim(),
+      AD: dentistData.value.AD.trim(),
+      RJ: dentistData.value.RJ.trim(),
+      LC: dentistData.value.LC.trim(),
+      PF: dentistData.value.PF.trim(),
+      CON: dentistData.value.CON.trim(),
       contactno: dentistData.value.phone.trim(),
       email: dentistData.value.email.trim(),
       modeofpayment: dentistData.value.modeOfPayment.trim(),
@@ -130,8 +161,8 @@ export function useDentistForm() {
           : dentistData.value.status === 'Inactive'
             ? '0'
             : current?.Isactive || '',
-      PPE_ICF: current?.PPE_ICF || 0,
-      CAN: current?.CAN || 0,
+      PPE_ICF: toNumber(dentistData.value.ppeIcf),
+      CAN: toNumber(dentistData.value.can),
       dentistcode: dentistData.value.dentistCode.trim(),
     }
   }
@@ -172,10 +203,8 @@ export function useDentistForm() {
     successMessage.value = isEditMode.value
       ? 'Dentist profile updated successfully.'
       : 'Dentist profile created successfully.'
-    if (isEditMode.value)
-      await fetchDentists()
-    else
-      dentistData.value = emptyDentistData
+    if (isEditMode.value) await fetchDentists()
+    else dentistData.value = emptyDentistData
     return true
   }
 

@@ -14,6 +14,8 @@ const props = defineProps({
     type: String,
     default: 'text',
   },
+  min: [String, Number],
+  step: [String, Number],
   readonly: Boolean,
   label: String,
   multiple: Boolean,
@@ -50,6 +52,8 @@ const inputType = computed(() =>
       <input
         v-model="model"
         :type="inputType"
+        :min="min"
+        :step="step"
         :multiple="multiple"
         :accept="accept"
         :disabled="disabled"
@@ -96,6 +100,8 @@ const inputType = computed(() =>
       <input
         v-model="model"
         :type="inputType"
+        :min="min"
+        :step="step"
         :multiple="multiple"
         :accept="accept"
         :disabled="disabled"
