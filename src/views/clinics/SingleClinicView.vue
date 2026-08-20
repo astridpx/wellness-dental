@@ -349,7 +349,7 @@ const setupSteps = [
             <AppInput
               v-model="clinicData.clinicCode"
               label="Clinic Code"
-              placeholder="WDC-MKT-001"
+              placeholder="CJD-STA.ROSA"
             />
             <AppInput v-model="clinicData.type" label="Clinic Type" placeholder="Dental" />
             <AppInput
