@@ -117,6 +117,7 @@ const clinicOptions = computed(() =>
 const procedureTotal = computed(() =>
   form.procedureItems.reduce((sum, item) => sum + Number(item.amount || 0), 0),
 )
+const toothNumberOptions = ['ALL', ...Array.from({ length: 32 }, (_, index) => String(index + 1))]
 
 function closeToast() {
   toast.value.show = false
@@ -608,6 +609,24 @@ watch(clinicSearch, (search) => {
                 </div>
               </div>
 
+              <AppSearchSelect
+                v-model="selectedDentistId"
+                v-model:search="dentistSearch"
+                :options="dentistOptions"
+                :loading="loadingDentists"
+                label="Dentist Name"
+                placeholder="Search dentist"
+                empty-text="No matching dentists found."
+              />
+              <AppSearchSelect
+                v-model="selectedClinicId"
+                v-model:search="clinicSearch"
+                :options="clinicOptions"
+                :loading="loadingClinics"
+                label="Clinic Name"
+                placeholder="Search clinic"
+                empty-text="No matching clinics found."
+              />
               <AppInput v-model="form.availDate" label="Availment Date" type="date" />
 
               <AppSearchSelect
@@ -626,12 +645,28 @@ watch(clinicSearch, (search) => {
                 placeholder="0.00"
                 icon="feather:hash"
               />
-              <AppInput
-                v-model="form.toothNo"
-                label="Tooth No."
-                placeholder="Optional tooth number"
-                icon="feather:hash"
-              />
+              <div>
+                <label class="mb-2 block text-sm font-medium text-onyx">Tooth No.</label>
+                <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                  <AppInput
+                    v-model="form.toothNo"
+                    placeholder="Optional tooth number or ALL"
+                    icon="feather:hash"
+                    list="tooth-number-options"
+                  />
+                  <AppButton
+                    type="button"
+                    btn-theme="outline"
+                    class="normal-case sm:min-w-24"
+                    @click="form.toothNo = 'ALL'"
+                  >
+                    ALL
+                  </AppButton>
+                </div>
+                <datalist id="tooth-number-options">
+                  <option v-for="option in toothNumberOptions" :key="option" :value="option" />
+                </datalist>
+              </div>
               <div class="flex items-end">
                 <AppButton
                   type="button"
@@ -690,25 +725,6 @@ watch(clinicSearch, (search) => {
                   </p>
                 </div>
               </div>
-
-              <AppSearchSelect
-                v-model="selectedDentistId"
-                v-model:search="dentistSearch"
-                :options="dentistOptions"
-                :loading="loadingDentists"
-                label="Dentist Name"
-                placeholder="Search dentist"
-                empty-text="No matching dentists found."
-              />
-              <AppSearchSelect
-                v-model="selectedClinicId"
-                v-model:search="clinicSearch"
-                :options="clinicOptions"
-                :loading="loadingClinics"
-                label="Clinic Name"
-                placeholder="Search clinic"
-                empty-text="No matching clinics found."
-              />
 
               <div class="md:col-span-2">
                 <label class="mb-2 block text-sm font-medium text-onyx">Treatment</label>
@@ -769,7 +785,9 @@ watch(clinicSearch, (search) => {
         </div>
       </section>
 
-      <section class="rounded-[1.75rem] border border-pebble bg-white p-5 shadow-sm lg:p-6">
+      <section
+        class="rounded-[1.75rem] border border-pebble bg-white p-5 shadow-sm lg:p-6 xl:sticky xl:top-6"
+      >
         <div class="mb-5">
           <h2 class="text-xl font-black text-onyx">Approval Lookup</h2>
           <p class="mt-1 text-sm text-slate">Enter a 9-digit approval number to verify it.</p>
@@ -795,6 +813,37 @@ watch(clinicSearch, (search) => {
             />
             Find
           </AppButton>
+        </div>
+
+        <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+          <div class="rounded-[1.4rem] border border-pebble bg-cloud px-4 py-4">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-smoke">
+              Current approval
+            </p>
+            <p class="mt-2 font-mono text-lg font-black text-onyx">
+              {{ form.approvalNo || 'Auto generate' }}
+            </p>
+            <p class="mt-1 text-sm text-slate">{{ form.memberName || 'No member selected yet' }}</p>
+          </div>
+          <div class="rounded-[1.4rem] border border-pebble bg-cloud px-4 py-4">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-smoke">
+              Current provider
+            </p>
+            <p class="mt-2 text-sm font-bold text-onyx">
+              {{ form.dentistName || 'No dentist selected' }}
+            </p>
+            <p class="mt-1 text-sm text-slate">{{ form.clinicName || 'No clinic selected' }}</p>
+          </div>
+        </div>
+
+        <div class="mt-4 rounded-[1.4rem] border border-[#e2d7c2] bg-[linear-gradient(135deg,#fffaf1_0%,#f8f6ef_100%)] px-4 py-4">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-tangerine">
+            Quick check
+          </p>
+          <p class="mt-2 text-sm leading-6 text-slate">
+            Use this panel to verify an existing approval number or quickly review the current
+            draft before creating a new availment.
+          </p>
         </div>
 
         <AppLoadingScreen

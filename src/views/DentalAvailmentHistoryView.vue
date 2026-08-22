@@ -99,6 +99,7 @@ const editReady = computed(
     editForm.dentistName.trim() &&
     editForm.clinicName.trim(),
 )
+const toothNumberOptions = ['ALL', ...Array.from({ length: 32 }, (_, index) => String(index + 1))]
 let dentistSearchTimer: number | undefined
 let clinicSearchTimer: number | undefined
 
@@ -565,12 +566,28 @@ watch(clinicSearch, (search) => {
             placeholder="0.00"
             icon="feather:hash"
           />
-          <AppInput
-            v-model="editForm.toothNo"
-            label="Tooth No."
-            placeholder="Optional tooth number"
-            icon="feather:hash"
-          />
+          <div>
+            <label class="mb-2 block text-sm font-medium text-onyx">Tooth No.</label>
+            <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+              <AppInput
+                v-model="editForm.toothNo"
+                placeholder="Optional tooth number or ALL"
+                icon="feather:hash"
+                list="edit-tooth-number-options"
+              />
+              <AppButton
+                type="button"
+                btn-theme="outline"
+                class="normal-case sm:min-w-24"
+                @click="editForm.toothNo = 'ALL'"
+              >
+                ALL
+              </AppButton>
+            </div>
+            <datalist id="edit-tooth-number-options">
+              <option v-for="option in toothNumberOptions" :key="option" :value="option" />
+            </datalist>
+          </div>
           <AppSearchSelect
             v-model="selectedDentistId"
             v-model:search="dentistSearch"
