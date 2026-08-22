@@ -21,15 +21,13 @@ const {
 const showSaveDialog = ref(false)
 const showUnlockDialog = ref(false)
 
-const selectedRoleCount = computed(() => userData.value.roleCodes.length)
+const selectedRoleCount = computed(() => (userData.value.roleCode ? 1 : 0))
 const displayName = computed(() => {
   const parts = [userData.value.firstName, userData.value.lastName].filter(Boolean)
   return parts.length ? parts.join(' ') : 'New User'
 })
 const selectedRoleNames = computed(() =>
-  roles.value
-    .filter((role) => userData.value.roleCodes.includes(role.code))
-    .map((role) => role.name),
+  roles.value.filter((role) => role.code === userData.value.roleCode).map((role) => role.name),
 )
 const accountStatusOptions = [
   {
@@ -125,8 +123,8 @@ async function confirmUnlock() {
           <p class="mt-2 text-sm leading-6 text-slate">
             {{
               isEditMode
-                ? 'Please confirm that you want to update this employee profile, access coverage, and account settings.'
-                : 'Please confirm that you want to create this employee account with the current details and access setup.'
+                ? 'Please confirm that you want to update this employee profile, role assignment, and account settings.'
+                : 'Please confirm that you want to create this employee account with the current details and role setup.'
             }}
           </p>
         </div>
@@ -145,8 +143,10 @@ async function confirmUnlock() {
             <p class="mt-2 text-sm font-bold text-onyx">{{ userData.status }}</p>
           </div>
           <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Roles</p>
-            <p class="mt-2 text-sm font-bold text-onyx">{{ selectedRoleCount }}</p>
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Role</p>
+            <p class="mt-2 text-sm font-bold text-onyx">
+              {{ selectedRoleNames[0] || 'Not selected yet' }}
+            </p>
           </div>
         </div>
       </div>
@@ -198,8 +198,8 @@ async function confirmUnlock() {
           {{ isEditMode ? 'Edit Team Member' : 'Create Team Member' }}
         </h1>
         <p class="mt-2 max-w-2xl text-sm leading-6 text-slate">
-          Set up staff access, role coverage, department ownership, and credential controls from one
-          focused profile workspace.
+          Set up staff access, role assignment, department ownership, and credential controls from
+          one focused profile workspace.
         </p>
       </div>
       <AppButton btn-theme="outline" class="px-5 py-3 normal-case" @click="goBackToList">
@@ -237,10 +237,10 @@ async function confirmUnlock() {
             </p>
           </div>
           <div class="rounded-[1.4rem] border border-pebble bg-white px-5 py-4 shadow-sm">
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">
-              Assigned roles
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Assigned role</p>
+            <p class="mt-2 text-lg font-black text-onyx">
+              {{ selectedRoleNames[0] || 'Not assigned' }}
             </p>
-            <p class="mt-2 text-2xl font-black text-onyx">{{ selectedRoleCount }}</p>
           </div>
           <div class="rounded-[1.4rem] border border-pebble bg-white px-5 py-4 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Status</p>
@@ -339,9 +339,6 @@ async function confirmUnlock() {
                   </button>
                 </template>
               </AppInput>
-              <p class="mt-2 text-xs text-slate">
-                Click the disc icon to generate a secure password instantly.
-              </p>
             </div>
             <div>
               <label class="mb-2 block text-sm font-medium text-slate">First Name</label>
@@ -375,7 +372,7 @@ async function confirmUnlock() {
             <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-smoke">
               Access setup
             </p>
-            <h2 class="mt-2 text-xl font-black text-onyx">Roles, status, and account rules</h2>
+            <h2 class="mt-2 text-xl font-black text-onyx">Role, status, and account rules</h2>
             <p class="mt-2 text-sm leading-6 text-slate">
               Control what this employee can access, whether the account is currently enabled, and
               how password recovery should behave.
@@ -391,18 +388,19 @@ async function confirmUnlock() {
                     v-for="role in roles"
                     :key="role.code"
                     class="flex items-start gap-3 rounded-xl border border-pebble bg-cloud px-3 py-3 text-sm text-onyx transition hover:border-tangerine/30 hover:bg-white"
+                    :class="
+                      userData.roleCode === role.code ? 'border-tangerine bg-white shadow-sm' : ''
+                    "
                   >
                     <input
-                      v-model="userData.roleCodes"
+                      v-model="userData.roleCode"
                       :value="role.code"
-                      type="checkbox"
-                      class="mt-0.5 h-4 w-4 rounded border-gray-300 text-tangerine focus:ring-focus-ring"
+                      type="radio"
+                      name="user-role"
+                      class="mt-0.5 h-4 w-4 border-gray-300 text-tangerine focus:ring-focus-ring"
                     />
                     <span class="min-w-0">
                       <span class="block font-semibold">{{ role.name }}</span>
-                      <span class="block text-xs uppercase tracking-[0.16em] text-slate">
-                        {{ role.code }}
-                      </span>
                     </span>
                   </label>
                 </div>
@@ -518,8 +516,11 @@ async function confirmUnlock() {
                 <div>
                   <p class="text-sm font-bold text-onyx">Selected access coverage</p>
                   <p class="mt-1 text-sm text-slate">
-                    {{ selectedRoleCount }} role{{ selectedRoleCount === 1 ? '' : 's' }} assigned
-                    for this employee account.
+                    {{
+                      selectedRoleNames[0]
+                        ? `${selectedRoleNames[0]} is assigned to this employee account.`
+                        : 'No role selected yet.'
+                    }}
                   </p>
                 </div>
                 <div class="flex flex-wrap gap-2">

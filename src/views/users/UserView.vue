@@ -118,7 +118,7 @@ function confirmFilters() {
         <div class="bg-white px-6 py-5">
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Setup Focus</p>
           <p class="mt-2 text-sm font-medium leading-6 text-onyx">
-            Staff profiles combine role assignment, responsibility, and contact coverage.
+            Staff profiles combine one role assignment, responsibility, and contact coverage.
           </p>
         </div>
       </div>
@@ -145,7 +145,7 @@ function confirmFilters() {
         <AppTable
           :theads="[
             'Name',
-            'Role Assignment',
+            'Role',
             'Email',
             'Status',
             'Password Reset',
@@ -169,17 +169,11 @@ function confirmFilters() {
             >
               <td>{{ user.name }}</td>
               <td>
-                <div class="flex flex-wrap justify-end gap-2">
-                  <span
-                    v-for="roleCode in user.roles?.length
-                      ? user.roles
-                      : [user.primaryRole || 'No role']"
-                    :key="roleCode"
-                    class="inline-flex rounded-full bg-tangerine-light px-3 py-1 text-xs font-semibold text-tangerine"
-                  >
-                    {{ roleCode }}
-                  </span>
-                </div>
+                <span
+                  class="inline-flex rounded-full bg-tangerine-light px-3 py-1 text-xs font-semibold text-tangerine"
+                >
+                  {{ user.primaryRole || user.roles?.[0] || 'No role' }}
+                </span>
               </td>
               <td>{{ user.email }}</td>
               <td>

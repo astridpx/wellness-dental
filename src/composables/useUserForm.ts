@@ -45,7 +45,7 @@ export function useUserForm() {
     middleName: '',
     email: '',
     phone: '',
-    roleCodes: [] as string[],
+    roleCode: '',
     department: '',
     jobTitle: '',
     status: 'Active',
@@ -88,7 +88,7 @@ export function useUserForm() {
       middleName: user.middleName || '',
       email: user.email,
       phone: user.mobileNumber || '',
-      roleCodes: user.roles || [],
+      roleCode: user.primaryRole || user.roles?.[0] || '',
       department: user.department || '',
       jobTitle: user.jobTitle || '',
       status: user.isActive ? 'Active' : 'Inactive',
@@ -112,7 +112,7 @@ export function useUserForm() {
       middleName: userData.value.middleName || null,
       email: userData.value.email,
       mobileNumber: userData.value.phone || null,
-      roleCodes: userData.value.roleCodes,
+      roleCodes: [userData.value.roleCode],
       department: userData.value.department || null,
       jobTitle: userData.value.jobTitle || null,
       isActive: userData.value.status === 'Active',
@@ -129,8 +129,8 @@ export function useUserForm() {
       return
     }
 
-    if (!userData.value.roleCodes.length) {
-      errorMessage.value = 'Please assign at least one role.'
+    if (!userData.value.roleCode) {
+      errorMessage.value = 'Please assign a role.'
       saving.value = false
       return
     }
