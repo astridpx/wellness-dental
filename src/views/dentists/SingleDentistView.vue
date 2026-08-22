@@ -557,7 +557,7 @@ watch(
                 v-model="dentistData.email"
                 label="Email Address"
                 placeholder="name@clinic.com"
-                required
+                :required="!isEditMode"
               />
               <AppInput
                 v-model="dentistData.phone"
