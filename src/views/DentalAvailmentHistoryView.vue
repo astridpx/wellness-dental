@@ -812,7 +812,7 @@ watch(clinicSearch, (search) => {
       <AppTable
         :theads="[
           'Approval',
-          'Date',
+          'Availment Date',
           'Member',
           'Procedure',
           'Dentist / Clinic',
@@ -837,7 +837,11 @@ watch(clinicSearch, (search) => {
             v-for="record in records"
             v-else
             :key="record.dentalid"
-            :class="isValidAvailment(record) ? 'cursor-pointer' : ''"
+            :class="
+              isValidAvailment(record)
+                ? 'cursor-pointer transition-colors hover:bg-[#fffaf1] focus-within:bg-[#fffaf1]'
+                : ''
+            "
             :tabindex="isValidAvailment(record) ? 0 : undefined"
             :role="isValidAvailment(record) ? 'button' : undefined"
             @click="handleRowEdit(record)"
@@ -891,6 +895,17 @@ watch(clinicSearch, (search) => {
             </td>
             <td>
               <div class="flex flex-wrap justify-end gap-2">
+                <button
+                  v-if="isValidAvailment(record)"
+                  type="button"
+                  class="inline-flex items-center gap-2 rounded-full border border-tangerine/20 bg-tangerine-light/35 px-3.5 py-2 text-xs font-semibold text-tangerine-dark transition hover:border-tangerine/40 hover:bg-white"
+                  title="Edit availment"
+                  aria-label="Edit availment"
+                  @click.stop="openEditDialog(record)"
+                >
+                  <Icon icon="feather:edit-2" class="h-4 w-4" />
+                  Edit
+                </button>
                 <button
                   v-if="isValidAvailment(record)"
                   type="button"
