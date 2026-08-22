@@ -53,6 +53,8 @@ const selectedProcedureId = ref<string | number | null>(null)
 const procedureSearch = ref('')
 const selectedDentistId = ref<string | number | null>(null)
 const dentistSearch = ref('')
+const dentistOptions = ref<Array<{ value: number; label: string; description: string }>>([])
+const retainedDentist = ref<{ value: number; label: string; description: string } | null>(null)
 const selectedClinicId = ref<string | number | null>(null)
 const clinicSearch = ref('')
 const editForm = reactive({
@@ -81,15 +83,6 @@ const activeProcedureOptions = computed(() =>
         .filter(Boolean)
         .join(' | '),
     })),
-)
-const dentistOptions = computed(() =>
-  dentists.value.map((dentist) => ({
-    value: dentist.dentistidno,
-    label: dentist.dentistname,
-    description: [dentist.dentistcode, dentist.prcno, dentist.specialization]
-      .filter(Boolean)
-      .join(' | '),
-  })),
 )
 const clinicOptions = computed(() =>
   clinics.value.map((clinic) => ({
@@ -246,6 +239,44 @@ watch(selectedDentistId, (value) => {
   editForm.dentistId = String(selected.dentistidno)
   editForm.dentistName = selected.dentistname
 })
+
+watch(
+  [dentists, selectedDentistId],
+  ([availableDentists, selectedId]) => {
+    const options = availableDentists.map((dentist) => ({
+      value: dentist.dentistidno,
+      label: dentist.dentistname,
+      description: [dentist.dentistcode, dentist.prcno, dentist.specialization]
+        .filter(Boolean)
+        .join(' | '),
+    }))
+    const normalizedSelectedId = selectedId == null ? null : Number(selectedId)
+    const matchedDentist = options.find((option) => option.value === normalizedSelectedId)
+
+    if (matchedDentist) {
+      retainedDentist.value = matchedDentist
+    } else if (normalizedSelectedId == null) {
+      retainedDentist.value = null
+    } else if (retainedDentist.value?.value !== normalizedSelectedId) {
+      retainedDentist.value = {
+        value: normalizedSelectedId,
+        label: editForm.dentistName || 'Selected dentist',
+        description: 'Currently selected dentist',
+      }
+    }
+
+    if (
+      normalizedSelectedId != null &&
+      !options.some((option) => option.value === normalizedSelectedId) &&
+      retainedDentist.value
+    ) {
+      options.unshift(retainedDentist.value)
+    }
+
+    dentistOptions.value = options
+  },
+  { immediate: true },
+)
 
 watch(dentistSearch, (search) => {
   window.clearTimeout(dentistSearchTimer)

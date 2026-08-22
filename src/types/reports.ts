@@ -2,6 +2,8 @@ export type AvailmentReportMode = 'companyPeriod' | 'dentistPeriod' | 'period' |
 
 export type AvailmentCompanyScope = 'both' | 'ims' | 'partner' | 'specificIms'
 
+export type AvailmentCompanyFilterBy = 'classification' | 'mainCompany'
+
 export type AvailmentReportRow = {
   companyName?: string | null
   approvalNo?: string | null

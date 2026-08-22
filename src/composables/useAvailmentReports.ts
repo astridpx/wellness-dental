@@ -1,5 +1,6 @@
 import { computed, reactive, ref } from 'vue'
 import type {
+  AvailmentCompanyFilterBy,
   AvailmentCompanyScope,
   AvailmentReportMode,
   AvailmentReportRow,
@@ -25,10 +26,10 @@ export function useAvailmentReports() {
   const form = reactive({
     mode: 'daily' as AvailmentReportMode,
     companyScope: 'both' as AvailmentCompanyScope,
+    companyFilterBy: 'classification' as AvailmentCompanyFilterBy,
     company: '',
     dentist: '',
     dentistPaymentStatus: '',
-    paymentReceivedStatus: '',
     dateFrom: '',
     dateTo: '',
   })
@@ -59,14 +60,12 @@ export function useAvailmentReports() {
     const params = new URLSearchParams({
       mode: form.mode,
       companyScope: form.companyScope,
+      companyFilterBy: form.companyFilterBy,
     })
 
     if (form.company.trim()) params.set('company', form.company.trim())
     if (form.dentist.trim()) params.set('dentist', form.dentist.trim())
     if (form.dentistPaymentStatus) params.set('dentistPaymentStatus', form.dentistPaymentStatus)
-    if (form.paymentReceivedStatus) {
-      params.set('paymentReceivedStatus', form.paymentReceivedStatus)
-    }
     if (form.dateFrom) params.set('dateFrom', form.dateFrom)
     if (form.dateTo) params.set('dateTo', form.dateTo)
 
@@ -115,10 +114,10 @@ export function useAvailmentReports() {
   function clearReport() {
     form.mode = 'daily'
     form.companyScope = 'both'
+    form.companyFilterBy = 'classification'
     form.company = ''
     form.dentist = ''
     form.dentistPaymentStatus = ''
-    form.paymentReceivedStatus = ''
     form.dateFrom = ''
     form.dateTo = ''
     rows.value = []

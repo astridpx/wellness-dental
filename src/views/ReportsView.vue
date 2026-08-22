@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx'
 import { computed, onMounted, ref, watch } from 'vue'
 import { AppButton, AppInput, AppLoadingScreen, AppSearchSelect, AppTable } from '@/components/app'
 import { useAvailmentReports, useDentists } from '@/composables'
-import type { AvailmentReportMode } from '@/types'
+import type { AvailmentCompanyFilterBy, AvailmentReportMode } from '@/types'
 import { formatDate, formatDateTime, formatMoney } from '@/utils'
 
 const {
@@ -37,12 +37,20 @@ type DentistOption = {
   description: string
 }
 
+type CompanyOption = {
+  value: string
+  label: string
+  description: string
+}
+
 const selectedDentistId = ref<string | number | null>(null)
 const dentistSearch = ref('')
 const dentistOptions = ref<DentistOption[]>([])
 const retainedDentist = ref<DentistOption | null>(null)
 const selectedCompanyCode = ref<string | number | null>(null)
 const companySearch = ref('')
+const companyOptions = ref<CompanyOption[]>([])
+const retainedCompany = ref<CompanyOption | null>(null)
 let dentistSearchTimer: number | undefined
 let companySearchTimer: number | undefined
 
@@ -81,36 +89,50 @@ const reportModes: Array<{
 const selectedMode = computed(() => reportModes.find((mode) => mode.value === form.mode))
 const companyScopeOptions = [
   {
-    value: 'both',
-    label: 'Both',
-    description: 'Include IMS and partner member availments.',
+    value: 'all',
+    label: 'All',
+    description: 'Include all availments without narrowing to one IMS company group.',
   },
   {
-    value: 'ims',
-    label: 'IMS only',
-    description: 'Include IMS member availments only.',
+    value: 'deployment',
+    label: 'Per deployment',
+    description: 'Filter availments by one IMS deployment or classification.',
   },
   {
-    value: 'partner',
-    label: 'Partner Members',
-    description: 'Include partner member availments only.',
-  },
-  {
-    value: 'specificIms',
-    label: 'Specific IMS company',
-    description: 'Filter IMS availments by one company.',
+    value: 'motherCompany',
+    label: 'Per mother company',
+    description: 'Filter availments by one mother company or maincode description.',
   },
 ] as const
 const requiresSpecificCompany = computed(
   () => requiresCompany.value && form.companyScope === 'specificIms',
 )
-const imsCompanyOptions = computed(() =>
-  imsCompanies.value.map((company) => ({
+const imsCompanyOptions = computed<CompanyOption[]>(() => {
+  if (form.companyFilterBy === 'mainCompany') {
+    const uniqueMainCompanies = Array.from(
+      new Map(
+        imsCompanies.value
+          .filter((company) => company.mainCompany?.trim())
+          .map((company) => [
+            company.mainCompany!.trim(),
+            {
+              value: company.mainCompany!.trim(),
+              label: company.mainCompany!.trim(),
+              description: company.companyName || company.officeCode,
+            },
+          ]),
+      ).values(),
+    )
+
+    return uniqueMainCompanies
+  }
+
+  return imsCompanies.value.map((company) => ({
     value: company.officeCode,
     label: company.companyName,
     description: [company.officeCode, company.mainCompany].filter(Boolean).join(' | '),
-  })),
-)
+  }))
+})
 const excelColumns = [
   ['no', 'No.'],
   ['companyName', 'Company Name'],
@@ -124,18 +146,12 @@ const excelColumns = [
   ['amount', 'Amount'],
   ['paymentStatus', 'Payment Status'],
   ['paidToDentistAt', 'Paid to Dentist At'],
-  ['paymentReceivedStatus', 'Payment Received'],
-  ['paymentReceivedAt', 'Payment Received At'],
   ['remarks', 'Remarks'],
   ['encodedBy', 'Encoded By'],
 ] as const
 
 function isPaid(row: { ifPaid?: boolean | number | string | null }) {
   return row.ifPaid === true || Number(row.ifPaid || 0) === 1
-}
-
-function isPaymentReceived(row: { paymentReceived?: boolean | number | string | null }) {
-  return row.paymentReceived === true || Number(row.paymentReceived || 0) === 1
 }
 
 function exportReport() {
@@ -151,11 +167,7 @@ function exportReport() {
             ? isPaid(row)
               ? 'Paid'
               : 'Unpaid'
-            : key === 'paymentReceivedStatus'
-              ? isPaymentReceived(row)
-                ? 'Received'
-                : 'Pending'
-              : key === 'paidToDentistAt' || key === 'paymentReceivedAt'
+            : key === 'paidToDentistAt'
                 ? formatDateTime(row[key])
                 : (row[key] ?? ''),
       ]),
@@ -179,20 +191,26 @@ function clearReportsView() {
   companySearch.value = ''
 }
 
+function resetSelectedCompany() {
+  form.company = ''
+  selectedCompanyCode.value = null
+  companySearch.value = ''
+}
+
 function selectCompanyScope(value: (typeof companyScopeOptions)[number]['value']) {
-  form.companyScope = value
-  if (value !== 'specificIms') {
-    form.company = ''
-    selectedCompanyCode.value = null
-    companySearch.value = ''
+  if (value === 'all') {
+    form.companyScope = 'both'
+    resetSelectedCompany()
+    return
   }
+
+  form.companyScope = 'specificIms'
+  form.companyFilterBy = value === 'motherCompany' ? 'mainCompany' : 'classification'
+  resetSelectedCompany()
 }
 
 watch(selectedCompanyCode, (value) => {
-  const selected = imsCompanies.value.find(
-    (company) => String(company.officeCode) === String(value),
-  )
-  form.company = selected?.officeCode || ''
+  form.company = value == null ? '' : String(value)
 })
 
 watch(companySearch, (search) => {
@@ -202,6 +220,40 @@ watch(companySearch, (search) => {
     void fetchImsCompanies(search)
   }, 350)
 })
+
+watch(
+  [imsCompanyOptions, selectedCompanyCode],
+  ([availableCompanies, selectedValue]) => {
+    const options = [...availableCompanies]
+    const normalizedSelectedValue = selectedValue == null ? null : String(selectedValue)
+    const matchedCompany = options.find(
+      (option) => String(option.value) === normalizedSelectedValue,
+    )
+
+    if (matchedCompany) {
+      retainedCompany.value = matchedCompany
+    } else if (normalizedSelectedValue == null) {
+      retainedCompany.value = null
+    } else if (retainedCompany.value?.value !== normalizedSelectedValue) {
+      retainedCompany.value = {
+        value: normalizedSelectedValue,
+        label: form.company || 'Selected company',
+        description: 'Currently selected company',
+      }
+    }
+
+    if (
+      normalizedSelectedValue != null &&
+      !options.some((option) => String(option.value) === normalizedSelectedValue) &&
+      retainedCompany.value
+    ) {
+      options.unshift(retainedCompany.value)
+    }
+
+    companyOptions.value = options
+  },
+  { immediate: true },
+)
 
 watch(
   [dentists, selectedDentistId],
@@ -345,15 +397,21 @@ onMounted(() => {
 
       <div class="mt-5 grid gap-4 md:grid-cols-2">
         <div v-if="requiresCompany" class="md:col-span-2">
-          <label class="mb-2 block text-sm font-medium text-onyx">Company Scope</label>
-          <div class="grid gap-3 md:grid-cols-4">
+          <label class="mb-2 block text-sm font-medium text-onyx">Company Filter</label>
+          <div class="grid gap-3 md:grid-cols-3">
             <button
               v-for="scope in companyScopeOptions"
               :key="scope.value"
               type="button"
               class="rounded-2xl border px-4 py-3 text-left transition"
               :class="
-                form.companyScope === scope.value
+                (scope.value === 'all' && form.companyScope === 'both') ||
+                (scope.value === 'deployment' &&
+                  form.companyScope === 'specificIms' &&
+                  form.companyFilterBy === 'classification') ||
+                (scope.value === 'motherCompany' &&
+                  form.companyScope === 'specificIms' &&
+                  form.companyFilterBy === 'mainCompany')
                   ? 'border-tangerine bg-tangerine-light text-onyx shadow-sm'
                   : 'border-pebble bg-cloud text-slate hover:border-tangerine/40 hover:bg-white'
               "
@@ -368,10 +426,18 @@ onMounted(() => {
           v-if="requiresSpecificCompany"
           v-model="selectedCompanyCode"
           v-model:search="companySearch"
-          :options="imsCompanyOptions"
+          :options="companyOptions"
           :loading="loadingCompanies"
-          label="Specific IMS Company"
-          placeholder="Search active IMS company"
+          :label="
+            form.companyFilterBy === 'mainCompany'
+              ? 'Specific Mother Company'
+              : 'Specific Deployment'
+          "
+          :placeholder="
+            form.companyFilterBy === 'mainCompany'
+              ? 'Search mother company'
+              : 'Search active IMS deployment'
+          "
           empty-text="No active IMS companies found."
         />
         <AppSearchSelect
@@ -384,8 +450,18 @@ onMounted(() => {
           placeholder="Search dentist"
           empty-text="No matching dentists found."
         />
-        <AppInput v-if="requiresDates" v-model="form.dateFrom" label="Date From" type="date" />
-        <AppInput v-if="requiresDates" v-model="form.dateTo" label="Date To" type="date" />
+        <AppInput
+          v-if="requiresDates"
+          v-model="form.dateFrom"
+          label="Availment Date From"
+          type="date"
+        />
+        <AppInput
+          v-if="requiresDates"
+          v-model="form.dateTo"
+          label="Availment Date To"
+          type="date"
+        />
         <div>
           <label class="mb-2 block text-sm font-medium text-onyx">Dentist Payment</label>
           <select
@@ -395,17 +471,6 @@ onMounted(() => {
             <option value="">All dentist payments</option>
             <option value="paid">Paid only</option>
             <option value="unpaid">Unpaid only</option>
-          </select>
-        </div>
-        <div>
-          <label class="mb-2 block text-sm font-medium text-onyx">Payment Received</label>
-          <select
-            v-model="form.paymentReceivedStatus"
-            class="w-full rounded-xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fafcff_100%)] px-4 py-3.5 text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
-          >
-            <option value="">All received states</option>
-            <option value="received">Received only</option>
-            <option value="pending">Pending only</option>
           </select>
         </div>
       </div>
@@ -454,15 +519,14 @@ onMounted(() => {
           'Procedure',
           'Amount',
           'Payment',
-          'Payment Received',
-          'Dates',
+          'Paid to Dentist At',
           'Encoded By',
         ]"
         :total-entries="rows.length"
       >
         <template #trs>
           <tr v-if="!rows.length">
-            <td colspan="11" class="py-12! text-center! text-sm text-slate">
+            <td colspan="10" class="py-12! text-center! text-sm text-slate">
               No report rows generated yet.
             </td>
           </tr>
@@ -493,26 +557,7 @@ onMounted(() => {
               </span>
             </td>
             <td>
-              <span
-                class="rounded-full px-3 py-1 text-xs font-semibold"
-                :class="
-                  isPaymentReceived(row)
-                    ? 'bg-emerald-light text-emerald'
-                    : 'bg-amber-light text-amber'
-                "
-              >
-                {{ isPaymentReceived(row) ? 'Received' : 'Pending' }}
-              </span>
-            </td>
-            <td>
-              <p class="text-xs font-semibold uppercase tracking-[0.14em] text-smoke">
-                Dentist Paid
-              </p>
-              <p class="mt-1 text-sm text-onyx">{{ formatDateTime(row.paidToDentistAt) }}</p>
-              <p class="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-smoke">
-                Received
-              </p>
-              <p class="mt-1 text-sm text-onyx">{{ formatDateTime(row.paymentReceivedAt) }}</p>
+              {{ formatDateTime(row.paidToDentistAt) }}
             </td>
             <td>{{ row.encodedBy || 'N/A' }}</td>
           </tr>
