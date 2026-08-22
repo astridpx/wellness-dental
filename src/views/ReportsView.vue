@@ -3,7 +3,7 @@ import { Icon } from '@iconify/vue'
 import * as XLSX from 'xlsx'
 import { computed, onMounted, ref, watch } from 'vue'
 import { AppButton, AppInput, AppLoadingScreen, AppSearchSelect, AppTable } from '@/components/app'
-import { useAvailmentReports, useDentists } from '@/composables'
+import { useAvailmentReports, useDentists, useProcedures } from '@/composables'
 import type { AvailmentCompanyFilterBy, AvailmentReportMode } from '@/types'
 import { formatDate, formatDateTime, formatMoney } from '@/utils'
 
@@ -32,6 +32,7 @@ const {
   filters: dentistFilters,
   loading: loadingDentists,
 } = useDentists({ perPage: 20 })
+const { fetchProcedures, procedures } = useProcedures()
 
 type DentistOption = {
   value: number
@@ -161,13 +162,33 @@ const excelColumns = [
   ['dentistName', 'Dentist Name'],
   ['clinicName', 'Clinic Name'],
   ['toothNo', 'Tooth No.'],
-  ['procedures', 'Procedures'],
+  ['procedureName', 'Procedure Name'],
   ['amount', 'Amount'],
   ['paymentStatus', 'Payment Status'],
   ['paidToDentistAt', 'Paid to Dentist At'],
   ['remarks', 'Remarks'],
   ['encodedBy', 'Encoded By'],
 ] as const
+
+const procedureNameMap = computed(
+  () => new Map(procedures.value.map((procedure) => [procedure.code.trim().toUpperCase(), procedure.name])),
+)
+
+function procedureName(value?: string | null) {
+  const procedureValue = value?.trim()
+  if (!procedureValue) return 'N/A'
+
+  return procedureValue
+    .split(',')
+    .map((part) => {
+      const normalizedPart = part.trim()
+      if (!normalizedPart) return ''
+
+      return procedureNameMap.value.get(normalizedPart.toUpperCase()) || normalizedPart
+    })
+    .filter(Boolean)
+    .join(', ')
+}
 
 function isPaid(row: { ifPaid?: boolean | number | string | null }) {
   return row.ifPaid === true || Number(row.ifPaid || 0) === 1
@@ -182,6 +203,8 @@ function exportReport() {
         label,
         key === 'no'
           ? index + 1
+          : key === 'procedureName'
+            ? procedureName(row.procedures)
           : key === 'paymentStatus'
             ? isPaid(row)
               ? 'Paid'
@@ -352,6 +375,7 @@ watch(dentistSearch, (search) => {
 onMounted(() => {
   void fetchImsCompanies()
   void fetchPartnerCompanies()
+  void fetchProcedures()
 })
 </script>
 
@@ -590,7 +614,7 @@ onMounted(() => {
               <p class="mt-1 text-xs text-slate">{{ row.clinicName || 'N/A' }}</p>
             </td>
             <td>
-              <p class="font-semibold text-onyx">{{ row.procedures || 'N/A' }}</p>
+              <p class="font-semibold text-onyx">{{ procedureName(row.procedures) }}</p>
               <p class="mt-1 text-xs text-slate">Tooth {{ row.toothNo || 'N/A' }}</p>
             </td>
             <td class="font-black text-onyx">{{ formatMoney(row.amount) }}</td>
