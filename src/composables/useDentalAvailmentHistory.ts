@@ -28,6 +28,8 @@ export function useDentalAvailmentHistory() {
   const paidRows = ref(0)
   const unpaidRows = ref(0)
   const unpaidAmount = ref(0)
+  const totalAmount = ref(0)
+  const hasOverallTotalAmount = ref(false)
 
   const filters = reactive({
     approvalNo: '',
@@ -44,7 +46,8 @@ export function useDentalAvailmentHistory() {
 
   const stats = computed(() => ({
     totalVisible: totalEntries.value,
-    totalAmount: records.value.reduce((sum, record) => sum + Number(record.amount || 0), 0),
+    totalAmount: totalAmount.value,
+    hasOverallTotalAmount: hasOverallTotalAmount.value,
     validRows: records.value.filter((record) => (record.status || 'VALID') === 'VALID').length,
   }))
 
@@ -84,6 +87,8 @@ export function useDentalAvailmentHistory() {
       paidRows.value = 0
       unpaidRows.value = 0
       unpaidAmount.value = 0
+      totalAmount.value = 0
+      hasOverallTotalAmount.value = false
       return
     }
 
@@ -94,6 +99,9 @@ export function useDentalAvailmentHistory() {
     paidRows.value = Number(metadata.paidRows || 0)
     unpaidRows.value = Number(metadata.unpaidRows || 0)
     unpaidAmount.value = Number(metadata.unpaidAmount || 0)
+    hasOverallTotalAmount.value =
+      metadata.totalAmount !== null && metadata.totalAmount !== undefined
+    totalAmount.value = hasOverallTotalAmount.value ? Number(metadata.totalAmount || 0) : 0
   }
 
   function applyFilters() {
@@ -303,6 +311,7 @@ export function useDentalAvailmentHistory() {
     paidRows,
     unpaidRows,
     unpaidAmount,
+    totalAmount,
     updateAvailment,
     updateDoctorPaymentStatus,
     updatingPaymentId,

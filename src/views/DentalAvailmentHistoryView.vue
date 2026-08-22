@@ -12,7 +12,7 @@ import {
 } from '@/components/app'
 import { useClinics, useDentalAvailmentHistory, useDentists, useProcedures } from '@/composables'
 import type { DentalAvailmentRecord } from '@/types'
-import { formatDate, formatMoney } from '@/utils'
+import { formatDate, formatDateTime, formatMoney } from '@/utils'
 
 const {
   cancelAvailment,
@@ -28,6 +28,7 @@ const {
   successMessage,
   totalEntries,
   totalPages,
+  paidRows,
   updateAvailment,
   updateDoctorPaymentStatus,
   uncancelAvailment,
@@ -768,16 +769,25 @@ watch(clinicSearch, (search) => {
 
       <div class="grid border-t border-pebble/80 bg-white/72 md:grid-cols-3">
         <div class="border-b border-pebble/80 px-6 py-4 md:border-b-0 md:border-r">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Rows</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">
+            Filtered Rows
+          </p>
           <p class="mt-2 text-2xl font-black text-onyx">{{ stats.totalVisible }}</p>
         </div>
         <div class="border-b border-pebble/80 px-6 py-4 md:border-b-0 md:border-r">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Visible Total</p>
-          <p class="mt-2 text-2xl font-black text-onyx">{{ formatMoney(stats.totalAmount) }}</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">
+            Overall Total Amount
+          </p>
+          <p class="mt-2 text-2xl font-black text-onyx">
+            {{ stats.hasOverallTotalAmount ? formatMoney(stats.totalAmount) : 'Unavailable' }}
+          </p>
+          <p v-if="!stats.hasOverallTotalAmount" class="mt-1 text-xs text-slate">
+            Backend total amount is not included in the history response yet.
+          </p>
         </div>
         <div class="px-6 py-4">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Valid Rows</p>
-          <p class="mt-2 text-2xl font-black text-emerald">{{ stats.validRows }}</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Paid Rows</p>
+          <p class="mt-2 text-2xl font-black text-emerald">{{ paidRows }}</p>
         </div>
       </div>
     </section>
@@ -818,6 +828,7 @@ watch(clinicSearch, (search) => {
           'Dentist / Clinic',
           'Amount',
           'Dentist Payment',
+          'Paid to Dentist At',
           'Status',
           'Actions',
         ]"
@@ -828,7 +839,7 @@ watch(clinicSearch, (search) => {
       >
         <template #trs>
           <tr v-if="!records.length">
-            <td colspan="9" class="py-10! text-center! text-sm text-slate">
+            <td colspan="10" class="py-10! text-center! text-sm text-slate">
               No availment history found.
             </td>
           </tr>
@@ -880,6 +891,9 @@ watch(clinicSearch, (search) => {
               >
                 {{ isDoctorPaid(record) ? 'Paid' : 'Unpaid' }}
               </span>
+            </td>
+            <td class="text-sm text-slate">
+              {{ isDoctorPaid(record) ? formatDateTime(record.paidAt) : 'N/A' }}
             </td>
             <td>
               <span

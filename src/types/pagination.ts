@@ -24,4 +24,5 @@ export type DentalAvailmentHistoryPaginationMetadata = PaginationMetadata & {
   paidRows?: number
   unpaidRows?: number
   unpaidAmount?: number
+  totalAmount?: number
 }
