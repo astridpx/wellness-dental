@@ -5,6 +5,8 @@ import type {
   AvailmentReportMode,
   AvailmentReportRow,
   ImsReportCompany,
+  PartnerMemberBatch,
+  PartnerReportCompany,
 } from '@/types'
 import { useWellnessApi } from './useWellnessApi'
 
@@ -22,6 +24,7 @@ export function useAvailmentReports() {
   const companyErrorMessage = ref('')
   const rows = ref<AvailmentReportRow[]>([])
   const imsCompanies = ref<ImsReportCompany[]>([])
+  const partnerCompanies = ref<PartnerReportCompany[]>([])
   const totalAmount = ref(0)
   const form = reactive({
     mode: 'daily' as AvailmentReportMode,
@@ -111,6 +114,55 @@ export function useAvailmentReports() {
     return true
   }
 
+  async function fetchPartnerCompanies(search = '') {
+    loadingCompanies.value = true
+    companyErrorMessage.value = ''
+
+    const params = new URLSearchParams({
+      page: '1',
+      perPage: '100',
+      sortBy: 'uploadedAt',
+      sortOrder: 'desc',
+    })
+
+    if (search.trim()) {
+      params.set('companyName', search.trim())
+    }
+
+    const result = await request<PartnerMemberBatch[]>(
+      `/wellness/partnerMembers/batches?${params.toString()}`,
+    )
+
+    loadingCompanies.value = false
+
+    if (!result.ok) {
+      partnerCompanies.value = []
+      companyErrorMessage.value = result.error || 'Unable to load partner member companies.'
+      return false
+    }
+
+    partnerCompanies.value = Array.from(
+      new Map(
+        (result.data || [])
+          .filter((batch) => batch.companyName?.trim() || batch.companyCode?.trim())
+          .map((batch) => {
+            const companyCode = batch.companyCode?.trim() || batch.companyName.trim()
+            const companyName = batch.companyName?.trim() || companyCode
+
+            return [
+              companyCode,
+              {
+                companyCode,
+                companyName,
+              },
+            ]
+          }),
+      ).values(),
+    )
+
+    return true
+  }
+
   function clearReport() {
     form.mode = 'daily'
     form.companyScope = 'both'
@@ -131,11 +183,13 @@ export function useAvailmentReports() {
     companyErrorMessage,
     errorMessage,
     fetchImsCompanies,
+    fetchPartnerCompanies,
     form,
     generateReport,
     imsCompanies,
     loading,
     loadingCompanies,
+    partnerCompanies,
     requiresCompany,
     requiresDates,
     requiresDentist,

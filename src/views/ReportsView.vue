@@ -13,11 +13,13 @@ const {
   companyErrorMessage,
   errorMessage,
   fetchImsCompanies,
+  fetchPartnerCompanies,
   form,
   generateReport,
   imsCompanies,
   loading,
   loadingCompanies,
+  partnerCompanies,
   requiresCompany,
   requiresDates,
   requiresDentist,
@@ -67,6 +69,12 @@ const reportModes: Array<{
     icon: 'feather:calendar',
   },
   {
+    value: 'period',
+    label: 'Availment Date',
+    description: 'All valid availments by availment date range.',
+    icon: 'feather:clock',
+  },
+  {
     value: 'companyPeriod',
     label: 'Company + Availment',
     description: 'Company availments by availment date range.',
@@ -77,12 +85,6 @@ const reportModes: Array<{
     label: 'Dentist + Availment',
     description: 'Dentist availments by availment date range.',
     icon: 'feather:users',
-  },
-  {
-    value: 'period',
-    label: 'Availment Date',
-    description: 'All valid availments by availment date range.',
-    icon: 'feather:clock',
   },
 ]
 
@@ -103,9 +105,16 @@ const companyScopeOptions = [
     label: 'Per mother company',
     description: 'Filter availments by one mother company or maincode description.',
   },
+  {
+    value: 'partnerCompany',
+    label: 'Partner member company',
+    description: 'Filter availments by one uploaded partner-member company such as HB or IWC.',
+  },
 ] as const
 const requiresSpecificCompany = computed(
-  () => requiresCompany.value && form.companyScope === 'specificIms',
+  () =>
+    requiresCompany.value &&
+    (form.companyScope === 'specificIms' || form.companyScope === 'partner'),
 )
 const imsCompanyOptions = computed<CompanyOption[]>(() => {
   if (form.companyFilterBy === 'mainCompany') {
@@ -133,6 +142,16 @@ const imsCompanyOptions = computed<CompanyOption[]>(() => {
     description: [company.officeCode, company.mainCompany].filter(Boolean).join(' | '),
   }))
 })
+const partnerCompanyOptions = computed<CompanyOption[]>(() =>
+  partnerCompanies.value.map((company) => ({
+    value: company.companyCode,
+    label: company.companyName,
+    description: company.companyCode,
+  })),
+)
+const activeCompanySourceOptions = computed<CompanyOption[]>(() =>
+  form.companyScope === 'partner' ? partnerCompanyOptions.value : imsCompanyOptions.value,
+)
 const excelColumns = [
   ['no', 'No.'],
   ['companyName', 'Company Name'],
@@ -168,8 +187,8 @@ function exportReport() {
               ? 'Paid'
               : 'Unpaid'
             : key === 'paidToDentistAt'
-                ? formatDateTime(row[key])
-                : (row[key] ?? ''),
+              ? formatDateTime(row[key])
+              : (row[key] ?? ''),
       ]),
     ),
   )
@@ -204,6 +223,12 @@ function selectCompanyScope(value: (typeof companyScopeOptions)[number]['value']
     return
   }
 
+  if (value === 'partnerCompany') {
+    form.companyScope = 'partner'
+    resetSelectedCompany()
+    return
+  }
+
   form.companyScope = 'specificIms'
   form.companyFilterBy = value === 'motherCompany' ? 'mainCompany' : 'classification'
   resetSelectedCompany()
@@ -217,12 +242,17 @@ watch(companySearch, (search) => {
   window.clearTimeout(companySearchTimer)
 
   companySearchTimer = window.setTimeout(() => {
+    if (form.companyScope === 'partner') {
+      void fetchPartnerCompanies(search)
+      return
+    }
+
     void fetchImsCompanies(search)
   }, 350)
 })
 
 watch(
-  [imsCompanyOptions, selectedCompanyCode],
+  [activeCompanySourceOptions, selectedCompanyCode],
   ([availableCompanies, selectedValue]) => {
     const options = [...availableCompanies]
     const normalizedSelectedValue = selectedValue == null ? null : String(selectedValue)
@@ -253,6 +283,20 @@ watch(
     companyOptions.value = options
   },
   { immediate: true },
+)
+
+watch(
+  () => form.companyScope,
+  (scope) => {
+    if (scope === 'partner') {
+      void fetchPartnerCompanies(companySearch.value)
+      return
+    }
+
+    if (scope === 'specificIms') {
+      void fetchImsCompanies(companySearch.value)
+    }
+  },
 )
 
 watch(
@@ -307,6 +351,7 @@ watch(dentistSearch, (search) => {
 
 onMounted(() => {
   void fetchImsCompanies()
+  void fetchPartnerCompanies()
 })
 </script>
 
@@ -398,7 +443,7 @@ onMounted(() => {
       <div class="mt-5 grid gap-4 md:grid-cols-2">
         <div v-if="requiresCompany" class="md:col-span-2">
           <label class="mb-2 block text-sm font-medium text-onyx">Company Filter</label>
-          <div class="grid gap-3 md:grid-cols-3">
+          <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <button
               v-for="scope in companyScopeOptions"
               :key="scope.value"
@@ -411,7 +456,8 @@ onMounted(() => {
                   form.companyFilterBy === 'classification') ||
                 (scope.value === 'motherCompany' &&
                   form.companyScope === 'specificIms' &&
-                  form.companyFilterBy === 'mainCompany')
+                  form.companyFilterBy === 'mainCompany') ||
+                (scope.value === 'partnerCompany' && form.companyScope === 'partner')
                   ? 'border-tangerine bg-tangerine-light text-onyx shadow-sm'
                   : 'border-pebble bg-cloud text-slate hover:border-tangerine/40 hover:bg-white'
               "
@@ -429,16 +475,24 @@ onMounted(() => {
           :options="companyOptions"
           :loading="loadingCompanies"
           :label="
-            form.companyFilterBy === 'mainCompany'
-              ? 'Specific Mother Company'
-              : 'Specific Deployment'
+            form.companyScope === 'partner'
+              ? 'Specific Partner Member Company'
+              : form.companyFilterBy === 'mainCompany'
+                ? 'Specific Mother Company'
+                : 'Specific Deployment'
           "
           :placeholder="
-            form.companyFilterBy === 'mainCompany'
-              ? 'Search mother company'
-              : 'Search active IMS deployment'
+            form.companyScope === 'partner'
+              ? 'Search partner member company'
+              : form.companyFilterBy === 'mainCompany'
+                ? 'Search mother company'
+                : 'Search active IMS deployment'
           "
-          empty-text="No active IMS companies found."
+          :empty-text="
+            form.companyScope === 'partner'
+              ? 'No partner member companies found.'
+              : 'No active IMS companies found.'
+          "
         />
         <AppSearchSelect
           v-if="requiresDentist"
@@ -450,19 +504,7 @@ onMounted(() => {
           placeholder="Search dentist"
           empty-text="No matching dentists found."
         />
-        <AppInput
-          v-if="requiresDates"
-          v-model="form.dateFrom"
-          label="Availment Date From"
-          type="date"
-        />
-        <AppInput
-          v-if="requiresDates"
-          v-model="form.dateTo"
-          label="Availment Date To"
-          type="date"
-        />
-        <div>
+        <div v-if="requiresDentist">
           <label class="mb-2 block text-sm font-medium text-onyx">Dentist Payment</label>
           <select
             v-model="form.dentistPaymentStatus"
@@ -472,6 +514,10 @@ onMounted(() => {
             <option value="paid">Paid only</option>
             <option value="unpaid">Unpaid only</option>
           </select>
+        </div>
+        <div v-if="requiresDates" class="grid gap-4 md:col-span-2 md:grid-cols-2">
+          <AppInput v-model="form.dateFrom" label="Availment Date From" type="date" />
+          <AppInput v-model="form.dateTo" label="Availment Date To" type="date" />
         </div>
       </div>
 

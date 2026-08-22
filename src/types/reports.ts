@@ -27,3 +27,8 @@ export type ImsReportCompany = {
   companyName: string
   mainCompany?: string | null
 }
+
+export type PartnerReportCompany = {
+  companyCode: string
+  companyName: string
+}
