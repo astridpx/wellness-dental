@@ -3,7 +3,7 @@ import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
 import { AppButton, AppDialog, AppInput, AppLoadingScreen } from '@/components/app'
 import { useUserForm } from '@/composables'
-import { formatDateTime } from '@/utils'
+import { formatDateTime, generateSecurePassword } from '@/utils'
 
 const {
   errorMessage,
@@ -28,6 +28,10 @@ const displayName = computed(() => {
 })
 const selectedRoleNames = computed(() =>
   roles.value.filter((role) => role.code === userData.value.roleCode).map((role) => role.name),
+)
+const selectedRoleLabel = computed(() => selectedRoleNames.value[0] || 'Not assigned')
+const accountStatusLabel = computed(() =>
+  userData.value.isLocked ? 'Locked' : userData.value.status || 'Inactive',
 )
 const accountStatusOptions = [
   {
@@ -61,15 +65,7 @@ const passwordPolicyOptions = [
 ] as const
 
 function generatePassword() {
-  const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*'
-  const passwordLength = 12
-  const randomValues = new Uint32Array(passwordLength)
-
-  window.crypto.getRandomValues(randomValues)
-
-  userData.value.password = Array.from(randomValues, (value) => {
-    return characters[value % characters.length]
-  }).join('')
+  userData.value.password = generateSecurePassword()
 }
 
 function openSaveDialog() {
@@ -229,13 +225,7 @@ async function confirmUnlock() {
           </p>
         </div>
 
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div class="rounded-[1.4rem] border border-pebble bg-white px-5 py-4 shadow-sm">
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Mode</p>
-            <p class="mt-2 text-2xl font-black text-onyx">
-              {{ isEditMode ? 'Edit' : 'Create' }}
-            </p>
-          </div>
+        <div class="grid gap-4 md:grid-cols-3">
           <div class="rounded-[1.4rem] border border-pebble bg-white px-5 py-4 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Assigned role</p>
             <p class="mt-2 text-lg font-black text-onyx">
@@ -267,48 +257,110 @@ async function confirmUnlock() {
       </div>
     </section>
 
-    <form class="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]" @submit.prevent="openSaveDialog">
+    <form
+      class="grid items-start gap-6 xl:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)]"
+      @submit.prevent="openSaveDialog"
+    >
       <div
-        class="h-fit rounded-[1.75rem] border border-pebble bg-[linear-gradient(145deg,#f8fbff_0%,#ffffff_100%)] p-6 shadow-sm"
+        class="h-fit rounded-[1.9rem] border border-pebble bg-[linear-gradient(160deg,#f7f3ea_0%,#ffffff_34%,#f8fbff_100%)] p-6 shadow-sm xl:sticky xl:top-6"
       >
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Profile panel</p>
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">Profile panel</p>
+            <p class="mt-1 text-sm text-slate">Quick account summary and ownership details.</p>
+          </div>
+          <div
+            class="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#fff4e8_0%,#f3dcc0_100%)] text-tangerine shadow-[0_10px_24px_rgba(176,138,52,0.14)]"
+          >
+            <Icon icon="feather:user" class="size-5" />
+          </div>
+        </div>
+
         <div
-          class="mt-5 flex flex-col items-center rounded-[1.5rem] border border-dashed border-pebble bg-white p-6"
+          class="mt-5 flex flex-col items-center rounded-[1.6rem] border border-dashed border-[#d8d6d0] bg-white/92 p-6 text-center"
         >
           <div
-            class="flex h-32 w-32 items-center justify-center rounded-full bg-[linear-gradient(135deg,#fff4e8_0%,#ffe1bf_100%)]"
+            class="flex h-28 w-28 items-center justify-center rounded-full bg-[radial-gradient(circle_at_top,#fff7ea_0%,#fde3bf_70%,#f7d19d_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
           >
             <Icon icon="feather:user" class="size-16 text-tangerine" />
           </div>
-          <p class="mt-4 text-sm font-semibold text-onyx">{{ displayName }}</p>
+          <p class="mt-4 text-base font-bold text-onyx">{{ displayName }}</p>
           <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate">Clinic team account</p>
+          <div class="mt-4 flex flex-wrap justify-center gap-2">
+            <span
+              class="inline-flex rounded-full bg-tangerine-light px-3 py-1 text-xs font-semibold text-tangerine"
+            >
+              {{ selectedRoleLabel }}
+            </span>
+            <span
+              class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
+              :class="
+                accountStatusLabel === 'Active'
+                  ? 'bg-emerald-light text-emerald'
+                  : accountStatusLabel === 'Locked'
+                    ? 'bg-ruby-light text-ruby'
+                    : 'bg-fog text-slate'
+              "
+            >
+              {{ accountStatusLabel }}
+            </span>
+          </div>
         </div>
 
-        <div class="mt-5 space-y-3">
-          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Phone</p>
-            <p class="mt-2 text-sm font-bold text-onyx">{{ userData.phone || 'Not provided' }}</p>
+        <div class="mt-5 grid gap-3">
+          <div class="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+            <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+              <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Department</p>
+              <p class="mt-2 text-sm font-bold text-onyx">
+                {{ userData.department || 'Not assigned' }}
+              </p>
+            </div>
+            <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+              <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Phone</p>
+              <p class="mt-2 text-sm font-bold text-onyx">{{ userData.phone || 'Not provided' }}</p>
+            </div>
+            <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+              <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Password rule</p>
+              <p class="mt-2 text-sm font-bold text-onyx">
+                {{ userData.mustChangePassword ? 'Reset required on next login' : 'No forced reset' }}
+              </p>
+            </div>
           </div>
-          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Password rule</p>
-            <p class="mt-2 text-sm font-bold text-onyx">
-              {{
-                userData.mustChangePassword
-                  ? 'Password reset required on next login'
-                  : 'No forced password reset'
-              }}
+
+          <div
+            class="rounded-[1.4rem] border border-[#e2d7c2] bg-[linear-gradient(135deg,#fffaf1_0%,#f8f6ef_100%)] px-4 py-4"
+          >
+            <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-tangerine">
+              Workspace note
+            </p>
+            <p class="mt-2 text-sm leading-6 text-slate">
+              Use this panel to quickly verify access, department ownership, and password behavior
+              before saving.
             </p>
           </div>
         </div>
       </div>
 
       <div class="space-y-6">
-        <div class="rounded-[1.75rem] border border-pebble bg-snow p-6 shadow-sm">
-          <div class="mb-5">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-smoke">
-              Basic details
-            </p>
-            <h2 class="mt-2 text-xl font-black text-onyx">Identity and contact information</h2>
+        <div
+          class="rounded-[1.9rem] border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fcfdff_100%)] p-6 shadow-sm"
+        >
+          <div
+            class="mb-6 flex flex-col gap-4 border-b border-pebble pb-5 lg:flex-row lg:items-end lg:justify-between"
+          >
+            <div>
+              <div
+                class="inline-flex items-center gap-2 rounded-full border border-[#e3d8c6] bg-[#fff8ef] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-tangerine"
+              >
+                <Icon icon="feather:id-card" class="size-3.5" />
+                Basic details
+              </div>
+              <h2 class="mt-3 text-xl font-black text-onyx">Identity and contact information</h2>
+              <p class="mt-2 max-w-2xl text-sm leading-6 text-slate">
+                Capture the employee's login credentials, profile details, and internal department
+                ownership in one balanced section.
+              </p>
+            </div>
           </div>
 
           <div class="grid gap-5 md:grid-cols-2">
@@ -339,6 +391,9 @@ async function confirmUnlock() {
                   </button>
                 </template>
               </AppInput>
+              <p class="mt-2 text-xs text-slate">
+                Click the disc icon to generate a secure password instantly.
+              </p>
             </div>
             <div>
               <label class="mb-2 block text-sm font-medium text-slate">First Name</label>
@@ -371,16 +426,35 @@ async function confirmUnlock() {
           </div>
         </div>
 
-        <div class="rounded-[1.75rem] border border-pebble bg-snow p-6 shadow-sm">
-          <div class="mb-5">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-smoke">
-              Access setup
-            </p>
-            <h2 class="mt-2 text-xl font-black text-onyx">Role, status, and account rules</h2>
-            <p class="mt-2 text-sm leading-6 text-slate">
-              Control what this employee can access, whether the account is currently enabled, and
-              how password recovery should behave.
-            </p>
+        <div
+          class="rounded-[1.9rem] border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fcfdff_100%)] p-6 shadow-sm"
+        >
+          <div
+            class="mb-6 flex flex-col gap-4 border-b border-pebble pb-5 lg:flex-row lg:items-end lg:justify-between"
+          >
+            <div>
+              <div
+                class="inline-flex items-center gap-2 rounded-full border border-[#dbe7f7] bg-sapphire-light px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-sapphire"
+              >
+                <Icon icon="feather:shield" class="size-3.5" />
+                Access setup
+              </div>
+              <h2 class="mt-3 text-xl font-black text-onyx">Role, status, and account rules</h2>
+              <p class="mt-2 max-w-2xl text-sm leading-6 text-slate">
+                Define what this employee can access, whether the account is enabled, and how
+                password recovery should behave.
+              </p>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div class="rounded-2xl border border-pebble bg-cloud px-4 py-3">
+                <p class="text-[11px] uppercase tracking-[0.18em] text-smoke">Assigned role</p>
+                <p class="mt-1 text-sm font-bold text-onyx">{{ selectedRoleLabel }}</p>
+              </div>
+              <div class="rounded-2xl border border-pebble bg-cloud px-4 py-3">
+                <p class="text-[11px] uppercase tracking-[0.18em] text-smoke">Account status</p>
+                <p class="mt-1 text-sm font-bold text-onyx">{{ accountStatusLabel }}</p>
+              </div>
+            </div>
           </div>
 
           <div class="grid gap-5 md:grid-cols-2">
@@ -443,7 +517,7 @@ async function confirmUnlock() {
                   v-for="option in accountStatusOptions"
                   :key="option.value"
                   type="button"
-                  class="rounded-lg border px-4 py-4 text-left transition"
+                  class="rounded-2xl border px-4 py-4 text-left transition"
                   :class="
                     userData.status === option.value
                       ? option.classes
@@ -480,7 +554,7 @@ async function confirmUnlock() {
                   v-for="option in passwordPolicyOptions"
                   :key="option.label"
                   type="button"
-                  class="rounded-lg border px-4 py-4 text-left transition"
+                  class="rounded-2xl border px-4 py-4 text-left transition"
                   :class="
                     userData.mustChangePassword === option.value
                       ? 'border-sapphire/20 bg-sapphire-light text-sapphire-dark'
@@ -510,7 +584,7 @@ async function confirmUnlock() {
               </div>
             </div>
 
-            <div class="md:col-span-2 rounded-lg border border-pebble bg-white p-4">
+            <div class="md:col-span-2 rounded-[1.4rem] border border-pebble bg-cloud p-4">
               <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
                   <p class="text-sm font-bold text-onyx">Selected access coverage</p>
