@@ -138,7 +138,7 @@ export function useDentistForm() {
   function validateForm() {
     if (!dentistData.value.firstname.trim()) return 'First name is required.'
     if (!dentistData.value.lastname.trim()) return 'Last name is required.'
-    if (!dentistData.value.license.trim()) return 'PRC license number is required.'
+    if (!isEditMode.value && !dentistData.value.license.trim()) return 'PRC license number is required.'
 
     for (const [field, label] of procedureFeeFields) {
       const value = dentistData.value[field].trim()

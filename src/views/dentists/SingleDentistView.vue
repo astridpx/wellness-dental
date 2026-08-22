@@ -370,7 +370,7 @@ watch(
                   v-model="dentistData.license"
                   label="PRC License Number"
                   placeholder="PRC-XXXXXXX"
-                  required
+                  :required="!isEditMode"
                 />
               </div>
               <AppInput

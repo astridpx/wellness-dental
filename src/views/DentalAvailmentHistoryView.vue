@@ -55,8 +55,10 @@ const selectedDentistId = ref<string | number | null>(null)
 const dentistSearch = ref('')
 const dentistOptions = ref<Array<{ value: number; label: string; description: string }>>([])
 const retainedDentist = ref<{ value: number; label: string; description: string } | null>(null)
+const retainedDentistRecord = ref<Record<string, unknown> | null>(null)
 const selectedClinicId = ref<string | number | null>(null)
 const clinicSearch = ref('')
+const retainedClinicRecord = ref<Record<string, unknown> | null>(null)
 const editForm = reactive({
   availDate: '',
   procedures: '',
@@ -69,6 +71,23 @@ const editForm = reactive({
   treatment: '',
   remarks: '',
 })
+
+const legacyRateAliases: Record<string, string> = {
+  TWLB: 'TWLB',
+  OP: 'OP',
+  STE: 'STE',
+  TF: 'TF',
+  AD: 'AD',
+  RJ: 'RJ',
+  LC: 'LC',
+  PF: 'PF',
+  CON: 'CON',
+  CONS: 'CON',
+  CONSULT: 'CON',
+  CONSULTATION: 'CON',
+  PPEICF: 'PPE_ICF',
+  CAN: 'CAN',
+}
 
 const activeFilterCount = computed(
   () => Object.values(filters).filter((value) => String(value).trim()).length,
@@ -102,6 +121,60 @@ const editReady = computed(
 const toothNumberOptions = ['ALL', ...Array.from({ length: 32 }, (_, index) => String(index + 1))]
 let dentistSearchTimer: number | undefined
 let clinicSearchTimer: number | undefined
+
+function normalizeLegacyRateKey(value: string) {
+  const normalized = value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  return legacyRateAliases[normalized] || null
+}
+
+function toLegacyRateNumber(value: unknown) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
+}
+
+function readLegacyRateValue(source: Record<string, unknown> | undefined, rateKey: string) {
+  if (!source) return null
+
+  const candidates = [
+    rateKey,
+    rateKey.toLowerCase(),
+    rateKey.toUpperCase(),
+    rateKey === 'PPE_ICF' ? 'ppe_icf' : null,
+    rateKey === 'CAN' ? 'can' : null,
+  ].filter(Boolean) as string[]
+
+  for (const candidate of candidates) {
+    const parsed = toLegacyRateNumber(source[candidate])
+    if (parsed !== null) return parsed
+  }
+
+  return null
+}
+
+function resolveLegacyProcedureAmount() {
+  const rateKey = normalizeLegacyRateKey(editForm.procedures.trim())
+  if (!rateKey) return false
+
+  const selectedDentist =
+    (dentists.value.find(
+      (dentist) => String(dentist.dentistidno) === String(selectedDentistId.value),
+    ) as Record<string, unknown> | undefined) || retainedDentistRecord.value || undefined
+  const selectedClinic =
+    (clinics.value.find(
+      (clinic) => String(clinic.clinicidno) === String(selectedClinicId.value),
+    ) as Record<string, unknown> | undefined) || retainedClinicRecord.value || undefined
+
+  const dentistAmount = readLegacyRateValue(selectedDentist, rateKey)
+  const clinicAmount = ['TWLB', 'OP', 'STE', 'TF', 'AD', 'RJ', 'LC', 'PF', 'CON'].includes(rateKey)
+    ? readLegacyRateValue(selectedClinic, rateKey)
+    : null
+  const resolvedAmount = dentistAmount ?? clinicAmount
+
+  if (resolvedAmount === null) return false
+
+  editForm.amount = String(resolvedAmount)
+  return true
+}
 
 function confirmFilters() {
   showFilterDialog.value = false
@@ -230,15 +303,19 @@ watch(selectedProcedureId, (value) => {
   if (!selected) return
 
   editForm.procedures = selected.code
-  if (selected.price !== undefined) editForm.amount = String(selected.price)
+  if (!resolveLegacyProcedureAmount() && selected.price !== undefined) {
+    editForm.amount = String(selected.price)
+  }
 })
 
 watch(selectedDentistId, (value) => {
   const selected = dentists.value.find((dentist) => String(dentist.dentistidno) === String(value))
   if (!selected) return
 
+  retainedDentistRecord.value = selected as Record<string, unknown>
   editForm.dentistId = String(selected.dentistidno)
   editForm.dentistName = selected.dentistname
+  resolveLegacyProcedureAmount()
 })
 
 watch(
@@ -256,8 +333,13 @@ watch(
 
     if (matchedDentist) {
       retainedDentist.value = matchedDentist
+      retainedDentistRecord.value =
+        (availableDentists.find((dentist) => dentist.dentistidno === normalizedSelectedId) as
+          | Record<string, unknown>
+          | undefined) || retainedDentistRecord.value
     } else if (normalizedSelectedId == null) {
       retainedDentist.value = null
+      retainedDentistRecord.value = null
     } else if (retainedDentist.value?.value !== normalizedSelectedId) {
       retainedDentist.value = {
         value: normalizedSelectedId,
@@ -292,9 +374,31 @@ watch(selectedClinicId, (value) => {
   const selected = clinics.value.find((clinic) => String(clinic.clinicidno) === String(value))
   if (!selected) return
 
+  retainedClinicRecord.value = selected as Record<string, unknown>
   editForm.clinicId = String(selected.clinicidno)
   editForm.clinicName = selected.clinicname
+  resolveLegacyProcedureAmount()
 })
+
+watch(
+  [clinics, selectedClinicId],
+  ([availableClinics, selectedId]) => {
+    const normalizedSelectedId = selectedId == null ? null : Number(selectedId)
+
+    if (normalizedSelectedId == null) {
+      retainedClinicRecord.value = null
+      return
+    }
+
+    const matchedClinic = availableClinics.find(
+      (clinic) => String(clinic.clinicidno) === String(normalizedSelectedId),
+    )
+    if (matchedClinic) {
+      retainedClinicRecord.value = matchedClinic as Record<string, unknown>
+    }
+  },
+  { immediate: true },
+)
 
 watch(clinicSearch, (search) => {
   window.clearTimeout(clinicSearchTimer)
