@@ -360,6 +360,10 @@ async function confirmUnlock() {
               <label class="mb-2 block text-sm font-medium text-slate">Mobile Number</label>
               <AppInput v-model="userData.phone" placeholder="+63 912 345 6789" />
             </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-slate">Department</label>
+              <AppInput v-model="userData.department" placeholder="Clinic Administration" />
+            </div>
             <div class="md:col-span-2">
               <label class="mb-2 block text-sm font-medium text-slate">Job Title</label>
               <AppInput v-model="userData.jobTitle" placeholder="Operations Supervisor" />
@@ -382,12 +386,12 @@ async function confirmUnlock() {
           <div class="grid gap-5 md:grid-cols-2">
             <div class="md:col-span-2">
               <label class="mb-2 block text-sm font-medium text-slate">Role Assignment</label>
-              <div class="rounded-lg border border-pebble bg-white p-4">
-                <div class="grid gap-3 md:grid-cols-2">
+              <div class="rounded-lg border border-pebble bg-white p-3">
+                <div class="grid gap-2.5 md:grid-cols-2">
                   <label
                     v-for="role in roles"
                     :key="role.code"
-                    class="flex items-start gap-3 rounded-xl border border-pebble bg-cloud px-3 py-3 text-sm text-onyx transition hover:border-tangerine/30 hover:bg-white"
+                    class="flex items-center gap-2.5 rounded-xl border border-pebble bg-cloud px-3 py-2.5 text-sm text-onyx transition hover:border-tangerine/30 hover:bg-white"
                     :class="
                       userData.roleCode === role.code ? 'border-tangerine bg-white shadow-sm' : ''
                     "
@@ -397,9 +401,9 @@ async function confirmUnlock() {
                       :value="role.code"
                       type="radio"
                       name="user-role"
-                      class="mt-0.5 h-4 w-4 border-gray-300 text-tangerine focus:ring-focus-ring"
+                      class="h-4 w-4 shrink-0 border-gray-300 text-tangerine focus:ring-focus-ring"
                     />
-                    <span class="min-w-0">
+                    <span class="min-w-0 leading-5">
                       <span class="block font-semibold">{{ role.name }}</span>
                     </span>
                   </label>
@@ -467,11 +471,6 @@ async function confirmUnlock() {
                   </div>
                 </button>
               </div>
-            </div>
-
-            <div>
-              <label class="mb-2 block text-sm font-medium text-slate">Department</label>
-              <AppInput v-model="userData.department" placeholder="Clinic Administration" />
             </div>
 
             <div class="md:col-span-2">
