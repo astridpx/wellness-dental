@@ -9,6 +9,7 @@ import {
   TransitionRoot,
 } from '@headlessui/vue'
 import { Icon } from '@iconify/vue'
+import { ref, watch } from 'vue'
 
 export type SearchSelectOption = {
   value: string | number
@@ -36,9 +37,36 @@ const props = withDefaults(
 
 const model = defineModel<string | number | null>({ default: null })
 const search = defineModel<string>('search', { default: '' })
+const retainedOption = ref<SearchSelectOption | null>(null)
+
+watch(
+  [() => props.options, model],
+  ([options, value]) => {
+    const normalizedValue = value == null ? null : String(value)
+
+    if (normalizedValue == null) {
+      retainedOption.value = null
+      return
+    }
+
+    const matchedOption = options.find((option) => String(option.value) === normalizedValue)
+    if (matchedOption) {
+      retainedOption.value = matchedOption
+    }
+  },
+  { immediate: true },
+)
 
 function displayValue(value: unknown) {
-  return props.options.find((option) => String(option.value) === String(value))?.label || ''
+  const normalizedValue = value == null ? null : String(value)
+  if (normalizedValue == null) return ''
+
+  return (
+    props.options.find((option) => String(option.value) === normalizedValue)?.label ||
+    (retainedOption.value && String(retainedOption.value.value) === normalizedValue
+      ? retainedOption.value.label
+      : '')
+  )
 }
 </script>
 
