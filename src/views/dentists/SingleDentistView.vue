@@ -50,6 +50,129 @@ const dentistName = computed(
       .filter(Boolean)
       .join(' ') || 'New Dentist',
 )
+const dentistStatusLabel = computed(() => dentistData.value.status || 'Unknown')
+const dentistSpecialtyLabel = computed(() => dentistData.value.specialty || 'Not assigned yet')
+const dentistCodeLabel = computed(() => dentistData.value.dentistCode || 'Not assigned yet')
+const dentistPaymentModeLabel = computed(
+  () => dentistData.value.modeOfPayment || 'Not assigned yet',
+)
+const dentistContactLabel = computed(() => dentistData.value.phone || 'Not provided')
+const activeBankAccountCount = computed(
+  () => bankAccounts.value.filter((bankAccount) => bankAccount.isActive).length,
+)
+const paymentDestinationConfig = computed(() => {
+  const mode = dentistData.value.modeOfPayment.trim().toLowerCase()
+
+  if (mode.includes('gcash')) {
+    return {
+      sectionEyebrow: 'Payout setup',
+      sectionTitle: 'Payout destination details',
+      sectionDescription:
+        'Manage the destination details used when releasing provider payouts.',
+      addLabel: 'Add payout record',
+      recordLabel: 'Payout record',
+      createTitle: 'New payout record',
+      recordTypeLabel: 'Saved records',
+      activeLabel: 'Active records',
+      stateLabel: 'Current state',
+      firstLabel: 'Wallet or channel *',
+      firstPlaceholder: 'e.g. GCash',
+      secondLabel: 'Recipient name *',
+      secondPlaceholder: 'Registered GCash account name',
+      thirdLabel: 'Mobile number *',
+      thirdPlaceholder: '09XXXXXXXXX',
+      firstDisplayLabel: 'Wallet or channel',
+      secondDisplayLabel: 'Recipient name',
+      thirdDisplayLabel: 'Mobile number',
+      emptyTitle: 'No payout records yet',
+      emptyDescription: 'Add the destination details used for this provider\'s payout releases.',
+      note:
+        'Payout records save immediately and stay separate from the main dentist profile. Sensitive values remain hidden by default.',
+    }
+  }
+
+  if (mode.includes('cheque') || mode.includes('check')) {
+    return {
+      sectionEyebrow: 'Payout setup',
+      sectionTitle: 'Payout destination details',
+      sectionDescription:
+        'Manage the destination details used when releasing provider payouts.',
+      addLabel: 'Add payout record',
+      recordLabel: 'Payout record',
+      createTitle: 'New payout record',
+      recordTypeLabel: 'Saved records',
+      activeLabel: 'Active records',
+      stateLabel: 'Current state',
+      firstLabel: 'Issuing bank / branch *',
+      firstPlaceholder: 'e.g. BPI Main Branch',
+      secondLabel: 'Payee name *',
+      secondPlaceholder: 'Exact payee name',
+      thirdLabel: 'Reference / account no. *',
+      thirdPlaceholder: 'Cheque or internal reference',
+      firstDisplayLabel: 'Issuing bank / branch',
+      secondDisplayLabel: 'Payee name',
+      thirdDisplayLabel: 'Reference / account no.',
+      emptyTitle: 'No payout records yet',
+      emptyDescription: 'Add the destination details used for this provider\'s payout releases.',
+      note:
+        'Payout records save immediately and stay separate from the main dentist profile. Sensitive values remain hidden by default.',
+    }
+  }
+
+  if (mode.includes('bank')) {
+    return {
+      sectionEyebrow: 'Payout setup',
+      sectionTitle: 'Payout destination details',
+      sectionDescription:
+        'Manage the destination details used when releasing provider payouts.',
+      addLabel: 'Add payout record',
+      recordLabel: 'Payout record',
+      createTitle: 'New payout record',
+      recordTypeLabel: 'Saved records',
+      activeLabel: 'Active records',
+      stateLabel: 'Current state',
+      firstLabel: 'Bank name *',
+      firstPlaceholder: 'e.g. BPI',
+      secondLabel: 'Account holder name *',
+      secondPlaceholder: 'Exact bank account name',
+      thirdLabel: 'Account number *',
+      thirdPlaceholder: 'Enter the complete account number',
+      firstDisplayLabel: 'Bank name',
+      secondDisplayLabel: 'Account name',
+      thirdDisplayLabel: 'Account number',
+      emptyTitle: 'No payout records yet',
+      emptyDescription: 'Add the destination details used for this provider\'s payout releases.',
+      note:
+        'Payout records save immediately and stay separate from the main dentist profile. Account numbers are hidden by default for privacy.',
+    }
+  }
+
+  return {
+    sectionEyebrow: 'Payout setup',
+    sectionTitle: 'Disbursement details',
+    sectionDescription:
+      'Manage the destination details used for this provider\'s selected payout method.',
+    addLabel: 'Add disbursement record',
+    recordLabel: 'Disbursement record',
+    createTitle: 'New disbursement record',
+    recordTypeLabel: 'Saved records',
+    activeLabel: 'Active records',
+    stateLabel: 'Current state',
+    firstLabel: 'Channel or destination *',
+    firstPlaceholder: 'e.g. BPI, GCash, cheque branch',
+    secondLabel: 'Recipient or payee name *',
+    secondPlaceholder: 'Exact recipient name',
+    thirdLabel: 'Reference or account detail *',
+    thirdPlaceholder: 'Reference, mobile number, or account number',
+    firstDisplayLabel: 'Channel or destination',
+    secondDisplayLabel: 'Recipient or payee',
+    thirdDisplayLabel: 'Reference or account detail',
+    emptyTitle: 'No disbursement records yet',
+    emptyDescription: 'Add the destination details used for this provider\'s payout method.',
+    note:
+      'Disbursement records save immediately and stay separate from the main dentist profile. Sensitive values remain hidden by default.',
+  }
+})
 
 const feeFields = [
   { key: 'TWLB', label: 'TWLB' },
@@ -69,7 +192,7 @@ const setupSteps = computed(() => [
   'Identity and credentials',
   'Procedure fee schedule',
   'Account status',
-  ...(isEditMode.value ? ['Bank accounts'] : []),
+  ...(isEditMode.value ? ['Payout setup'] : []),
 ])
 
 const creatingBankAccount = ref(false)
@@ -157,8 +280,8 @@ async function submitBankAccount() {
 
   cancelBankAccountEdit()
   bankAccountFeedback.value = wasCreating
-    ? 'Bank account added successfully.'
-    : 'Bank account updated successfully.'
+    ? 'Payout record added successfully.'
+    : 'Payout record updated successfully.'
 }
 
 function requestBankAccountDelete(bankAccountId: number) {
@@ -175,7 +298,7 @@ async function confirmBankAccountDelete(bankAccount: DentistBankAccount) {
   if (!deleted) return
 
   pendingDeleteBankAccountId.value = null
-  bankAccountFeedback.value = `${bankAccount.bankName} account ending in ${bankAccount.accountNumber.slice(-4)} was deleted.`
+  bankAccountFeedback.value = `${bankAccount.bankName} record ending in ${bankAccount.accountNumber.slice(-4)} was deleted.`
 }
 
 function maskedAccountNumber(accountNumber: string) {
@@ -293,9 +416,14 @@ watch(
       message="Please wait while we retrieve the provider's identity, credentials, and account details."
     />
 
-    <div v-else-if="!profileMissing" class="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
+    <div
+      v-else-if="!profileMissing"
+      class="grid items-start gap-6 xl:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)]"
+    >
       <aside class="space-y-5">
-        <div class="rounded-4xl bg-[#122833] p-6 text-white shadow-lg">
+        <div
+          class="rounded-4xl bg-[#122833] p-6 text-white shadow-lg xl:sticky xl:top-6"
+        >
           <div class="flex items-center justify-between gap-4">
             <div>
               <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-tangerine-light">
@@ -308,21 +436,47 @@ watch(
             </div>
           </div>
 
+          <div class="mt-4 flex flex-wrap gap-2">
+            <span
+              class="inline-flex rounded-full bg-white/12 px-3 py-1 text-xs font-semibold text-white"
+            >
+              {{ dentistStatusLabel }}
+            </span>
+            <span
+              class="inline-flex rounded-full bg-white/12 px-3 py-1 text-xs font-semibold text-white"
+            >
+              {{ dentistCodeLabel }}
+            </span>
+          </div>
+
           <div class="mt-6 grid gap-3">
             <div class="rounded-2xl bg-white/8 px-4 py-3">
               <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Status</p>
-              <p class="mt-2 text-sm font-semibold">{{ dentistData.status }}</p>
+              <p class="mt-2 text-sm font-semibold">{{ dentistStatusLabel }}</p>
             </div>
             <div class="rounded-2xl bg-white/8 px-4 py-3">
               <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Specialty</p>
-              <p class="mt-2 text-sm font-semibold">
-                {{ dentistData.specialty || 'Not assigned yet' }}
-              </p>
+              <p class="mt-2 text-sm font-semibold">{{ dentistSpecialtyLabel }}</p>
             </div>
             <div class="rounded-2xl bg-white/8 px-4 py-3">
               <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Dentist code</p>
+              <p class="mt-2 text-sm font-semibold">{{ dentistCodeLabel }}</p>
+            </div>
+          </div>
+
+          <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+            <div class="rounded-2xl bg-white/8 px-4 py-4">
+              <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Mode of payment</p>
+              <p class="mt-2 text-sm font-semibold">{{ dentistPaymentModeLabel }}</p>
+            </div>
+            <div class="rounded-2xl bg-white/8 px-4 py-4">
+              <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Mobile number</p>
+              <p class="mt-2 text-sm font-semibold">{{ dentistContactLabel }}</p>
+            </div>
+            <div class="rounded-2xl bg-white/8 px-4 py-4">
+              <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Bank accounts</p>
               <p class="mt-2 text-sm font-semibold">
-                {{ dentistData.dentistCode || 'Not assigned yet' }}
+                {{ isEditMode ? `${bankAccounts.length} saved` : 'Available after save' }}
               </p>
             </div>
           </div>
@@ -346,6 +500,18 @@ watch(
               <span class="text-sm font-semibold text-onyx">{{ step }}</span>
             </div>
           </div>
+        </div>
+
+        <div
+          class="rounded-[1.4rem] border border-[#e2d7c2] bg-[linear-gradient(135deg,#fffaf1_0%,#f8f6ef_100%)] px-4 py-4 shadow-sm"
+        >
+          <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-tangerine">
+            Workspace note
+          </p>
+          <p class="mt-2 text-sm leading-6 text-slate">
+            Keep profile identity, rates, and payout setup aligned. This left panel stays focused on
+            the provider snapshot while the right side handles editing.
+          </p>
         </div>
       </aside>
 
@@ -398,6 +564,25 @@ watch(
                 label="Mobile Number"
                 placeholder="+63 912 345 6789"
               />
+              <AppInput
+                v-model="dentistData.specialty"
+                label="Specialty"
+                placeholder="General Dentistry"
+              />
+              <div>
+                <label class="mb-2 block text-sm font-medium text-slate">Account Status</label>
+                <select v-model="dentistData.status">
+                  <option>Active</option>
+                  <option>Inactive</option>
+                </select>
+              </div>
+              <AppInput
+                v-model="dentistData.dentistCode"
+                label="Dentist Code"
+                readonly
+                placeholder="Auto Generated"
+              />
+              <AppInput v-model="dentistData.agent" label="Agent" placeholder="Assigned agent" />
             </div>
           </section>
 
@@ -441,7 +626,7 @@ watch(
                 <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
                   Section 3
                 </p>
-                <h2 class="mt-2 text-2xl font-black text-onyx">Provider account details</h2>
+                <h2 class="mt-2 text-2xl font-black text-onyx">Payout and remarks</h2>
               </div>
               <span
                 class="rounded-full bg-tangerine-light px-3 py-1 text-xs font-semibold text-tangerine-dark"
@@ -450,25 +635,6 @@ watch(
             </div>
 
             <div class="mt-6 grid gap-5 md:grid-cols-2">
-              <AppInput
-                v-model="dentistData.specialty"
-                label="Specialty"
-                placeholder="General Dentistry"
-              />
-              <div>
-                <label class="mb-2 block text-sm font-medium text-slate">Account Status</label>
-                <select v-model="dentistData.status">
-                  <option>Active</option>
-                  <option>Inactive</option>
-                </select>
-              </div>
-              <AppInput
-                v-model="dentistData.dentistCode"
-                label="Dentist Code"
-                readonly
-                placeholder="Auto Generated"
-              />
-              <AppInput v-model="dentistData.agent" label="Agent" placeholder="Assigned agent" />
               <div class="md:col-span-2">
                 <template v-if="paymentModeError">
                   <AppInput
@@ -521,6 +687,444 @@ watch(
                 />
               </div>
             </div>
+            <div
+              v-if="isEditMode"
+              class="mt-8 border-t border-pebble pt-6"
+            >
+              <div
+                class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
+              >
+                <div>
+                  <div
+                    class="inline-flex items-center gap-2 rounded-full border border-tangerine/20 bg-tangerine-light px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-tangerine"
+                  >
+                    <Icon icon="feather:credit-card" class="size-3.5" />
+                    {{ paymentDestinationConfig.sectionEyebrow }}
+                  </div>
+                  <h3 class="mt-3 text-xl font-black text-onyx">
+                    {{ paymentDestinationConfig.sectionTitle }}
+                  </h3>
+                  <p class="mt-2 max-w-2xl text-sm leading-6 text-slate">
+                    {{ paymentDestinationConfig.sectionDescription }}
+                  </p>
+                </div>
+                <AppButton
+                  type="button"
+                  btn-theme="primary-alt"
+                  class="w-fit shrink-0 normal-case"
+                  :disabled="bankAccountEditorOpen || loadingBankAccounts"
+                  @click="createBankAccount"
+                >
+                  <Icon icon="feather:plus" class="h-4 w-4" />
+                  {{ paymentDestinationConfig.addLabel }}
+                </AppButton>
+              </div>
+
+              <div class="mt-5 grid gap-3 sm:grid-cols-3">
+                <div class="rounded-2xl border border-pebble bg-cloud px-4 py-3">
+                  <p class="text-[11px] uppercase tracking-[0.18em] text-smoke">
+                    {{ paymentDestinationConfig.recordTypeLabel }}
+                  </p>
+                  <p class="mt-1 text-lg font-black text-onyx">{{ bankAccounts.length }}</p>
+                </div>
+                <div class="rounded-2xl border border-pebble bg-cloud px-4 py-3">
+                  <p class="text-[11px] uppercase tracking-[0.18em] text-smoke">
+                    {{ paymentDestinationConfig.activeLabel }}
+                  </p>
+                  <p class="mt-1 text-lg font-black text-onyx">{{ activeBankAccountCount }}</p>
+                </div>
+                <div class="rounded-2xl border border-pebble bg-cloud px-4 py-3">
+                  <p class="text-[11px] uppercase tracking-[0.18em] text-smoke">
+                    {{ paymentDestinationConfig.stateLabel }}
+                  </p>
+                  <p class="mt-1 text-sm font-bold text-onyx">
+                    {{ bankAccountEditorOpen ? 'In progress' : 'Ready' }}
+                  </p>
+                </div>
+              </div>
+
+              <div
+                class="mt-5 flex items-start gap-3 rounded-2xl border border-tangerine/20 bg-tangerine-light/35 px-4 py-3 text-tangerine-dark"
+              >
+                <Icon icon="feather:info" class="mt-0.5 h-5 w-5 shrink-0" />
+                <p class="text-sm leading-6">
+                  {{ paymentDestinationConfig.note }}
+                </p>
+              </div>
+
+              <div
+                v-if="bankAccountError"
+                class="mt-4 flex items-start gap-3 rounded-2xl border border-ruby/20 bg-ruby-light px-4 py-3 text-ruby"
+                role="alert"
+              >
+                <Icon icon="feather:alert-circle" class="mt-0.5 h-5 w-5 shrink-0" />
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-bold">Payout record action failed</p>
+                  <p class="mt-1 text-sm leading-6">{{ bankAccountError }}</p>
+                </div>
+                <button
+                  type="button"
+                  class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition hover:bg-ruby/10"
+                  aria-label="Dismiss payout record error"
+                  @click="clearBankAccountError"
+                >
+                  <Icon icon="feather:x" class="h-4 w-4" />
+                </button>
+              </div>
+
+              <p
+                v-if="bankAccountFeedback"
+                class="mt-4 flex items-center gap-2 rounded-2xl border border-emerald/15 bg-emerald-light px-4 py-3 text-sm font-semibold text-emerald"
+                role="status"
+                aria-live="polite"
+              >
+                <Icon icon="feather:check-circle" class="h-5 w-5 shrink-0" />
+                {{ bankAccountFeedback }}
+              </p>
+
+              <div
+                v-if="creatingBankAccount && bankAccountDraft"
+                data-bank-account-editor="new"
+                class="mt-5 rounded-[1.6rem] border-2 border-sapphire/25 bg-[linear-gradient(135deg,#f5f8ff_0%,#ffffff_100%)] p-5 shadow-sm"
+                @keydown.esc.prevent="cancelBankAccountEdit"
+              >
+                <div class="flex items-start gap-3">
+                  <span
+                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#fff4e8_0%,#f3dcc0_100%)] text-tangerine"
+                  >
+                    <Icon icon="feather:plus" class="h-5 w-5" />
+                  </span>
+                  <div>
+                    <h3 class="font-black text-onyx">{{ paymentDestinationConfig.createTitle }}</h3>
+                    <p class="mt-1 text-sm leading-6 text-slate">
+                      Enter the payout details exactly as they should appear during release.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="mt-5 grid gap-5 md:grid-cols-2">
+                  <AppInput
+                    v-model="bankAccountDraft.bankName"
+                    :label="paymentDestinationConfig.firstLabel"
+                    :placeholder="paymentDestinationConfig.firstPlaceholder"
+                    autocomplete="organization"
+                    :has-error="bankAccountValidationVisible && !bankAccountDraft.bankName.trim()"
+                  />
+                  <AppInput
+                    v-model="bankAccountDraft.accountName"
+                    :label="paymentDestinationConfig.secondLabel"
+                    :placeholder="paymentDestinationConfig.secondPlaceholder"
+                    autocomplete="name"
+                    :has-error="bankAccountValidationVisible && !bankAccountDraft.accountName.trim()"
+                  />
+                  <AppInput
+                    v-model="bankAccountDraft.accountNumber"
+                    :label="paymentDestinationConfig.thirdLabel"
+                    :placeholder="paymentDestinationConfig.thirdPlaceholder"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    :has-error="bankAccountValidationVisible && !bankAccountDraft.accountNumber.trim()"
+                  />
+                  <div>
+                    <label class="mb-2 block text-sm font-medium text-onyx">Status</label>
+                    <select v-model="bankAccountDraft.isActive" class="w-full">
+                      <option :value="true">Active — available for payouts</option>
+                      <option :value="false">Inactive — keep on record</option>
+                    </select>
+                  </div>
+                </div>
+
+                <p
+                  v-if="bankAccountValidationVisible && !bankAccountDraftIsValid"
+                  class="mt-4 flex items-center gap-2 text-sm font-medium text-ruby"
+                  role="alert"
+                >
+                  <Icon icon="feather:alert-circle" class="h-4 w-4 shrink-0" />
+                  Complete all three required fields to add this record.
+                </p>
+
+                <div
+                  class="mt-5 flex flex-col-reverse gap-3 border-t border-pebble pt-4 sm:flex-row sm:justify-end"
+                >
+                  <AppButton
+                    type="button"
+                    btn-theme="outline"
+                    class="normal-case"
+                    :disabled="savingBankAccount"
+                    @click="cancelBankAccountEdit"
+                  >
+                    Cancel
+                  </AppButton>
+                  <AppButton
+                    type="button"
+                    btn-theme="primary-alt"
+                    class="normal-case"
+                    :disabled="savingBankAccount"
+                    @click="submitBankAccount"
+                  >
+                    <Icon
+                      :icon="savingBankAccount ? 'feather:loader' : 'feather:plus-circle'"
+                      class="h-4 w-4"
+                      :class="{ 'animate-spin': savingBankAccount }"
+                    />
+                    {{ savingBankAccount ? 'Adding record...' : paymentDestinationConfig.addLabel }}
+                  </AppButton>
+                </div>
+              </div>
+
+              <div
+                v-if="loadingBankAccounts"
+                class="mt-6 grid place-items-center rounded-3xl border border-dashed border-pebble bg-cloud/40 px-6 py-12 text-center"
+                role="status"
+              >
+                <Icon icon="feather:loader" class="h-6 w-6 animate-spin text-sapphire" />
+                <p class="mt-3 text-sm font-semibold text-onyx">Loading payout records...</p>
+              </div>
+
+              <div
+                v-else-if="!bankAccounts.length && !creatingBankAccount"
+                class="mt-6 grid place-items-center rounded-3xl border border-dashed border-pebble bg-cloud/40 px-6 py-12 text-center"
+              >
+                <span
+                  class="flex h-14 w-14 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#fff6ea_0%,#f3dcc0_100%)] text-tangerine shadow-sm"
+                >
+                  <Icon icon="feather:credit-card" class="h-6 w-6" />
+                </span>
+                <h3 class="mt-4 font-black text-onyx">{{ paymentDestinationConfig.emptyTitle }}</h3>
+                <p class="mt-2 max-w-sm text-sm leading-6 text-slate">
+                  {{ paymentDestinationConfig.emptyDescription }}
+                </p>
+              </div>
+
+              <div v-else-if="!loadingBankAccounts" class="mt-6 space-y-4">
+                <article
+                  v-for="(bankAccount, index) in bankAccounts"
+                  :key="bankAccount.id"
+                  class="rounded-[1.6rem] border p-5 transition-colors"
+                  :class="
+                    editingBankAccountId === bankAccount.id
+                      ? 'border-tangerine/40 bg-tangerine-light/20 shadow-sm'
+                      : 'border-pebble bg-white'
+                  "
+                >
+                  <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                      <span
+                        class="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-sapphire shadow-sm"
+                      >
+                        <Icon icon="feather:credit-card" class="h-5 w-5" />
+                      </span>
+                      <div>
+                        <p class="font-bold text-onyx">
+                          {{ paymentDestinationConfig.recordLabel }} {{ index + 1 }}
+                        </p>
+                        <p class="mt-1 text-xs text-smoke">Record ID {{ bankAccount.id }}</p>
+                      </div>
+                    </div>
+                    <span
+                      class="rounded-full px-3 py-1 text-xs font-semibold"
+                      :class="
+                        bankAccount.isActive ? 'bg-emerald-light text-emerald' : 'bg-fog text-smoke'
+                      "
+                    >
+                      {{ bankAccount.isActive ? 'Active' : 'Inactive' }}
+                    </span>
+                  </div>
+
+                  <div
+                    v-if="editingBankAccountId === bankAccount.id && bankAccountDraft"
+                    :data-bank-account-editor="bankAccount.id"
+                    class="mt-5 grid gap-5 md:grid-cols-2"
+                    @keydown.enter.prevent="submitBankAccount"
+                    @keydown.esc.prevent="cancelBankAccountEdit"
+                  >
+                    <AppInput
+                      v-model="bankAccountDraft.bankName"
+                      :label="paymentDestinationConfig.firstLabel"
+                      :placeholder="paymentDestinationConfig.firstPlaceholder"
+                      :has-error="bankAccountValidationVisible && !bankAccountDraft.bankName.trim()"
+                    />
+                    <AppInput
+                      v-model="bankAccountDraft.accountName"
+                      :label="paymentDestinationConfig.secondLabel"
+                      :placeholder="paymentDestinationConfig.secondPlaceholder"
+                      :has-error="bankAccountValidationVisible && !bankAccountDraft.accountName.trim()"
+                    />
+                    <AppInput
+                      v-model="bankAccountDraft.accountNumber"
+                      :label="paymentDestinationConfig.thirdLabel"
+                      :placeholder="paymentDestinationConfig.thirdPlaceholder"
+                      inputmode="numeric"
+                      :has-error="
+                        bankAccountValidationVisible && !bankAccountDraft.accountNumber.trim()
+                      "
+                    />
+                    <div>
+                      <label class="mb-2 block text-sm font-medium text-onyx">Status</label>
+                      <select v-model="bankAccountDraft.isActive" class="w-full">
+                        <option :value="true">Active — available for payouts</option>
+                        <option :value="false">Inactive — keep on record</option>
+                      </select>
+                    </div>
+                    <p
+                      v-if="bankAccountValidationVisible && !bankAccountDraftIsValid"
+                      class="flex items-center gap-2 text-sm font-medium text-ruby md:col-span-2"
+                      role="alert"
+                    >
+                      <Icon icon="feather:alert-circle" class="h-4 w-4 shrink-0" />
+                      Complete all three required fields to save this record.
+                    </p>
+                  </div>
+
+                  <dl v-else class="mt-5 grid gap-4 md:grid-cols-3">
+                    <div class="rounded-2xl bg-white px-4 py-3">
+                      <dt class="text-[11px] font-semibold uppercase tracking-[0.16em] text-smoke">
+                        {{ paymentDestinationConfig.firstDisplayLabel }}
+                      </dt>
+                      <dd class="mt-2 text-sm font-semibold text-onyx">{{ bankAccount.bankName }}</dd>
+                    </div>
+                    <div class="rounded-2xl bg-white px-4 py-3">
+                      <dt class="text-[11px] font-semibold uppercase tracking-[0.16em] text-smoke">
+                        {{ paymentDestinationConfig.secondDisplayLabel }}
+                      </dt>
+                      <dd class="mt-2 text-sm font-semibold text-onyx">
+                        {{ bankAccount.accountName }}
+                      </dd>
+                    </div>
+                    <div class="rounded-2xl bg-white px-4 py-3">
+                      <dt class="text-[11px] font-semibold uppercase tracking-[0.16em] text-smoke">
+                        {{ paymentDestinationConfig.thirdDisplayLabel }}
+                      </dt>
+                      <dd class="mt-2 flex items-center justify-between gap-3 text-sm text-onyx">
+                        <span class="break-all font-semibold tabular-nums">
+                          {{
+                            visibleBankAccountId === bankAccount.id
+                              ? bankAccount.accountNumber
+                              : maskedAccountNumber(bankAccount.accountNumber)
+                          }}
+                        </span>
+                        <button
+                          type="button"
+                          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate transition hover:bg-cloud hover:text-onyx focus:outline-none focus:ring-4 focus:ring-focus-ring"
+                          :aria-label="
+                            visibleBankAccountId === bankAccount.id
+                              ? `Hide account detail for ${paymentDestinationConfig.recordLabel.toLowerCase()} ${index + 1}`
+                              : `Show account detail for ${paymentDestinationConfig.recordLabel.toLowerCase()} ${index + 1}`
+                          "
+                          @click="toggleAccountNumberVisibility(bankAccount.id)"
+                        >
+                          <Icon
+                            :icon="
+                              visibleBankAccountId === bankAccount.id
+                                ? 'feather:eye-off'
+                                : 'feather:eye'
+                            "
+                            class="h-4 w-4"
+                          />
+                        </button>
+                      </dd>
+                    </div>
+                  </dl>
+
+                  <div class="mt-5 border-t border-pebble pt-4">
+                    <template v-if="editingBankAccountId === bankAccount.id">
+                      <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <AppButton
+                          type="button"
+                          btn-theme="outline"
+                          class="normal-case"
+                          :disabled="savingBankAccount"
+                          @click="cancelBankAccountEdit"
+                        >
+                          Cancel
+                        </AppButton>
+                        <AppButton
+                          type="button"
+                          btn-theme="primary-alt"
+                          class="normal-case"
+                          :disabled="savingBankAccount"
+                          @click="submitBankAccount"
+                        >
+                          <Icon
+                            :icon="savingBankAccount ? 'feather:loader' : 'feather:save'"
+                            class="h-4 w-4"
+                            :class="{ 'animate-spin': savingBankAccount }"
+                          />
+                          {{ savingBankAccount ? 'Saving record...' : 'Save record' }}
+                        </AppButton>
+                      </div>
+                    </template>
+                    <div
+                      v-else-if="pendingDeleteBankAccountId === bankAccount.id"
+                      class="flex flex-col gap-4 rounded-2xl border border-ruby/15 bg-ruby-light p-4 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div class="flex items-start gap-3 text-ruby">
+                        <Icon icon="feather:alert-triangle" class="mt-0.5 h-5 w-5 shrink-0" />
+                        <div>
+                          <p class="text-sm font-bold">Delete this payout record?</p>
+                          <p class="mt-1 text-xs leading-5">
+                            This action cannot be undone. The main dentist profile will not be changed.
+                          </p>
+                        </div>
+                      </div>
+                      <div class="flex shrink-0 gap-3">
+                        <AppButton
+                          type="button"
+                          btn-theme="outline"
+                          class="normal-case"
+                          :disabled="deletingBankAccountId === bankAccount.id"
+                          @click="pendingDeleteBankAccountId = null"
+                        >
+                          Keep record
+                        </AppButton>
+                        <AppButton
+                          type="button"
+                          btn-theme="danger"
+                          class="normal-case"
+                          :disabled="deletingBankAccountId === bankAccount.id"
+                          @click="confirmBankAccountDelete(bankAccount)"
+                        >
+                          <Icon
+                            :icon="
+                              deletingBankAccountId === bankAccount.id
+                                ? 'feather:loader'
+                                : 'feather:trash-2'
+                            "
+                            class="h-4 w-4"
+                            :class="{ 'animate-spin': deletingBankAccountId === bankAccount.id }"
+                          />
+                          {{
+                            deletingBankAccountId === bankAccount.id ? 'Deleting...' : 'Delete record'
+                          }}
+                        </AppButton>
+                      </div>
+                    </div>
+                    <div v-else class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                      <AppButton
+                        type="button"
+                        btn-theme="outline"
+                        class="normal-case text-ruby"
+                        :disabled="bankAccountEditorOpen"
+                        @click="requestBankAccountDelete(bankAccount.id)"
+                      >
+                        <Icon icon="feather:trash-2" class="h-4 w-4" />
+                        Delete
+                      </AppButton>
+                      <AppButton
+                        type="button"
+                        btn-theme="outline"
+                        class="normal-case"
+                        :disabled="bankAccountEditorOpen"
+                        @click="editBankAccount(bankAccount)"
+                      >
+                        <Icon icon="feather:edit-2" class="h-4 w-4" />
+                        Edit account
+                      </AppButton>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </div>
           </section>
 
           <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
@@ -549,420 +1153,6 @@ watch(
             </AppButton>
           </div>
         </form>
-
-        <section v-if="isEditMode" class="rounded-4xl border border-pebble bg-white p-6 shadow-sm">
-          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
-                Payment details
-              </p>
-              <h2 class="mt-2 text-2xl font-black text-onyx">Bank accounts</h2>
-              <p class="mt-3 text-sm leading-6 text-slate">
-                Manage payout accounts separately from the dentist profile.
-              </p>
-            </div>
-            <AppButton
-              type="button"
-              btn-theme="primary-alt"
-              class="w-fit shrink-0 normal-case"
-              :disabled="bankAccountEditorOpen || loadingBankAccounts"
-              @click="createBankAccount"
-            >
-              <Icon icon="feather:plus" class="h-4 w-4" />
-              Add bank account
-            </AppButton>
-          </div>
-
-          <div
-            class="mt-5 flex items-start gap-3 rounded-2xl border border-sapphire/15 bg-sapphire-light px-4 py-3 text-sapphire"
-          >
-            <Icon icon="feather:info" class="mt-0.5 h-5 w-5 shrink-0" />
-            <p class="text-sm leading-6">
-              Bank account changes save immediately and do not require updating the dentist profile.
-              Account numbers are hidden by default for privacy.
-            </p>
-          </div>
-
-          <div
-            v-if="bankAccountError"
-            class="mt-4 flex items-start gap-3 rounded-2xl border border-ruby/20 bg-ruby-light px-4 py-3 text-ruby"
-            role="alert"
-          >
-            <Icon icon="feather:alert-circle" class="mt-0.5 h-5 w-5 shrink-0" />
-            <div class="min-w-0 flex-1">
-              <p class="text-sm font-bold">Bank account action failed</p>
-              <p class="mt-1 text-sm leading-6">{{ bankAccountError }}</p>
-            </div>
-            <button
-              type="button"
-              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition hover:bg-ruby/10"
-              aria-label="Dismiss bank account error"
-              @click="clearBankAccountError"
-            >
-              <Icon icon="feather:x" class="h-4 w-4" />
-            </button>
-          </div>
-
-          <p
-            v-if="bankAccountFeedback"
-            class="mt-4 flex items-center gap-2 rounded-2xl border border-emerald/15 bg-emerald-light px-4 py-3 text-sm font-semibold text-emerald"
-            role="status"
-            aria-live="polite"
-          >
-            <Icon icon="feather:check-circle" class="h-5 w-5 shrink-0" />
-            {{ bankAccountFeedback }}
-          </p>
-
-          <div
-            v-if="creatingBankAccount && bankAccountDraft"
-            data-bank-account-editor="new"
-            class="mt-5 rounded-3xl border-2 border-sapphire/25 bg-[linear-gradient(135deg,#f5f8ff_0%,#ffffff_100%)] p-5 shadow-sm"
-            @keydown.esc.prevent="cancelBankAccountEdit"
-          >
-            <div class="flex items-start gap-3">
-              <span
-                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sapphire text-white"
-              >
-                <Icon icon="feather:plus" class="h-5 w-5" />
-              </span>
-              <div>
-                <h3 class="font-black text-onyx">New bank account</h3>
-                <p class="mt-1 text-sm leading-6 text-slate">
-                  Enter the account exactly as it appears in the bank's records.
-                </p>
-              </div>
-            </div>
-
-            <div class="mt-5 grid gap-5 md:grid-cols-2">
-              <AppInput
-                v-model="bankAccountDraft.bankName"
-                label="Bank name *"
-                placeholder="e.g. BPI"
-                autocomplete="organization"
-                :has-error="bankAccountValidationVisible && !bankAccountDraft.bankName.trim()"
-              />
-              <AppInput
-                v-model="bankAccountDraft.accountName"
-                label="Account holder name *"
-                placeholder="e.g. Juan Dela Cruz"
-                autocomplete="name"
-                :has-error="bankAccountValidationVisible && !bankAccountDraft.accountName.trim()"
-              />
-              <AppInput
-                v-model="bankAccountDraft.accountNumber"
-                label="Account number *"
-                placeholder="Enter the complete account number"
-                inputmode="numeric"
-                autocomplete="off"
-                :has-error="bankAccountValidationVisible && !bankAccountDraft.accountNumber.trim()"
-              />
-              <div>
-                <label class="mb-2 block text-sm font-medium text-onyx">Status</label>
-                <select v-model="bankAccountDraft.isActive" class="w-full">
-                  <option :value="true">Active — available for payouts</option>
-                  <option :value="false">Inactive — keep on record</option>
-                </select>
-              </div>
-            </div>
-
-            <p
-              v-if="bankAccountValidationVisible && !bankAccountDraftIsValid"
-              class="mt-4 flex items-center gap-2 text-sm font-medium text-ruby"
-              role="alert"
-            >
-              <Icon icon="feather:alert-circle" class="h-4 w-4 shrink-0" />
-              Complete all three required fields to add this account.
-            </p>
-
-            <div
-              class="mt-5 flex flex-col-reverse gap-3 border-t border-pebble pt-4 sm:flex-row sm:justify-end"
-            >
-              <AppButton
-                type="button"
-                btn-theme="outline"
-                class="normal-case"
-                :disabled="savingBankAccount"
-                @click="cancelBankAccountEdit"
-              >
-                Cancel
-              </AppButton>
-              <AppButton
-                type="button"
-                btn-theme="primary-alt"
-                class="normal-case"
-                :disabled="savingBankAccount"
-                @click="submitBankAccount"
-              >
-                <Icon
-                  :icon="savingBankAccount ? 'feather:loader' : 'feather:plus-circle'"
-                  class="h-4 w-4"
-                  :class="{ 'animate-spin': savingBankAccount }"
-                />
-                {{ savingBankAccount ? 'Adding account...' : 'Add account' }}
-              </AppButton>
-            </div>
-          </div>
-
-          <div
-            v-if="loadingBankAccounts"
-            class="mt-6 grid place-items-center rounded-3xl border border-dashed border-pebble bg-cloud/40 px-6 py-12 text-center"
-            role="status"
-          >
-            <Icon icon="feather:loader" class="h-6 w-6 animate-spin text-sapphire" />
-            <p class="mt-3 text-sm font-semibold text-onyx">Loading bank accounts...</p>
-          </div>
-
-          <div
-            v-else-if="!bankAccounts.length && !creatingBankAccount"
-            class="mt-6 grid place-items-center rounded-3xl border border-dashed border-pebble bg-cloud/40 px-6 py-12 text-center"
-          >
-            <span
-              class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-sapphire shadow-sm"
-            >
-              <Icon icon="feather:credit-card" class="h-6 w-6" />
-            </span>
-            <h3 class="mt-4 font-black text-onyx">No bank accounts yet</h3>
-            <p class="mt-2 max-w-sm text-sm leading-6 text-slate">
-              Add the dentist's first payout account. You can update or remove it at any time.
-            </p>
-            <AppButton
-              type="button"
-              btn-theme="primary-alt"
-              class="mt-5 normal-case"
-              @click="createBankAccount"
-            >
-              <Icon icon="feather:plus" class="h-4 w-4" />
-              Add first account
-            </AppButton>
-          </div>
-
-          <div v-else-if="!loadingBankAccounts" class="mt-6 space-y-4">
-            <article
-              v-for="(bankAccount, index) in bankAccounts"
-              :key="bankAccount.id"
-              class="rounded-3xl border p-5 transition-colors"
-              :class="
-                editingBankAccountId === bankAccount.id
-                  ? 'border-tangerine/40 bg-tangerine-light/30'
-                  : 'border-pebble bg-cloud/40'
-              "
-            >
-              <div class="flex flex-wrap items-center justify-between gap-3">
-                <div class="flex items-center gap-3">
-                  <span
-                    class="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-sapphire shadow-sm"
-                  >
-                    <Icon icon="feather:credit-card" class="h-5 w-5" />
-                  </span>
-                  <div>
-                    <p class="font-bold text-onyx">Bank account {{ index + 1 }}</p>
-                    <p class="mt-1 text-xs text-smoke">Account ID {{ bankAccount.id }}</p>
-                  </div>
-                </div>
-                <span
-                  class="rounded-full px-3 py-1 text-xs font-semibold"
-                  :class="
-                    bankAccount.isActive ? 'bg-emerald-light text-emerald' : 'bg-fog text-smoke'
-                  "
-                >
-                  {{ bankAccount.isActive ? 'Active' : 'Inactive' }}
-                </span>
-              </div>
-
-              <div
-                v-if="editingBankAccountId === bankAccount.id && bankAccountDraft"
-                :data-bank-account-editor="bankAccount.id"
-                class="mt-5 grid gap-5 md:grid-cols-2"
-                @keydown.enter.prevent="submitBankAccount"
-                @keydown.esc.prevent="cancelBankAccountEdit"
-              >
-                <AppInput
-                  v-model="bankAccountDraft.bankName"
-                  label="Bank name *"
-                  placeholder="e.g. BPI"
-                  :has-error="bankAccountValidationVisible && !bankAccountDraft.bankName.trim()"
-                />
-                <AppInput
-                  v-model="bankAccountDraft.accountName"
-                  label="Account holder name *"
-                  placeholder="e.g. Juan Dela Cruz"
-                  :has-error="bankAccountValidationVisible && !bankAccountDraft.accountName.trim()"
-                />
-                <AppInput
-                  v-model="bankAccountDraft.accountNumber"
-                  label="Account number *"
-                  placeholder="Enter the complete account number"
-                  inputmode="numeric"
-                  :has-error="
-                    bankAccountValidationVisible && !bankAccountDraft.accountNumber.trim()
-                  "
-                />
-                <div>
-                  <label class="mb-2 block text-sm font-medium text-onyx">Status</label>
-                  <select v-model="bankAccountDraft.isActive" class="w-full">
-                    <option :value="true">Active — available for payouts</option>
-                    <option :value="false">Inactive — keep on record</option>
-                  </select>
-                </div>
-                <p
-                  v-if="bankAccountValidationVisible && !bankAccountDraftIsValid"
-                  class="flex items-center gap-2 text-sm font-medium text-ruby md:col-span-2"
-                  role="alert"
-                >
-                  <Icon icon="feather:alert-circle" class="h-4 w-4 shrink-0" />
-                  Complete all three required fields to save this account.
-                </p>
-              </div>
-
-              <dl v-else class="mt-5 grid gap-4 md:grid-cols-3">
-                <div class="rounded-2xl bg-white px-4 py-3">
-                  <dt class="text-[11px] font-semibold uppercase tracking-[0.16em] text-smoke">
-                    Bank name
-                  </dt>
-                  <dd class="mt-2 text-sm font-semibold text-onyx">{{ bankAccount.bankName }}</dd>
-                </div>
-                <div class="rounded-2xl bg-white px-4 py-3">
-                  <dt class="text-[11px] font-semibold uppercase tracking-[0.16em] text-smoke">
-                    Account name
-                  </dt>
-                  <dd class="mt-2 text-sm font-semibold text-onyx">
-                    {{ bankAccount.accountName }}
-                  </dd>
-                </div>
-                <div class="rounded-2xl bg-white px-4 py-3">
-                  <dt class="text-[11px] font-semibold uppercase tracking-[0.16em] text-smoke">
-                    Account number
-                  </dt>
-                  <dd class="mt-2 flex items-center justify-between gap-3 text-sm text-onyx">
-                    <span class="break-all font-semibold tabular-nums">
-                      {{
-                        visibleBankAccountId === bankAccount.id
-                          ? bankAccount.accountNumber
-                          : maskedAccountNumber(bankAccount.accountNumber)
-                      }}
-                    </span>
-                    <button
-                      type="button"
-                      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate transition hover:bg-cloud hover:text-onyx focus:outline-none focus:ring-4 focus:ring-focus-ring"
-                      :aria-label="
-                        visibleBankAccountId === bankAccount.id
-                          ? `Hide account number for bank account ${index + 1}`
-                          : `Show account number for bank account ${index + 1}`
-                      "
-                      @click="toggleAccountNumberVisibility(bankAccount.id)"
-                    >
-                      <Icon
-                        :icon="
-                          visibleBankAccountId === bankAccount.id
-                            ? 'feather:eye-off'
-                            : 'feather:eye'
-                        "
-                        class="h-4 w-4"
-                      />
-                    </button>
-                  </dd>
-                </div>
-              </dl>
-
-              <div class="mt-5 border-t border-pebble pt-4">
-                <template v-if="editingBankAccountId === bankAccount.id">
-                  <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                    <AppButton
-                      type="button"
-                      btn-theme="outline"
-                      class="normal-case"
-                      :disabled="savingBankAccount"
-                      @click="cancelBankAccountEdit"
-                    >
-                      Cancel
-                    </AppButton>
-                    <AppButton
-                      type="button"
-                      btn-theme="primary-alt"
-                      class="normal-case"
-                      :disabled="savingBankAccount"
-                      @click="submitBankAccount"
-                    >
-                      <Icon
-                        :icon="savingBankAccount ? 'feather:loader' : 'feather:save'"
-                        class="h-4 w-4"
-                        :class="{ 'animate-spin': savingBankAccount }"
-                      />
-                      {{ savingBankAccount ? 'Saving account...' : 'Save account' }}
-                    </AppButton>
-                  </div>
-                </template>
-                <div
-                  v-else-if="pendingDeleteBankAccountId === bankAccount.id"
-                  class="flex flex-col gap-4 rounded-2xl border border-ruby/15 bg-ruby-light p-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div class="flex items-start gap-3 text-ruby">
-                    <Icon icon="feather:alert-triangle" class="mt-0.5 h-5 w-5 shrink-0" />
-                    <div>
-                      <p class="text-sm font-bold">Delete this bank account?</p>
-                      <p class="mt-1 text-xs leading-5">
-                        This action cannot be undone. The dentist profile will not be changed.
-                      </p>
-                    </div>
-                  </div>
-                  <div class="flex shrink-0 gap-3">
-                    <AppButton
-                      type="button"
-                      btn-theme="outline"
-                      class="normal-case"
-                      :disabled="deletingBankAccountId === bankAccount.id"
-                      @click="pendingDeleteBankAccountId = null"
-                    >
-                      Keep account
-                    </AppButton>
-                    <AppButton
-                      type="button"
-                      btn-theme="danger"
-                      class="normal-case"
-                      :disabled="deletingBankAccountId === bankAccount.id"
-                      @click="confirmBankAccountDelete(bankAccount)"
-                    >
-                      <Icon
-                        :icon="
-                          deletingBankAccountId === bankAccount.id
-                            ? 'feather:loader'
-                            : 'feather:trash-2'
-                        "
-                        class="h-4 w-4"
-                        :class="{ 'animate-spin': deletingBankAccountId === bankAccount.id }"
-                      />
-                      {{
-                        deletingBankAccountId === bankAccount.id ? 'Deleting...' : 'Delete account'
-                      }}
-                    </AppButton>
-                  </div>
-                </div>
-                <div v-else class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                  <AppButton
-                    type="button"
-                    btn-theme="outline"
-                    class="normal-case text-ruby"
-                    :disabled="bankAccountEditorOpen"
-                    @click="requestBankAccountDelete(bankAccount.id)"
-                  >
-                    <Icon icon="feather:trash-2" class="h-4 w-4" />
-                    Delete
-                  </AppButton>
-                  <AppButton
-                    type="button"
-                    btn-theme="outline"
-                    class="normal-case"
-                    :disabled="bankAccountEditorOpen"
-                    @click="editBankAccount(bankAccount)"
-                  >
-                    <Icon icon="feather:edit-2" class="h-4 w-4" />
-                    Edit account
-                  </AppButton>
-                </div>
-              </div>
-            </article>
-          </div>
-        </section>
       </div>
     </div>
   </section>

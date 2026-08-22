@@ -48,6 +48,10 @@ const dentistOptions = ref<DentistOption[]>([])
 const assignedDentistName = ref('Not assigned yet')
 const selectedDentist = ref<SelectedDentistDetails | null>(null)
 const selectedDentistStatus = ref('')
+const clinicStatusLabel = ref('Unknown')
+const clinicCodeLabel = ref('Not assigned yet')
+const clinicLocationLabel = ref('Not assigned yet')
+const clinicAccreditationLabel = ref('Not accredited')
 
 const clinicFeeFields = [
   { key: 'TWLB', label: 'TWLB' },
@@ -138,6 +142,15 @@ watch(
           ? 'Inactive'
           : 'Unknown'
       : ''
+    clinicStatusLabel.value = clinicData.value.status || 'Unknown'
+    clinicCodeLabel.value = clinicData.value.clinicCode || 'Not assigned yet'
+    clinicLocationLabel.value =
+      clinicData.value.city || clinicData.value.province
+        ? [clinicData.value.city, clinicData.value.province].filter(Boolean).join(', ')
+        : 'Not assigned yet'
+    clinicAccreditationLabel.value = clinicData.value.isAccredited
+      ? 'Accredited'
+      : 'Not accredited'
   },
   { immediate: true },
 )
@@ -256,11 +269,11 @@ const setupSteps = [
 
     <form
       v-else-if="!profileMissing"
-      class="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]"
+      class="grid items-start gap-6 xl:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)]"
       @submit.prevent="save"
     >
       <aside class="space-y-5">
-        <div class="rounded-4xl bg-[#122833] p-6 text-white shadow-lg">
+        <div class="rounded-4xl bg-[#122833] p-6 text-white shadow-lg xl:sticky xl:top-6">
           <div class="flex items-center justify-between gap-4">
             <div class="min-w-0">
               <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-tangerine-light">
@@ -275,16 +288,27 @@ const setupSteps = [
             </div>
           </div>
 
+          <div class="mt-4 flex flex-wrap gap-2">
+            <span
+              class="inline-flex rounded-full bg-white/12 px-3 py-1 text-xs font-semibold text-white"
+            >
+              {{ clinicStatusLabel }}
+            </span>
+            <span
+              class="inline-flex rounded-full bg-white/12 px-3 py-1 text-xs font-semibold text-white"
+            >
+              {{ clinicAccreditationLabel }}
+            </span>
+          </div>
+
           <div class="mt-6 grid gap-3">
             <div class="rounded-2xl bg-white/8 px-4 py-3">
               <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Status</p>
-              <p class="mt-2 text-sm font-semibold">{{ clinicData.status }}</p>
+              <p class="mt-2 text-sm font-semibold">{{ clinicStatusLabel }}</p>
             </div>
             <div class="rounded-2xl bg-white/8 px-4 py-3">
               <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Clinic code</p>
-              <p class="mt-2 text-sm font-semibold">
-                {{ clinicData.clinicCode || 'Not assigned yet' }}
-              </p>
+              <p class="mt-2 text-sm font-semibold">{{ clinicCodeLabel }}</p>
             </div>
             <div class="rounded-2xl bg-white/8 px-4 py-3">
               <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Assigned dentist</p>
@@ -292,14 +316,29 @@ const setupSteps = [
             </div>
             <div class="rounded-2xl bg-white/8 px-4 py-3">
               <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Location</p>
-              <p class="mt-2 text-sm font-semibold">
-                {{ clinicData.city || clinicData.province || 'Not assigned yet' }}
-              </p>
+              <p class="mt-2 text-sm font-semibold">{{ clinicLocationLabel }}</p>
             </div>
             <div class="rounded-2xl bg-white/8 px-4 py-3">
               <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Accreditation</p>
+              <p class="mt-2 text-sm font-semibold">{{ clinicAccreditationLabel }}</p>
+            </div>
+          </div>
+
+          <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+            <div class="rounded-2xl bg-white/8 px-4 py-4">
+              <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Provider app</p>
               <p class="mt-2 text-sm font-semibold">
-                {{ clinicData.isAccredited ? 'Accredited' : 'Not accredited' }}
+                {{ clinicData.providerApp || 'Not assigned yet' }}
+              </p>
+            </div>
+            <div class="rounded-2xl bg-white/8 px-4 py-4">
+              <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Clinic type</p>
+              <p class="mt-2 text-sm font-semibold">{{ clinicData.type || 'Not assigned yet' }}</p>
+            </div>
+            <div class="rounded-2xl bg-white/8 px-4 py-4">
+              <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Dentist status</p>
+              <p class="mt-2 text-sm font-semibold">
+                {{ selectedDentistStatus || 'No dentist selected' }}
               </p>
             </div>
           </div>
@@ -323,6 +362,18 @@ const setupSteps = [
               <span class="text-sm font-semibold text-onyx">{{ step }}</span>
             </div>
           </div>
+        </div>
+
+        <div
+          class="rounded-[1.4rem] border border-[#e2d7c2] bg-[linear-gradient(135deg,#fffaf1_0%,#f8f6ef_100%)] px-4 py-4 shadow-sm"
+        >
+          <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-tangerine">
+            Workspace note
+          </p>
+          <p class="mt-2 text-sm leading-6 text-slate">
+            Use this panel as the clinic snapshot while the right side handles setup details,
+            dentist assignment, rates, and operating information.
+          </p>
         </div>
       </aside>
 
