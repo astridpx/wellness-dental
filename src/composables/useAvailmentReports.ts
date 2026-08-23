@@ -63,8 +63,11 @@ export function useAvailmentReports() {
     const params = new URLSearchParams({
       mode: form.mode,
       companyScope: form.companyScope,
-      companyFilterBy: form.companyFilterBy,
     })
+
+    if (form.companyScope === 'specificIms') {
+      params.set('companyFilterBy', form.companyFilterBy)
+    }
 
     if (form.company.trim()) params.set('company', form.company.trim())
     if (form.dentist.trim()) params.set('dentist', form.dentist.trim())

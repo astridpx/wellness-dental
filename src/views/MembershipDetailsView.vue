@@ -394,6 +394,7 @@ function getPaymentRemittanceStatus(payment: { remittedWell?: string | null }) {
             >
               <tr>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Member</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Agent</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Company</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Plan</th>
                 <th class="px-6 py-4 text-right text-sm font-semibold text-onyx">Action</th>
@@ -412,6 +413,11 @@ function getPaymentRemittanceStatus(payment: { remittedWell?: string | null }) {
                       {{ member.imsCardNumber || 'No card number' }}
                     </p>
                   </div>
+                </td>
+                <td class="px-6 py-4 align-top text-onyx">
+                  <span class="block min-w-44 whitespace-normal wrap-break-word">
+                    {{ member.agentName || 'N/A' }}
+                  </span>
                 </td>
                 <td class="px-6 py-4 align-top text-onyx">
                   <span class="block min-w-55 whitespace-normal wrap-break-word">
@@ -442,7 +448,7 @@ function getPaymentRemittanceStatus(payment: { remittedWell?: string | null }) {
                 </td>
               </tr>
               <tr v-if="totalEntries <= 0">
-                <td colspan="4" class="w-full px-6 py-14 text-center text-onyx">
+                <td colspan="5" class="w-full px-6 py-14 text-center text-onyx">
                   <div class="flex w-full flex-col items-center">
                     <span
                       class="flex h-12 w-12 items-center justify-center rounded-2xl bg-fog text-smoke"

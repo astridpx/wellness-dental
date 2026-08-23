@@ -94,7 +94,7 @@ const companyScopeOptions = [
   {
     value: 'all',
     label: 'All',
-    description: 'Include all availments without narrowing to one IMS company group.',
+    description: 'Include IMS availments together with all uploaded partner-member companies.',
   },
   {
     value: 'deployment',
@@ -242,12 +242,14 @@ function resetSelectedCompany() {
 function selectCompanyScope(value: (typeof companyScopeOptions)[number]['value']) {
   if (value === 'all') {
     form.companyScope = 'both'
+    form.companyFilterBy = 'classification'
     resetSelectedCompany()
     return
   }
 
   if (value === 'partnerCompany') {
     form.companyScope = 'partner'
+    form.companyFilterBy = 'classification'
     resetSelectedCompany()
     return
   }

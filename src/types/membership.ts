@@ -2,6 +2,7 @@ export type MembershipRecord = {
   planholderId: string
   mainPlanholderId?: string | null
   memberName: string
+  agentName?: string | null
   officeCode?: string | null
   company?: string | null
   planCode?: string | null
