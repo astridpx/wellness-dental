@@ -11,42 +11,30 @@ import {
   AppTextArea,
   AppToast,
 } from '@/components/app'
-import { useBusinessPartners, usePartnerMembers } from '@/composables'
-import type { PartnerMemberBatch, PartnerMemberRecord } from '@/types'
+import { useBusinessPartnerUploads, useBusinessPartners } from '@/composables'
+import type { PartnerMemberBatch } from '@/types'
 import { formatDateTime } from '@/utils'
 
 const {
   batches,
-  records,
   selectedBatch,
-  recordScope,
   loadingBatches,
-  loadingRecords,
   uploadingBatch,
-  updatingRecordId,
   markingPaidBatchId,
   batchError,
-  recordError,
   uploadError,
   uploadSuccess,
   batchCurrentPage,
   batchTotalEntries,
   batchTotalPages,
-  recordCurrentPage,
-  recordTotalEntries,
-  recordTotalPages,
   batchFilters,
-  recordFilters,
   uploadForm,
   batchStats,
-  recordStats,
   uploadBatch,
-  updatePaymentStatus,
   updateBatchPaymentStatus,
   selectBatch,
-  selectAllBatches,
   resetUploadForm,
-} = usePartnerMembers()
+} = useBusinessPartnerUploads()
 const { businessPartners, loadingBusinessPartners } = useBusinessPartners()
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -54,13 +42,11 @@ const selectedUploadFile = ref<File | null>(null)
 const selectedBusinessPartnerId = ref('')
 const availableSheetNames = ref<string[]>([])
 const showUploadPanel = ref(false)
+const today = new Date()
+const selectedPaymentMonth = ref(String(today.getMonth()))
+const selectedPaymentYear = ref(String(today.getFullYear()))
 const batchPaymentConfirmation = ref<{
   batch: PartnerMemberBatch
-  paid: boolean
-  paymentReference: string
-} | null>(null)
-const recordPaymentConfirmation = ref<{
-  record: PartnerMemberRecord
   paid: boolean
   paymentReference: string
 } | null>(null)
@@ -76,6 +62,8 @@ const uploadReady = computed(() =>
     selectedUploadFile.value &&
     uploadForm.companyCode.trim() &&
     uploadForm.companyName.trim() &&
+    (!requiresManualPaymentPeriod.value || uploadForm.paymentPeriod.trim()) &&
+    uploadForm.paidAt.trim() &&
     uploadForm.sheetName.trim(),
   ),
 )
@@ -83,6 +71,47 @@ const uploadReady = computed(() =>
 const activeBusinessPartners = computed(() =>
   businessPartners.value.filter((partner) => partner.active),
 )
+
+const requiresManualPaymentPeriod = computed(() => {
+  const partnerCode = uploadForm.businessPartnerCode.trim().toUpperCase()
+  return partnerCode !== 'IWC'
+})
+
+const paymentMonthOptions = computed(() => {
+  const formatter = new Intl.DateTimeFormat('en-US', { month: 'long' })
+
+  return Array.from({ length: 12 }, (_, month) => ({
+    label: formatter.format(new Date(2000, month, 1)),
+    value: String(month),
+  }))
+})
+
+const paymentYearOptions = computed(() => {
+  const currentYear = today.getFullYear()
+
+  return Array.from({ length: 11 }, (_, index) => String(currentYear + 5 - index))
+})
+
+function syncPaymentPeriod() {
+  if (!requiresManualPaymentPeriod.value) {
+    uploadForm.paymentPeriod = ''
+    return
+  }
+
+  if (!selectedPaymentMonth.value || !selectedPaymentYear.value) {
+    uploadForm.paymentPeriod = ''
+    return
+  }
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    year: 'numeric',
+  })
+
+  uploadForm.paymentPeriod = formatter.format(
+    new Date(Number(selectedPaymentYear.value), Number(selectedPaymentMonth.value), 1),
+  )
+}
 
 function openFilePicker() {
   fileInputRef.value?.click()
@@ -128,6 +157,8 @@ function resetUploadState() {
   resetUploadForm()
   clearSelectedFile()
   selectedBusinessPartnerId.value = ''
+  selectedPaymentMonth.value = String(today.getMonth())
+  selectedPaymentYear.value = String(today.getFullYear())
 }
 
 function padDatePart(value: number) {
@@ -165,14 +196,6 @@ function generateBatchPaymentReference() {
 
   batchPaymentConfirmation.value.paymentReference = generatePaymentReference(
     batchPaymentConfirmation.value.batch.companyCode,
-  )
-}
-
-function generateRecordPaymentReference() {
-  if (!recordPaymentConfirmation.value) return
-
-  recordPaymentConfirmation.value.paymentReference = generatePaymentReference(
-    recordPaymentConfirmation.value.record.companyCode || selectedBatch.value?.companyCode,
   )
 }
 
@@ -214,10 +237,7 @@ async function confirmBatchPaymentStatus() {
       show: true,
       variant: 'error',
       title: 'Batch was not updated',
-      message:
-        recordError.value ||
-        batchError.value ||
-        `Unable to mark this batch as ${paid ? 'received' : 'pending'}.`,
+      message: batchError.value || `Unable to mark this batch as ${paid ? 'received' : 'pending'}.`,
     }
     return
   }
@@ -229,51 +249,6 @@ async function confirmBatchPaymentStatus() {
     message: `${batch.batchCode} now has all members marked ${paid ? 'received' : 'pending'}.`,
   }
   batchPaymentConfirmation.value = null
-}
-
-function openRecordPaymentConfirmation(record: PartnerMemberRecord, paid: boolean) {
-  if (updatingRecordId.value) return
-
-  recordPaymentConfirmation.value = {
-    record,
-    paid,
-    paymentReference: paid
-      ? record.paymentReference ||
-        generatePaymentReference(record.companyCode || selectedBatch.value?.companyCode)
-      : '',
-  }
-}
-
-function closeRecordPaymentConfirmation() {
-  if (updatingRecordId.value) return
-
-  recordPaymentConfirmation.value = null
-}
-
-async function confirmRecordPaymentStatus() {
-  if (!recordPaymentConfirmation.value) return
-
-  const { record, paid, paymentReference } = recordPaymentConfirmation.value
-  const updated = await updatePaymentStatus(record, paid, paymentReference)
-
-  if (!updated) {
-    toast.value = {
-      show: true,
-      variant: 'error',
-      title: 'Member was not updated',
-      message:
-        recordError.value || `Unable to mark this member as ${paid ? 'received' : 'pending'}.`,
-    }
-    return
-  }
-
-  toast.value = {
-    show: true,
-    variant: 'success',
-    title: paid ? 'Member marked as received' : 'Member marked as pending',
-    message: `${record.fullName} is now marked ${paid ? 'received' : 'pending'}.`,
-  }
-  recordPaymentConfirmation.value = null
 }
 
 function closeToast() {
@@ -309,6 +284,14 @@ watch(selectedBusinessPartnerId, (value) => {
   uploadForm.companyCode = selectedPartner.code
   uploadForm.companyName = selectedPartner.name
 })
+
+watch(
+  [selectedPaymentMonth, selectedPaymentYear, requiresManualPaymentPeriod],
+  () => {
+    syncPaymentPeriod()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -326,12 +309,10 @@ watch(selectedBusinessPartnerId, (value) => {
           </div>
 
           <div>
-            <h1 class="text-3xl font-black tracking-tight text-onyx">
-              Business partner member batches
-            </h1>
+            <h1 class="text-3xl font-black tracking-tight text-onyx">Business Partner Uploads</h1>
             <p class="mt-3 max-w-3xl text-sm leading-6 text-slate">
-              Read partner Excel lists, add the member rows into the active partner list, and track
-              payment status for service billing.
+              Upload partner Excel lists, create monthly batches, and manage batch-level payment
+              tracking for service billing.
             </p>
           </div>
 
@@ -354,10 +335,10 @@ watch(selectedBusinessPartnerId, (value) => {
             </div>
             <div class="rounded-[1.4rem] border border-pebble bg-white/88 px-5 py-4 shadow-sm">
               <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate">
-                Visible members
+                Uploaded rows
               </p>
-              <p class="mt-3 text-3xl font-black text-onyx">{{ recordStats.totalMembers }}</p>
-              <p class="mt-2 text-sm text-slate">Rows shown for the selected batch view.</p>
+              <p class="mt-3 text-3xl font-black text-onyx">{{ batchStats.totalMembers }}</p>
+              <p class="mt-2 text-sm text-slate">Rows currently stored across uploaded batches.</p>
             </div>
           </div>
         </div>
@@ -372,16 +353,9 @@ watch(selectedBusinessPartnerId, (value) => {
             <div>
               <p class="text-sm font-bold text-onyx">Import workflow</p>
               <p class="mt-1 text-sm leading-6 text-slate">
-                Each import becomes a batch. We read the Excel contents, save the member rows, then
-                let you review them later and update payment status without retyping anything.
+                Each import becomes a monthly batch. We sync members by identity, refresh the
+                company's current partner list, and keep the payment status for that uploaded month.
               </p>
-            </div>
-          </div>
-
-          <div class="mt-5 space-y-3">
-            <div class="rounded-2xl border border-pebble bg-cloud px-4 py-4 text-sm text-onyx">
-              Excel headers expected: <strong>`No.`</strong>, <strong>`AREA/LOCATION`</strong>,
-              <strong>`ID NO.`</strong>, <strong>`FULL NAME`</strong>, <strong>`CARD NO.`</strong>
             </div>
           </div>
         </div>
@@ -396,8 +370,8 @@ watch(selectedBusinessPartnerId, (value) => {
           </p>
           <h2 class="mt-2 text-xl font-black text-onyx">Import a new partner Excel file</h2>
           <p class="mt-1 text-sm text-slate">
-            Read the Excel contents and create a member batch with partner, company, and payment
-            tracking state.
+            Read the Excel contents, sync recurring members for the selected company, and create
+            this month's payment batch without duplicating the same person record.
           </p>
         </div>
         <button
@@ -463,6 +437,49 @@ watch(selectedBusinessPartnerId, (value) => {
             icon="feather:home"
             readonly
           />
+          <AppInput
+            v-model="uploadForm.paidAt"
+            label="Received Date"
+            type="date"
+            icon="feather:check-circle"
+          />
+          <div v-if="requiresManualPaymentPeriod" class="md:col-span-2">
+            <label class="mb-2 block text-sm font-medium text-onyx">Payment Period</label>
+            <div class="grid gap-4 md:grid-cols-2">
+              <div class="relative">
+                <Icon
+                  icon="feather:calendar"
+                  class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate"
+                />
+                <select
+                  v-model="selectedPaymentMonth"
+                  class="w-full rounded-xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fafcff_100%)] py-3.5 pr-4 pl-11 text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+                >
+                  <option value="">Select month</option>
+                  <option
+                    v-for="paymentMonth in paymentMonthOptions"
+                    :key="paymentMonth.value"
+                    :value="paymentMonth.value"
+                  >
+                    {{ paymentMonth.label }}
+                  </option>
+                </select>
+              </div>
+              <select
+                v-model="selectedPaymentYear"
+                class="w-full rounded-xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fafcff_100%)] py-3.5 pr-4 pl-11 text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+              >
+                <option value="">Select year</option>
+                <option
+                  v-for="paymentYear in paymentYearOptions"
+                  :key="paymentYear"
+                  :value="paymentYear"
+                >
+                  {{ paymentYear }}
+                </option>
+              </select>
+            </div>
+          </div>
           <div class="md:col-span-2">
             <label class="mb-2 block text-sm font-medium text-onyx">Upload Notes</label>
             <AppTextArea
@@ -630,9 +647,7 @@ watch(selectedBusinessPartnerId, (value) => {
               v-else
               :key="batch.id"
               class="cursor-pointer"
-              :class="
-                recordScope === 'selected' && selectedBatch?.id === batch.id ? 'bg-apricot' : ''
-              "
+              :class="selectedBatch?.id === batch.id ? 'bg-apricot' : ''"
               @click="selectBatch(batch)"
             >
               <td>
@@ -693,229 +708,6 @@ watch(selectedBusinessPartnerId, (value) => {
                       :class="markingPaidBatchId === batch.id ? 'animate-spin' : ''"
                     />
                     {{ markingPaidBatchId === batch.id ? 'Saving...' : 'Mark All Pending' }}
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </template>
-        </AppTable>
-      </div>
-    </section>
-
-    <section class="rounded-[1.75rem] border border-pebble bg-white p-5 shadow-sm lg:p-6">
-      <div class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h2 class="text-xl font-black text-onyx">Imported Members</h2>
-          <p class="mt-1 text-sm text-slate">
-            {{
-              recordScope === 'all'
-                ? 'Search and review members across all active batch imports.'
-                : selectedBatch
-                  ? `Review rows from ${selectedBatch.batchCode} and update payment tracking.`
-                  : 'Select a batch to review imported member rows.'
-            }}
-          </p>
-        </div>
-
-        <div
-          v-if="recordScope === 'selected' && selectedBatch"
-          class="flex flex-col gap-3 rounded-[1.3rem] border border-pebble bg-[linear-gradient(145deg,#f8f1e6_0%,#eef3ee_100%)] px-4 py-4 text-sm text-onyx sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">
-              Selected batch
-            </p>
-            <p class="mt-2 font-bold">{{ selectedBatch.batchCode }}</p>
-            <p class="mt-1 text-xs text-slate">
-              {{ selectedBatch.companyCode }} · {{ selectedBatch.companyName }}
-            </p>
-          </div>
-          <button
-            v-if="selectedBatch.unpaidRows > 0"
-            type="button"
-            class="inline-flex items-center justify-center gap-2 rounded-full border border-emerald/30 bg-white/85 px-3.5 py-2 text-xs font-semibold text-emerald shadow-sm transition hover:border-emerald/50 hover:bg-emerald-light"
-            :disabled="markingPaidBatchId === selectedBatch.id"
-            @click="openBatchPaymentConfirmation(true)"
-          >
-            <Icon
-              :icon="
-                markingPaidBatchId === selectedBatch.id ? 'feather:loader' : 'feather:check-circle'
-              "
-              class="size-4"
-              :class="markingPaidBatchId === selectedBatch.id ? 'animate-spin' : ''"
-            />
-            {{ markingPaidBatchId === selectedBatch.id ? 'Saving...' : 'Mark All Received' }}
-          </button>
-          <button
-            v-if="selectedBatch.paidRows > 0"
-            type="button"
-            class="inline-flex items-center justify-center gap-2 rounded-full border border-[#cbd7dd] bg-white/85 px-3.5 py-2 text-xs font-semibold text-[#2d5562] shadow-sm transition hover:border-[#9bb6bf] hover:bg-[#edf5f7]"
-            :disabled="markingPaidBatchId === selectedBatch.id"
-            @click="openBatchPaymentConfirmation(false)"
-          >
-            <Icon
-              :icon="
-                markingPaidBatchId === selectedBatch.id ? 'feather:loader' : 'feather:rotate-ccw'
-              "
-              class="size-4"
-              :class="markingPaidBatchId === selectedBatch.id ? 'animate-spin' : ''"
-            />
-            {{ markingPaidBatchId === selectedBatch.id ? 'Saving...' : 'Mark All Pending' }}
-          </button>
-        </div>
-        <div
-          v-else
-          class="rounded-[1.3rem] border border-pebble bg-[linear-gradient(145deg,#eef6f3_0%,#f8f1e6_100%)] px-4 py-4 text-sm text-onyx"
-        >
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Viewing</p>
-          <p class="mt-2 font-bold">All active batch imports</p>
-          <p class="mt-1 text-xs text-slate">{{ recordTotalEntries }} matching members</p>
-        </div>
-      </div>
-
-      <div class="mb-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto]">
-        <AppInput
-          v-model="recordFilters.search"
-          placeholder="Search name, ID no., card no., or location"
-          icon="feather:search"
-        />
-        <div class="w-full">
-          <select
-            v-model="recordFilters.paid"
-            class="w-full rounded-xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fafcff_100%)] px-4 py-3.5 text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
-          >
-            <option value="">All payment states</option>
-            <option value="true">Received only</option>
-            <option value="false">Pending only</option>
-          </select>
-        </div>
-        <div class="flex rounded-xl border border-pebble bg-cloud p-1">
-          <button
-            type="button"
-            class="inline-flex min-h-10 items-center justify-center rounded-lg px-3 text-xs font-semibold transition"
-            :class="
-              recordScope === 'selected'
-                ? 'bg-white text-onyx shadow-sm'
-                : 'text-slate hover:bg-white/70 hover:text-onyx'
-            "
-            @click="selectedBatch && selectBatch(selectedBatch)"
-          >
-            Selected batch
-          </button>
-          <button
-            type="button"
-            class="inline-flex min-h-10 items-center justify-center rounded-lg px-3 text-xs font-semibold transition"
-            :class="
-              recordScope === 'all'
-                ? 'bg-white text-onyx shadow-sm'
-                : 'text-slate hover:bg-white/70 hover:text-onyx'
-            "
-            @click="selectAllBatches"
-          >
-            All batches
-          </button>
-        </div>
-      </div>
-
-      <p v-if="recordError" class="mb-4 rounded-xl bg-ruby-light px-4 py-3 text-sm text-ruby">
-        {{ recordError }}
-      </p>
-
-      <AppLoadingScreen
-        v-if="loadingRecords"
-        title="Loading member records"
-        message="Please wait while we retrieve the imported partner member rows."
-      />
-
-      <div v-else class="overflow-hidden rounded-[1.5rem] border border-pebble">
-        <AppTable
-          :theads="[
-            'Area / Location',
-            'ID No.',
-            'Full Name',
-            'Card No.',
-            'Payment',
-            'Reference No.',
-            'Action',
-          ]"
-          :total-entries="recordTotalEntries"
-          :total-pages="recordTotalPages"
-          :current-page="recordCurrentPage"
-          @update-pg-num="recordCurrentPage = $event"
-        >
-          <template #trs>
-            <tr v-if="!records.length">
-              <td colspan="7" class="w-full py-14! text-center!">
-                <div class="flex w-full flex-col items-center">
-                  <span
-                    class="flex h-12 w-12 items-center justify-center rounded-2xl bg-fog text-smoke"
-                  >
-                    <Icon icon="feather:users" class="h-5 w-5" />
-                  </span>
-                  <p class="mt-3 font-semibold text-onyx">No imported members found</p>
-                  <p class="mt-1 text-sm text-slate">Choose a batch or adjust your filters.</p>
-                </div>
-              </td>
-            </tr>
-            <tr v-for="record in records" v-else :key="record.id">
-              <td>{{ record.areaLocation }}</td>
-              <td>{{ record.idNo }}</td>
-              <td>
-                <div>
-                  <p class="font-semibold text-onyx">{{ record.fullName }}</p>
-                  <p class="mt-1 text-xs text-slate">
-                    {{ record.batchCode || selectedBatch?.batchCode }} ·
-                    {{ record.companyCode || selectedBatch?.companyCode }}
-                  </p>
-                </div>
-              </td>
-              <td>{{ record.cardNo }}</td>
-              <td>
-                <span
-                  class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
-                  :class="
-                    record.paid ? 'bg-emerald-light text-emerald' : 'bg-amber-light text-amber'
-                  "
-                >
-                  {{ record.paid ? 'Received' : 'Pending' }}
-                </span>
-              </td>
-              <td>
-                <span class="font-mono text-xs font-semibold text-slate">
-                  {{ record.paymentReference || 'N/A' }}
-                </span>
-              </td>
-              <td class="px-5 py-4">
-                <div class="flex justify-end">
-                  <button
-                    type="button"
-                    class="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-semibold transition"
-                    :class="
-                      record.paid
-                        ? 'border border-[#cbd7dd] bg-[linear-gradient(180deg,#edf5f7_0%,#e2ecef_100%)] text-[#2d5562] shadow-[0_10px_20px_rgba(54,89,99,0.08)] hover:border-[#9bb6bf]'
-                        : 'border border-[#d8c5a0] bg-[linear-gradient(180deg,#f8eddc_0%,#efe1cb_100%)] text-[#8c6320] shadow-[0_10px_20px_rgba(176,138,52,0.12)] hover:border-[#c59a42]'
-                    "
-                    :disabled="updatingRecordId === record.id"
-                    @click="openRecordPaymentConfirmation(record, !record.paid)"
-                  >
-                    <Icon
-                      :icon="
-                        updatingRecordId === record.id
-                          ? 'feather:loader'
-                          : record.paid
-                            ? 'feather:rotate-ccw'
-                            : 'feather:check-circle'
-                      "
-                      class="size-4"
-                      :class="updatingRecordId === record.id ? 'animate-spin' : ''"
-                    />
-                    {{
-                      updatingRecordId === record.id
-                        ? 'Saving...'
-                        : record.paid
-                          ? 'Mark Pending'
-                          : 'Mark Received'
-                    }}
                   </button>
                 </div>
               </td>
@@ -1045,125 +837,6 @@ watch(selectedBusinessPartnerId, (value) => {
                 : batchPaymentConfirmation?.paid
                   ? 'Mark All Received'
                   : 'Mark All Pending'
-            }}
-          </AppButton>
-        </div>
-      </template>
-    </AppModal>
-
-    <AppModal
-      :show="Boolean(recordPaymentConfirmation)"
-      :title="
-        recordPaymentConfirmation?.paid
-          ? 'Mark member as received'
-          : 'Mark member as pending payment'
-      "
-      subtitle="Payment received confirmation"
-      max-width="sm:max-w-lg"
-      @close="closeRecordPaymentConfirmation"
-    >
-      <div v-if="recordPaymentConfirmation" class="space-y-5 px-6 py-5">
-        <div class="flex items-start gap-4">
-          <span
-            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
-            :class="
-              recordPaymentConfirmation.paid
-                ? 'bg-emerald-light text-emerald'
-                : 'bg-fog text-[#2d5562]'
-            "
-          >
-            <Icon
-              :icon="recordPaymentConfirmation.paid ? 'feather:check-circle' : 'feather:rotate-ccw'"
-              class="h-5 w-5"
-            />
-          </span>
-          <div>
-            <p class="font-bold text-onyx">{{ recordPaymentConfirmation.record.fullName }}</p>
-            <p class="mt-1 text-sm text-slate">
-              {{ recordPaymentConfirmation.record.batchCode || selectedBatch?.batchCode }} ·
-              {{ recordPaymentConfirmation.record.companyCode || selectedBatch?.companyCode }}
-            </p>
-          </div>
-        </div>
-
-        <div class="rounded-2xl border border-pebble bg-cloud px-4 py-4 text-sm">
-          <div class="grid gap-3 sm:grid-cols-2">
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">ID No.</p>
-              <p class="mt-1 font-bold text-onyx">{{ recordPaymentConfirmation.record.idNo }}</p>
-            </div>
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Card No.</p>
-              <p class="mt-1 font-bold text-onyx">{{ recordPaymentConfirmation.record.cardNo }}</p>
-            </div>
-          </div>
-        </div>
-
-        <p class="text-sm leading-6 text-slate">
-          This will mark this member as
-          {{ recordPaymentConfirmation.paid ? 'received' : 'pending' }}.
-        </p>
-
-        <div v-if="recordPaymentConfirmation.paid" class="space-y-2">
-          <AppInput
-            v-model="recordPaymentConfirmation.paymentReference"
-            label="Payment Reference No."
-            placeholder="Required reference no."
-            icon="feather:hash"
-          />
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 text-sm font-semibold text-tangerine transition hover:text-tangerine-dark"
-            @click="generateRecordPaymentReference"
-          >
-            <Icon icon="feather:refresh-cw" class="h-4 w-4" />
-            Generate reference
-          </button>
-        </div>
-        <p v-else class="rounded-xl bg-fog px-4 py-3 text-sm text-slate">
-          This member's payment reference number will be cleared.
-        </p>
-      </div>
-
-      <template #footer>
-        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <AppButton
-            btn-theme="outline"
-            class="normal-case"
-            :disabled="Boolean(updatingRecordId)"
-            @click="closeRecordPaymentConfirmation"
-          >
-            Cancel
-          </AppButton>
-          <AppButton
-            btn-theme="primary"
-            class="normal-case"
-            :disabled="
-              Boolean(updatingRecordId) ||
-              Boolean(
-                recordPaymentConfirmation?.paid &&
-                !recordPaymentConfirmation.paymentReference.trim(),
-              )
-            "
-            @click="confirmRecordPaymentStatus"
-          >
-            <Icon
-              :icon="
-                updatingRecordId
-                  ? 'feather:loader'
-                  : recordPaymentConfirmation?.paid
-                    ? 'feather:check-circle'
-                    : 'feather:rotate-ccw'
-              "
-              class="h-4 w-4"
-              :class="updatingRecordId ? 'animate-spin' : ''"
-            />
-            {{
-              updatingRecordId
-                ? 'Saving...'
-                : recordPaymentConfirmation?.paid
-                  ? 'Mark Received'
-                  : 'Mark Pending'
             }}
           </AppButton>
         </div>

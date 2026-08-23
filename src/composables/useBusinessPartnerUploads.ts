@@ -7,7 +7,11 @@ import type {
 } from '@/types'
 import { useWellnessApi } from './useWellnessApi'
 
-export function usePartnerMembers() {
+function currentDateInputValue() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+export function useBusinessPartnerUploads() {
   const { request } = useWellnessApi()
 
   const batches = ref<PartnerMemberBatch[]>([])
@@ -52,6 +56,8 @@ export function usePartnerMembers() {
     businessPartnerName: '',
     companyCode: '',
     companyName: '',
+    paymentPeriod: '',
+    paidAt: currentDateInputValue(),
     sheetName: '',
     remarks: '',
   })
@@ -161,8 +167,12 @@ export function usePartnerMembers() {
 
     const formData = new FormData()
     formData.append('file', file)
+    formData.append('businessPartnerCode', uploadForm.businessPartnerCode.trim())
+    formData.append('businessPartnerName', uploadForm.businessPartnerName.trim())
     formData.append('companyCode', uploadForm.companyCode.trim())
     formData.append('companyName', uploadForm.companyName.trim())
+    if (uploadForm.paymentPeriod.trim()) formData.append('paymentPeriod', uploadForm.paymentPeriod.trim())
+    if (uploadForm.paidAt.trim()) formData.append('paidAt', uploadForm.paidAt.trim())
 
     if (uploadForm.sheetName.trim()) formData.append('sheetName', uploadForm.sheetName.trim())
     if (uploadForm.remarks.trim()) formData.append('remarks', uploadForm.remarks.trim())
@@ -185,7 +195,7 @@ export function usePartnerMembers() {
       return false
     }
 
-    uploadSuccess.value = `Member rows imported for ${uploadForm.companyCode.trim() || 'partner members'}.`
+    uploadSuccess.value = `Member rows imported for ${uploadForm.companyCode.trim() || 'business partner uploads'}.`
     batchCurrentPage.value = 1
     await fetchBatches()
     if (selectedBatch.value) {
@@ -286,6 +296,8 @@ export function usePartnerMembers() {
     uploadForm.businessPartnerName = ''
     uploadForm.companyCode = ''
     uploadForm.companyName = ''
+    uploadForm.paymentPeriod = ''
+    uploadForm.paidAt = currentDateInputValue()
     uploadForm.sheetName = ''
     uploadForm.remarks = ''
     uploadError.value = ''
