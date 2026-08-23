@@ -203,12 +203,13 @@ function getPaymentRemittanceStatus(payment: { remittedWell?: string | null }) {
               class="border-b border-pebble bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5fb_100%)]"
             >
               <tr>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Period</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Reference #</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Plan</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Membership Fee</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Remittance</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Received</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">
+                  Wellness Remittance Code
+                </th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Period</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Posted</th>
               </tr>
             </thead>
@@ -218,16 +219,6 @@ function getPaymentRemittanceStatus(payment: { remittedWell?: string | null }) {
                 :key="payment.paymentCollectionId"
                 class="transition-colors duration-200 hover:bg-apricot"
               >
-                <td class="px-6 py-4 align-top text-onyx">
-                  <span class="font-semibold text-onyx">
-                    {{ formatDateOnly(payment.paymentPeriod) }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 align-top text-onyx">
-                  <span class="block max-w-60 whitespace-normal wrap-break-word">
-                    {{ payment.referenceNumber || 'N/A' }}
-                  </span>
-                </td>
                 <td class="px-6 py-4 align-top text-onyx">
                   <span
                     class="inline-flex rounded-full bg-sapphire-light px-3 py-1 text-xs font-bold tracking-[0.08em] text-sapphire"
@@ -246,8 +237,11 @@ function getPaymentRemittanceStatus(payment: { remittedWell?: string | null }) {
                     {{ getPaymentRemittanceStatus(payment).label }}
                   </span>
                 </td>
+                <td class="px-6 py-4 align-top text-onyx">{{ payment.remittedWell || 'N/A' }}</td>
                 <td class="px-6 py-4 align-top text-onyx">
-                  {{ formatDate(payment.dateReceived) }}
+                  <span class="font-semibold text-onyx">
+                    {{ formatDateOnly(payment.paymentPeriod) }}
+                  </span>
                 </td>
                 <td class="px-6 py-4 align-top text-onyx">{{ formatDate(payment.datePosted) }}</td>
               </tr>

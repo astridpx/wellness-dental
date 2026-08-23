@@ -91,15 +91,12 @@ export function useMembershipDetails() {
 
     loadingPayments.value = true
     paymentErrorMessage.value = ''
-
-    const paymentGroupId =
-      selectedMember.value.mainPlanholderId || selectedMember.value.planholderId
     const params = new URLSearchParams({
       page: String(paymentCurrentPage.value),
       perPage: '10',
       sortBy: 'paymentCollectionId',
       sortOrder: 'desc',
-      mainPlanholderId: paymentGroupId,
+      planholderId: selectedMember.value.planholderId,
     })
 
     const result = await request<MembershipPaymentRecord[]>(
