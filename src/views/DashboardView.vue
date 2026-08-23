@@ -36,6 +36,13 @@ const loadingUsersCount = ref(false)
 const loadingPartnerBatchCount = ref(false)
 const loadingBusinessPartnerCount = ref(false)
 
+function formatDashboardCount(value: number) {
+  const normalized = Number(value || 0)
+  if (!Number.isFinite(normalized)) return '0'
+  if (normalized < 10000) return String(normalized)
+  return `${Math.floor(normalized / 1000)}K +`
+}
+
 const accessibleModuleCount = computed(() => {
   let count = 2
 
@@ -384,7 +391,7 @@ onMounted(() => {
                   <Icon :icon="card.icon" class="size-4" />
                 </span>
               </div>
-              <AppStatValue :loading="card.loading" :value="card.value" />
+              <AppStatValue :loading="card.loading" :value="formatDashboardCount(Number(card.value || 0))" />
               <p class="mt-3 text-sm leading-6 text-slate">{{ card.note }}</p>
             </article>
           </div>
@@ -484,7 +491,9 @@ onMounted(() => {
               <td class="font-medium text-onyx">{{ row.module }}</td>
               <td>
                 <span v-if="row.loading" class="text-slate">Loading...</span>
-                <span v-else class="font-semibold text-onyx">{{ row.count }}</span>
+                <span v-else class="font-semibold text-onyx">{{
+                  formatDashboardCount(Number(row.count || 0))
+                }}</span>
               </td>
               <td>
                 <span
