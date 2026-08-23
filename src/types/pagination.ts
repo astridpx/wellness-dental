@@ -20,6 +20,11 @@ export type MembershipPaginationMetadata = PaginationMetadata & {
   unremittedMembers?: number
 }
 
+export type ImportedPartnerMemberPaginationMetadata = PaginationMetadata & {
+  paidMembers?: number
+  unpaidMembers?: number
+}
+
 export type DentalAvailmentHistoryPaginationMetadata = PaginationMetadata & {
   paidRows?: number
   unpaidRows?: number

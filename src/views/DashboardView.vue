@@ -5,12 +5,7 @@ import { useRouter } from 'vue-router'
 import { AppStatValue, AppTable } from '@/components/app'
 import { APP_PER_PAGE } from '@/constants/app'
 import { useAuth, useDentists, usePlans, useWellnessApi } from '@/composables'
-import type {
-  ActivityItem,
-  DirectoryRow,
-  OverviewCard,
-  SummaryEntityResponse,
-} from '@/types'
+import type { ActivityItem, DirectoryRow, OverviewCard, SummaryEntityResponse } from '@/types'
 
 const router = useRouter()
 const { getStoredRoles } = useAuth()
@@ -206,7 +201,7 @@ const directoryRows = computed<DirectoryRow[]>(() => {
   if (canViewPartnerBatches.value) {
     rows.push({
       id: 'partner-members',
-      module: 'Partner Members',
+      module: 'Business Partner Uploads',
       count: partnerBatchCount.value,
       status: loadingPartnerBatchCount.value ? 'Loading' : 'Available',
       route: '/partner-members',
@@ -310,9 +305,7 @@ async function fetchBusinessPartnerCount() {
   if (!canViewBusinessPartners.value) return
 
   loadingBusinessPartnerCount.value = true
-  const result = await request<SummaryEntityResponse[]>(
-    '/wellness/businessPartners?perPage=100',
-  )
+  const result = await request<SummaryEntityResponse[]>('/wellness/businessPartners?perPage=100')
   businessPartnerCount.value = result.ok && Array.isArray(result.data) ? result.data.length : 0
   loadingBusinessPartnerCount.value = false
 }

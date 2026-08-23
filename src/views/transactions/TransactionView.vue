@@ -3,7 +3,7 @@ import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { AppButton, AppDialog, AppInput, AppLoadingScreen, AppTable } from '@/components/app'
-import { useDentalAvailmentHistory, usePartnerMembers } from '@/composables'
+import { useBusinessPartnerUploads, useDentalAvailmentHistory } from '@/composables'
 import type { DentalAvailmentRecord, PartnerMemberRecord } from '@/types'
 import { formatDate, formatDateTime, formatMoney } from '@/utils'
 
@@ -45,7 +45,7 @@ const {
   recordUnpaidEntries: partnerPendingRows,
   recordTotalPages,
   updatePaymentStatus,
-} = usePartnerMembers()
+} = useBusinessPartnerUploads()
 
 recordScope.value = 'all'
 
@@ -331,7 +331,7 @@ function clearActiveFilters() {
             @click="router.push('/partner-members')"
           >
             <Icon icon="feather:users" class="h-4 w-4" />
-            Partner Members
+            Business Partner Uploads
           </AppButton>
         </div>
       </div>

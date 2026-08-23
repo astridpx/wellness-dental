@@ -3,6 +3,7 @@ export type PartnerMemberBatch = {
   batchCode: string
   companyCode: string
   companyName: string
+  paymentPeriod?: string | null
   sourceFilename: string
   sourceSheetName?: string | null
   sourceMimeType?: string | null
@@ -26,9 +27,10 @@ export type PartnerMemberRecord = {
   id: number
   batchId: number
   rowNumber: number
+  memberId?: number
   excelNo?: string | null
   areaLocation: string
-  idNo: string
+  idNo?: string | null
   fullName: string
   cardNo: string
   paid: boolean
@@ -42,4 +44,41 @@ export type PartnerMemberRecord = {
   companyName?: string
   isCurrent?: boolean
   uploadedAt?: string
+}
+
+export type ImportedPartnerMember = {
+  memberId: number
+  companyCode: string
+  companyName: string
+  excelNo?: string | null
+  areaLocation: string
+  idNo?: string | null
+  fullName: string
+  cardNo: string
+  currentBatchId?: number | null
+  currentBatchCode?: string | null
+  currentPaymentPeriod?: string | null
+  currentBatchUploadedAt?: string | null
+  currentPaid?: boolean | null
+  currentPaidAt?: string | null
+  currentPaymentReference?: string | null
+  currentRemarks?: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type ImportedPartnerMemberPaymentRecord = {
+  paymentRecordId: number
+  batchId: number
+  memberId: number
+  paid: boolean
+  paidAt?: string | null
+  paymentReference?: string | null
+  remarks?: string | null
+  batchCode?: string | null
+  companyCode?: string | null
+  companyName?: string | null
+  paymentPeriod?: string | null
+  uploadedAt?: string | null
+  sourceFilename?: string | null
 }

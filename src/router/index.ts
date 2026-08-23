@@ -16,7 +16,8 @@ import SingleDentistView from '@/views/dentists/SingleDentistView.vue'
 import SingleUserView from '@/views/users/SingleUserView.vue'
 import TransactionView from '@/views/transactions/TransactionView.vue'
 import OptionsView from '@/views/OptionsView.vue'
-import PartnerMembersView from '@/views/PartnerMembersView.vue'
+import BusinessPartnerUploadsView from '@/views/BusinessPartnerUploadsView.vue'
+import ImportedPartnerMembersView from '@/views/ImportedPartnerMembersView.vue'
 import PaymentExtractionView from '@/views/PaymentExtractionView.vue'
 import PlansView from '@/views/PlansView.vue'
 import MembershipDetailsView from '@/views/MembershipDetailsView.vue'
@@ -213,11 +214,25 @@ const router = createRouter({
       },
     },
     {
+      path: '/partner-members/imported',
+      name: 'importedPartnerMembers',
+      component: ImportedPartnerMembersView,
+      meta: {
+        title: 'Imported Members',
+        icon: 'feather:users',
+        navGroup: {
+          name: 'Partners',
+          icon: 'feather:users',
+        },
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
+      },
+    },
+    {
       path: '/partner-members',
       name: 'partnerMembers',
-      component: PartnerMembersView,
+      component: BusinessPartnerUploadsView,
       meta: {
-        title: 'Partner Members',
+        title: 'Business Partner Uploads',
         icon: 'feather:upload-cloud',
         navGroup: {
           name: 'Partners',
