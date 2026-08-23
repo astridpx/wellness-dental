@@ -179,7 +179,7 @@ const router = createRouter({
       name: 'paymentExtraction',
       component: PaymentExtractionView,
       meta: {
-        title: 'IMS Wellness Payables',
+        title: 'IMS Payables',
         icon: 'feather:download-cloud',
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
       },

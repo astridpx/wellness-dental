@@ -92,6 +92,10 @@ const activeProcedureOptions = computed(() =>
     })),
 )
 
+const procedureNameMap = computed(
+  () => new Map(procedures.value.map((procedure) => [procedure.code.trim().toUpperCase(), procedure.name])),
+)
+
 const createReady = computed(
   () =>
     form.memberName.trim() &&
@@ -273,6 +277,22 @@ function removeProcedureItem(index: number) {
 function procedureLabel(code: string) {
   const procedure = procedures.value.find((item) => item.code === code)
   return procedure ? `${procedure.code} | ${procedure.name}` : code
+}
+
+function procedureName(value?: string | null) {
+  const procedureValue = value?.trim()
+  if (!procedureValue) return 'N/A'
+
+  return procedureValue
+    .split(',')
+    .map((part) => {
+      const normalizedPart = part.trim()
+      if (!normalizedPart) return ''
+
+      return procedureNameMap.value.get(normalizedPart.toUpperCase()) || normalizedPart
+    })
+    .filter(Boolean)
+    .join(', ')
 }
 
 async function submitCreate() {
@@ -988,9 +1008,10 @@ watch(clinicSearch, (search) => {
             >
               <div class="flex items-start justify-between gap-3">
                 <div>
-                  <p class="font-bold text-onyx">{{ row.procedures }}</p>
+                  <p class="font-bold text-onyx">{{ procedureName(row.procedures) }}</p>
                   <p class="mt-1 text-xs text-slate">
                     {{ row.clinicname || 'No clinic' }} · {{ row.dentistname || 'No dentist' }}
+                    {{ row.toothno ? `· Tooth ${row.toothno}` : '' }}
                   </p>
                 </div>
                 <span
