@@ -31,6 +31,7 @@ const {
   uploadForm,
   batchStats,
   uploadBatch,
+  downloadTemplate,
   updateBatchPaymentStatus,
   selectBatch,
   resetUploadForm,
@@ -577,6 +578,10 @@ watch(
                 :class="uploadingBatch ? 'animate-spin' : ''"
               />
               {{ uploadingBatch ? 'Importing...' : 'Import Batch' }}
+            </AppButton>
+            <AppButton btn-theme="outline" class="normal-case" @click="downloadTemplate">
+              <Icon icon="feather:download" class="h-4 w-4" />
+              Download Template
             </AppButton>
             <AppButton btn-theme="outline" class="normal-case" @click="resetUploadState">
               Reset

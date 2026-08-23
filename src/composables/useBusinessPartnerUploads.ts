@@ -5,6 +5,7 @@ import type {
   PartnerRecordPaginationMetadata,
   SortablePaginationMetadata,
 } from '@/types'
+import { useAuth } from './useAuth'
 import { useWellnessApi } from './useWellnessApi'
 
 function currentDateInputValue() {
@@ -13,6 +14,8 @@ function currentDateInputValue() {
 
 export function useBusinessPartnerUploads() {
   const { request } = useWellnessApi()
+  const { getAuthHeaders } = useAuth()
+  const baseURL = import.meta.env.VITE_APP_MAIN_API_BASE_URL
 
   const batches = ref<PartnerMemberBatch[]>([])
   const records = ref<PartnerMemberRecord[]>([])
@@ -206,6 +209,42 @@ export function useBusinessPartnerUploads() {
     return true
   }
 
+  async function downloadTemplate() {
+    uploadError.value = ''
+
+    const params = new URLSearchParams()
+    if (uploadForm.businessPartnerCode.trim()) {
+      params.set('businessPartnerCode', uploadForm.businessPartnerCode.trim())
+    }
+
+    const query = params.toString()
+    const response = await fetch(
+      `${baseURL}/wellness/partnerMembers/template${query ? `?${query}` : ''}`,
+      {
+        headers: getAuthHeaders(false),
+      },
+    )
+
+    if (!response.ok) {
+      uploadError.value = 'Unable to download the import template.'
+      return false
+    }
+
+    const blob = await response.blob()
+    const downloadUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    const partnerCode = uploadForm.businessPartnerCode.trim().toLowerCase() || 'default'
+
+    link.href = downloadUrl
+    link.download = `partner-member-template-${partnerCode}.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(downloadUrl)
+
+    return true
+  }
+
   async function updatePaymentStatus(
     record: PartnerMemberRecord,
     paid: boolean,
@@ -363,6 +402,7 @@ export function useBusinessPartnerUploads() {
     fetchBatches,
     fetchRecords,
     uploadBatch,
+    downloadTemplate,
     updatePaymentStatus,
     updateBatchPaymentStatus,
     selectBatch,
