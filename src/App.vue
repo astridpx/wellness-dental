@@ -9,7 +9,7 @@ type NavItem = {
   name: string
   href: string
   icon?: string
-  children?: Array<{ name: string; path: string; meta: { title: string } }>
+  children?: Array<{ name: string; href: string; icon?: string }>
 }
 
 const route = useRoute()
@@ -48,6 +48,7 @@ const routeTitle = computed(() => String(route.meta.title || 'Workspace'))
 const isForcedPasswordResetFlow = computed(
   () => route.path === '/accountSettings' && route.query.forcePasswordReset === '1',
 )
+const openNavGroups = ref<string[]>([])
 const todayLabel = computed(() =>
   new Intl.DateTimeFormat('en-US', {
     weekday: 'long',
@@ -59,6 +60,21 @@ const todayLabel = computed(() =>
 
 function isActiveLink(href: string) {
   return href === '/' ? route.path === href : route.path.startsWith(href)
+}
+
+function isActiveItem(item: NavItem) {
+  if (!item.children?.length) return isActiveLink(item.href)
+  return item.children.some((child) => isActiveLink(child.href))
+}
+
+function isNavGroupOpen(item: NavItem) {
+  return openNavGroups.value.includes(item.name) || isActiveItem(item)
+}
+
+function toggleNavGroup(name: string) {
+  openNavGroups.value = openNavGroups.value.includes(name)
+    ? openNavGroups.value.filter((item) => item !== name)
+    : [...openNavGroups.value, name]
 }
 
 watch(
@@ -143,21 +159,66 @@ watch(
                 </div>
 
                 <nav class="mt-6 flex-1 space-y-2">
-                  <RouterLink
-                    v-for="item in navigation"
-                    :key="item.name"
-                    :to="item.href"
-                    class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition"
-                    :class="
-                      isActiveLink(item.href)
-                        ? 'bg-[linear-gradient(180deg,#ffffff_0%,#f5f7fb_100%)] text-onyx shadow-[0_12px_24px_rgba(10,24,38,0.16)]'
-                        : 'text-white/78 hover:bg-white/10 hover:text-white'
-                    "
-                    @click="sidebarOpen = false"
-                  >
-                    <Icon :icon="item.icon || 'feather:circle'" class="h-5 w-5 shrink-0" />
-                    {{ item.name }}
-                  </RouterLink>
+                  <div v-for="item in navigation" :key="item.name" class="space-y-2">
+                    <RouterLink
+                      v-if="!item.children?.length"
+                      :to="item.href"
+                      class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition"
+                      :class="
+                        isActiveItem(item)
+                          ? 'bg-[linear-gradient(180deg,#ffffff_0%,#f5f7fb_100%)] text-onyx shadow-[0_12px_24px_rgba(10,24,38,0.16)]'
+                          : 'text-white/78 hover:bg-white/10 hover:text-white'
+                      "
+                      @click="sidebarOpen = false"
+                    >
+                      <Icon :icon="item.icon || 'feather:circle'" class="h-5 w-5 shrink-0" />
+                      {{ item.name }}
+                    </RouterLink>
+
+                    <template v-else>
+                      <button
+                        type="button"
+                        class="flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition"
+                        :class="
+                          isActiveItem(item)
+                            ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.16)_0%,rgba(255,255,255,0.08)_100%)] text-white shadow-[0_12px_24px_rgba(10,24,38,0.14)]'
+                            : 'text-white/78 hover:bg-white/10 hover:text-white'
+                        "
+                        @click="toggleNavGroup(item.name)"
+                      >
+                        <span class="flex items-center gap-3">
+                          <Icon :icon="item.icon || 'feather:circle'" class="h-5 w-5 shrink-0" />
+                          {{ item.name }}
+                        </span>
+                        <Icon
+                          icon="feather:chevron-down"
+                          class="h-4 w-4 shrink-0 transition"
+                          :class="isNavGroupOpen(item) ? 'rotate-180' : ''"
+                        />
+                      </button>
+
+                      <div
+                        v-show="isNavGroupOpen(item)"
+                        class="ml-4 space-y-2 border-l border-white/12 pl-4"
+                      >
+                        <RouterLink
+                          v-for="child in item.children"
+                          :key="child.href"
+                          :to="child.href"
+                          class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition"
+                          :class="
+                            isActiveLink(child.href)
+                              ? 'bg-[linear-gradient(180deg,#ffffff_0%,#f5f7fb_100%)] text-onyx shadow-[0_12px_24px_rgba(10,24,38,0.16)]'
+                              : 'text-white/70 hover:bg-white/10 hover:text-white'
+                          "
+                          @click="sidebarOpen = false"
+                        >
+                          <Icon :icon="child.icon || 'feather:circle'" class="h-4 w-4 shrink-0" />
+                          {{ child.name }}
+                        </RouterLink>
+                      </div>
+                    </template>
+                  </div>
                 </nav>
 
                 <button
@@ -218,26 +279,76 @@ watch(
             </div>
 
             <nav class="mt-6 flex-1 space-y-2">
-              <RouterLink
-                v-for="item in navigation"
-                :key="item.name"
-                :to="item.href"
-                class="group flex items-center justify-between rounded-2xl px-4 py-3 transition"
-                :class="
-                  isActiveLink(item.href)
-                    ? 'bg-[linear-gradient(180deg,#ffffff_0%,#f5f7fb_100%)] text-onyx shadow-[0_14px_28px_rgba(10,24,38,0.18)]'
-                    : 'text-white/76 hover:bg-white/8 hover:text-white'
-                "
-              >
-                <span class="flex items-center gap-3">
-                  <Icon :icon="item.icon || 'feather:circle'" class="h-5 w-5 shrink-0" />
-                  <span class="text-sm font-semibold">{{ item.name }}</span>
-                </span>
-                <Icon
-                  icon="feather:arrow-up-right"
-                  class="h-4 w-4 opacity-40 transition group-hover:opacity-100"
-                />
-              </RouterLink>
+              <div v-for="item in navigation" :key="item.name" class="space-y-2">
+                <RouterLink
+                  v-if="!item.children?.length"
+                  :to="item.href"
+                  class="group flex items-center justify-between rounded-2xl px-4 py-3 transition"
+                  :class="
+                    isActiveItem(item)
+                      ? 'bg-[linear-gradient(180deg,#ffffff_0%,#f5f7fb_100%)] text-onyx shadow-[0_14px_28px_rgba(10,24,38,0.18)]'
+                      : 'text-white/76 hover:bg-white/8 hover:text-white'
+                  "
+                >
+                  <span class="flex items-center gap-3">
+                    <Icon :icon="item.icon || 'feather:circle'" class="h-5 w-5 shrink-0" />
+                    <span class="text-sm font-semibold">{{ item.name }}</span>
+                  </span>
+                  <Icon
+                    icon="feather:arrow-up-right"
+                    class="h-4 w-4 opacity-40 transition group-hover:opacity-100"
+                  />
+                </RouterLink>
+
+                <template v-else>
+                  <button
+                    type="button"
+                    class="group flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left transition"
+                    :class="
+                      isActiveItem(item)
+                        ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.16)_0%,rgba(255,255,255,0.08)_100%)] text-white shadow-[0_14px_28px_rgba(10,24,38,0.14)]'
+                        : 'text-white/76 hover:bg-white/8 hover:text-white'
+                    "
+                    @click="toggleNavGroup(item.name)"
+                  >
+                    <span class="flex items-center gap-3">
+                      <Icon :icon="item.icon || 'feather:circle'" class="h-5 w-5 shrink-0" />
+                      <span class="text-sm font-semibold">{{ item.name }}</span>
+                    </span>
+                    <Icon
+                      icon="feather:chevron-down"
+                      class="h-4 w-4 shrink-0 transition"
+                      :class="isNavGroupOpen(item) ? 'rotate-180 opacity-100' : 'opacity-50'"
+                    />
+                  </button>
+
+                  <div
+                    v-show="isNavGroupOpen(item)"
+                    class="ml-4 space-y-2 border-l border-white/12 pl-4"
+                  >
+                    <RouterLink
+                      v-for="child in item.children"
+                      :key="child.href"
+                      :to="child.href"
+                      class="group flex items-center justify-between rounded-2xl px-4 py-3 transition"
+                      :class="
+                        isActiveLink(child.href)
+                          ? 'bg-[linear-gradient(180deg,#ffffff_0%,#f5f7fb_100%)] text-onyx shadow-[0_14px_28px_rgba(10,24,38,0.18)]'
+                          : 'text-white/70 hover:bg-white/8 hover:text-white'
+                      "
+                    >
+                      <span class="flex items-center gap-3">
+                        <Icon :icon="child.icon || 'feather:circle'" class="h-4 w-4 shrink-0" />
+                        <span class="text-sm font-semibold">{{ child.name }}</span>
+                      </span>
+                      <Icon
+                        icon="feather:arrow-up-right"
+                        class="h-4 w-4 opacity-40 transition group-hover:opacity-100"
+                      />
+                    </RouterLink>
+                  </div>
+                </template>
+              </div>
             </nav>
 
             <div

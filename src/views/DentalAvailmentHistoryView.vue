@@ -829,6 +829,7 @@ watch(clinicSearch, (search) => {
           'Amount',
           'Dentist Payment',
           'Paid to Dentist At',
+          'Remarks',
           'Status',
           'Actions',
         ]"
@@ -839,7 +840,7 @@ watch(clinicSearch, (search) => {
       >
         <template #trs>
           <tr v-if="!records.length">
-            <td colspan="10" class="py-10! text-center! text-sm text-slate">
+            <td colspan="11" class="py-10! text-center! text-sm text-slate">
               No availment history found.
             </td>
           </tr>
@@ -894,6 +895,11 @@ watch(clinicSearch, (search) => {
             </td>
             <td class="text-sm text-slate">
               {{ isDoctorPaid(record) ? formatDateTime(record.paidAt) : 'N/A' }}
+            </td>
+            <td>
+              <span class="block max-w-56 whitespace-normal text-sm text-slate">
+                {{ record.remarks || 'N/A' }}
+              </span>
             </td>
             <td>
               <span

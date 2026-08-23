@@ -73,6 +73,10 @@ const router = createRouter({
       meta: {
         title: 'Dental Availments',
         icon: 'feather:file-text',
+        navGroup: {
+          name: 'Availments',
+          icon: 'feather:file-text',
+        },
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
@@ -83,6 +87,10 @@ const router = createRouter({
       meta: {
         title: 'Availment History',
         icon: 'feather:clock',
+        navGroup: {
+          name: 'Availments',
+          icon: 'feather:file-text',
+        },
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
@@ -103,6 +111,10 @@ const router = createRouter({
       meta: {
         title: 'Dentist Profile',
         icon: 'streamline-ultimate:dentistry-tooth-shield',
+        navGroup: {
+          name: 'Dentist',
+          icon: 'feather:briefcase',
+        },
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
@@ -133,6 +145,10 @@ const router = createRouter({
       meta: {
         title: 'Dental Clinic',
         icon: 'feather:briefcase',
+        navGroup: {
+          name: 'Dentist',
+          icon: 'feather:briefcase',
+        },
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
@@ -161,6 +177,10 @@ const router = createRouter({
       meta: {
         title: 'IMS Dental Plans',
         icon: 'feather:clipboard',
+        navGroup: {
+          name: 'IMS',
+          icon: 'feather:layers',
+        },
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
@@ -171,6 +191,10 @@ const router = createRouter({
       meta: {
         title: 'IMS Membership Details',
         icon: 'feather:shield',
+        navGroup: {
+          name: 'IMS',
+          icon: 'feather:layers',
+        },
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
@@ -181,6 +205,10 @@ const router = createRouter({
       meta: {
         title: 'IMS Payables',
         icon: 'feather:download-cloud',
+        navGroup: {
+          name: 'IMS',
+          icon: 'feather:layers',
+        },
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
       },
     },
@@ -191,6 +219,10 @@ const router = createRouter({
       meta: {
         title: 'Partner Members',
         icon: 'feather:upload-cloud',
+        navGroup: {
+          name: 'Partners',
+          icon: 'feather:users',
+        },
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
       },
     },
@@ -201,6 +233,10 @@ const router = createRouter({
       meta: {
         title: 'Business Partners',
         icon: 'feather:briefcase',
+        navGroup: {
+          name: 'Partners',
+          icon: 'feather:users',
+        },
         navItem: [true, { visibleTo: ['superAdmin', 'admin'] }],
       },
     },
@@ -211,7 +247,7 @@ const router = createRouter({
       meta: {
         title: 'Users',
         icon: 'feather:users',
-        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
+        navItem: [true, { visibleTo: ['superAdmin', 'admin'] }],
       },
     },
     {
@@ -221,7 +257,7 @@ const router = createRouter({
       meta: {
         title: 'Add Users',
         icon: 'feather:home',
-        navItem: [false, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
+        navItem: [false, { visibleTo: ['superAdmin', 'admin'] }],
       },
     },
     {
@@ -231,7 +267,7 @@ const router = createRouter({
       meta: {
         title: 'Edit Users',
         icon: 'feather:home',
-        navItem: [false, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
+        navItem: [false, { visibleTo: ['superAdmin', 'admin'] }],
       },
     },
     {
@@ -241,7 +277,7 @@ const router = createRouter({
       meta: {
         title: 'Setup Library',
         icon: 'feather:sliders',
-        navItem: [true, { visibleTo: ['superAdmin', 'admin'] }],
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
     {
@@ -251,6 +287,10 @@ const router = createRouter({
       meta: {
         title: 'User Logs',
         icon: 'tabler:address-book',
+        navGroup: {
+          name: 'Logs',
+          icon: 'feather:activity',
+        },
         navItem: [true, { visibleTo: ['superAdmin'] }],
       },
     },
@@ -261,6 +301,10 @@ const router = createRouter({
       meta: {
         title: 'System Logs',
         icon: 'feather:activity',
+        navGroup: {
+          name: 'Logs',
+          icon: 'feather:activity',
+        },
         navItem: [true, { visibleTo: ['superAdmin'] }],
       },
     },
