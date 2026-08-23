@@ -3,7 +3,7 @@ import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { AppButton, AppDialog, AppInput, AppLoadingScreen, AppTable } from '@/components/app'
-import { useBusinessPartnerUploads, useDentalAvailmentHistory } from '@/composables'
+import { useBusinessPartnerUploads, useDentalAvailmentHistory, useProcedures } from '@/composables'
 import type { DentalAvailmentRecord, PartnerMemberRecord } from '@/types'
 import { formatDate, formatDateTime, formatMoney } from '@/utils'
 
@@ -12,6 +12,7 @@ type LedgerTab = 'dentist' | 'partner'
 const router = useRouter()
 const activeTab = ref<LedgerTab>('dentist')
 const showFilterDialog = ref(false)
+const dentistPaymentTarget = ref<{ record: DentalAvailmentRecord; paid: boolean } | null>(null)
 const partnerPaymentTarget = ref<{
   record: PartnerMemberRecord
   paid: boolean
@@ -30,6 +31,8 @@ const {
   unpaidAmount: visibleDentistPayable,
   totalEntries: dentistTotalEntries,
   totalPages: dentistTotalPages,
+  updateDoctorPaymentStatus,
+  updatingPaymentId,
 } = useDentalAvailmentHistory()
 
 const {
@@ -46,6 +49,7 @@ const {
   recordTotalPages,
   updatePaymentStatus,
 } = useBusinessPartnerUploads()
+const { procedures } = useProcedures()
 
 recordScope.value = 'all'
 
@@ -69,6 +73,51 @@ const partnerFilterCount = computed(
 const activeFilterCount = computed(() =>
   activeTab.value === 'dentist' ? dentistFilterCount.value : partnerFilterCount.value,
 )
+const dentistStatusOptions = computed(() => {
+  const statuses = new Set<string>()
+
+  for (const record of dentistRows.value) {
+    const status = String(record.status || '').trim()
+    if (status) statuses.add(status)
+  }
+
+  if (dentistFilters.status.trim()) {
+    statuses.add(dentistFilters.status.trim())
+  }
+
+  return Array.from(statuses).sort((left, right) => left.localeCompare(right))
+})
+const procedureNameMap = computed(
+  () => new Map(procedures.value.map((procedure) => [procedure.code.trim().toUpperCase(), procedure.name])),
+)
+
+function formatStatusLabel(value?: string | null) {
+  const normalized = String(value || '').trim()
+  if (!normalized) return 'N/A'
+
+  return normalized
+    .toLowerCase()
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+function procedureName(value?: string | null) {
+  const procedureValue = value?.trim()
+  if (!procedureValue) return 'N/A'
+
+  return procedureValue
+    .split(',')
+    .map((part) => {
+      const normalizedPart = part.trim()
+      if (!normalizedPart) return ''
+
+      return procedureNameMap.value.get(normalizedPart.toUpperCase()) || normalizedPart
+    })
+    .filter(Boolean)
+    .join(', ')
+}
 
 function isDoctorPaid(record?: DentalAvailmentRecord | null) {
   if (!record) return false
@@ -103,6 +152,26 @@ function getDoctorPaymentStatus(record: DentalAvailmentRecord) {
     label: 'Unpaid',
     className: 'bg-amber-light text-amber',
   }
+}
+
+function openDentistPaymentDialog(record: DentalAvailmentRecord, paid: boolean) {
+  if (updatingPaymentId.value || isDoctorCancelled(record)) return
+  dentistPaymentTarget.value = { record, paid }
+}
+
+function closeDentistPaymentDialog() {
+  if (updatingPaymentId.value) return
+  dentistPaymentTarget.value = null
+}
+
+async function confirmDentistPaymentStatus() {
+  if (!dentistPaymentTarget.value) return
+
+  const updated = await updateDoctorPaymentStatus(
+    dentistPaymentTarget.value.record,
+    dentistPaymentTarget.value.paid,
+  )
+  if (updated) dentistPaymentTarget.value = null
 }
 
 function openPartnerPaymentDialog(record: PartnerMemberRecord, paid: boolean) {
@@ -196,8 +265,9 @@ function clearActiveFilters() {
               class="w-full rounded-xl border border-pebble bg-white px-4 py-3.5 text-sm text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
             >
               <option value="">All availments</option>
-              <option value="valid">Valid only</option>
-              <option value="invalid">Cancelled only</option>
+              <option v-for="status in dentistStatusOptions" :key="status" :value="status">
+                {{ formatStatusLabel(status) }}
+              </option>
             </select>
           </div>
         </div>
@@ -236,6 +306,58 @@ function clearActiveFilters() {
           <Icon icon="feather:rotate-ccw" class="h-4 w-4" />
           Clear fields
         </button>
+      </div>
+    </template>
+  </AppDialog>
+
+  <AppDialog
+    :title="dentistPaymentTarget?.paid ? 'Mark dentist as paid' : 'Mark dentist as unpaid'"
+    :show="Boolean(dentistPaymentTarget)"
+    :disabled="Boolean(updatingPaymentId)"
+    :confirm-label="
+      updatingPaymentId
+        ? 'Saving...'
+        : dentistPaymentTarget?.paid
+          ? 'Mark Dentist Paid'
+          : 'Mark Dentist Unpaid'
+    "
+    @close="closeDentistPaymentDialog"
+    @confirm="confirmDentistPaymentStatus"
+  >
+    <template #dialog-content>
+      <div v-if="dentistPaymentTarget" class="space-y-4">
+        <div
+          class="rounded-[1.5rem] border border-emerald/15 bg-[linear-gradient(135deg,#ecfdf5_0%,#ffffff_100%)] p-5"
+        >
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald">
+            Dentist payment
+          </p>
+          <p class="mt-2 text-sm leading-6 text-slate">
+            This tracks whether the dentist or clinic has already been paid for this availment
+            row.
+          </p>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Approval</p>
+            <p class="mt-2 font-mono text-sm font-bold text-onyx">
+              {{ dentistPaymentTarget.record.approvalno || 'N/A' }}
+            </p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Procedure</p>
+            <p class="mt-2 text-sm font-bold text-onyx">
+              {{ procedureName(dentistPaymentTarget.record.procedures) }}
+            </p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4 sm:col-span-2">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Dentist / Clinic</p>
+            <p class="mt-2 text-sm font-bold text-onyx">
+              {{ dentistPaymentTarget.record.dentistname || 'N/A' }} ·
+              {{ dentistPaymentTarget.record.clinicname || 'N/A' }}
+            </p>
+          </div>
+        </div>
       </div>
     </template>
   </AppDialog>
@@ -427,6 +549,7 @@ function clearActiveFilters() {
             'Availment Date',
             'Amount',
             'Status',
+            'Action',
           ]"
           :total-entries="dentistTotalEntries"
           :total-pages="dentistTotalPages"
@@ -435,7 +558,7 @@ function clearActiveFilters() {
         >
           <template #trs>
             <tr v-if="!dentistRows.length">
-              <td colspan="7" class="py-12! text-center! text-sm text-slate">
+              <td colspan="8" class="py-12! text-center! text-sm text-slate">
                 No dentist payment rows found.
               </td>
             </tr>
@@ -449,7 +572,7 @@ function clearActiveFilters() {
                 <p class="mt-1 text-xs text-slate">{{ record.clinicname || 'N/A' }}</p>
               </td>
               <td>
-                <p class="font-semibold text-onyx">{{ record.procedures }}</p>
+                <p class="font-semibold text-onyx">{{ procedureName(record.procedures) }}</p>
                 <p class="mt-1 text-xs text-slate">Tooth {{ record.toothno || 'N/A' }}</p>
               </td>
               <td>{{ formatDate(record.availdate) }}</td>
@@ -461,6 +584,35 @@ function clearActiveFilters() {
                 >
                   {{ getDoctorPaymentStatus(record).label }}
                 </span>
+              </td>
+              <td>
+                <div v-if="!isDoctorCancelled(record)" class="flex justify-end">
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
+                    :class="
+                      isDoctorPaid(record)
+                        ? 'border border-[#cbd7dd] bg-[linear-gradient(180deg,#edf5f7_0%,#e2ecef_100%)] text-[#2d5562] shadow-[0_10px_20px_rgba(54,89,99,0.08)] hover:border-[#9bb6bf]'
+                        : 'border border-emerald/20 bg-emerald-light text-emerald hover:border-emerald/40 hover:bg-white'
+                    "
+                    :disabled="updatingPaymentId === record.dentalid"
+                    @click="openDentistPaymentDialog(record, !isDoctorPaid(record))"
+                  >
+                    <Icon
+                      :icon="
+                        updatingPaymentId === record.dentalid
+                          ? 'feather:loader'
+                          : isDoctorPaid(record)
+                            ? 'feather:rotate-ccw'
+                            : 'feather:check-circle'
+                      "
+                      class="h-4 w-4"
+                      :class="{ 'animate-spin': updatingPaymentId === record.dentalid }"
+                    />
+                    {{ isDoctorPaid(record) ? 'Mark Unpaid' : 'Mark Paid' }}
+                  </button>
+                </div>
+                <span v-else class="text-sm text-slate">N/A</span>
               </td>
             </tr>
           </template>
@@ -487,8 +639,8 @@ function clearActiveFilters() {
             'Card No.',
             'Batch',
             'Uploaded',
-            'Payment',
-            'Reference No.',
+            'Status',
+            'Received Date',
             'Action',
           ]"
           :total-entries="recordTotalEntries"
@@ -524,11 +676,7 @@ function clearActiveFilters() {
                   {{ record.paid ? 'Received' : 'Pending' }}
                 </span>
               </td>
-              <td>
-                <span class="font-mono text-xs font-semibold text-slate">
-                  {{ record.paymentReference || 'N/A' }}
-                </span>
-              </td>
+              <td>{{ record.paid ? formatDate(record.paidAt) : 'N/A' }}</td>
               <td>
                 <div class="flex justify-end">
                   <button

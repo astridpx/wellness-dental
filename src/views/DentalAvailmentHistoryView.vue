@@ -104,6 +104,9 @@ const activeProcedureOptions = computed(() =>
         .join(' | '),
     })),
 )
+const procedureNameMap = computed(
+  () => new Map(procedures.value.map((procedure) => [procedure.code.trim().toUpperCase(), procedure.name])),
+)
 const clinicOptions = computed(() =>
   clinics.value.map((clinic) => ({
     value: clinic.clinicidno,
@@ -122,6 +125,22 @@ const editReady = computed(
 const toothNumberOptions = ['ALL', ...Array.from({ length: 32 }, (_, index) => String(index + 1))]
 let dentistSearchTimer: number | undefined
 let clinicSearchTimer: number | undefined
+
+function procedureName(value?: string | null) {
+  const procedureValue = value?.trim()
+  if (!procedureValue) return 'N/A'
+
+  return procedureValue
+    .split(',')
+    .map((part) => {
+      const normalizedPart = part.trim()
+      if (!normalizedPart) return ''
+
+      return procedureNameMap.value.get(normalizedPart.toUpperCase()) || normalizedPart
+    })
+    .filter(Boolean)
+    .join(', ')
+}
 
 function normalizeLegacyRateKey(value: string) {
   const normalized = value.toUpperCase().replace(/[^A-Z0-9]/g, '')
@@ -871,7 +890,7 @@ watch(clinicSearch, (search) => {
               <span class="mt-1 block text-xs text-slate">{{ record.clientcode || 'N/A' }}</span>
             </td>
             <td>
-              <span class="text-sm font-bold text-onyx">{{ record.procedures }}</span>
+              <span class="text-sm font-bold text-onyx">{{ procedureName(record.procedures) }}</span>
               <span class="mt-1 block text-xs text-slate">Tooth {{ record.toothno || 'N/A' }}</span>
             </td>
             <td>
