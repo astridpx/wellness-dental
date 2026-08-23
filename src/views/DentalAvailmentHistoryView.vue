@@ -343,7 +343,7 @@ watch(
   ([availableDentists, selectedId]) => {
     const options = availableDentists.map((dentist) => ({
       value: dentist.dentistidno,
-      label: dentist.dentistname,
+      label: formatLegacyDentistName(dentist),
       description: [dentist.dentistcode, dentist.prcno, dentist.specialization]
         .filter(Boolean)
         .join(' | '),
@@ -428,6 +428,20 @@ watch(clinicSearch, (search) => {
     void fetchClinics()
   }, 350)
 })
+
+
+
+
+function formatLegacyDentistName(dentist: { dentistname?: string | null; firstname?: string | null; middleinitial?: string | null; lastname?: string | null }) {
+  if (dentist.dentistname?.trim()) return dentist.dentistname.trim()
+
+  const firstName = String(dentist.firstname || '').trim()
+  const middleInitial = String(dentist.middleinitial || '').trim().replace(/\.+$/, '')
+  const lastName = String(dentist.lastname || '').trim()
+  const rightSide = [firstName, middleInitial ? `${middleInitial}.` : ''].filter(Boolean).join(' ').trim()
+
+  return [lastName, rightSide].filter(Boolean).join(', ').trim()
+}
 </script>
 
 <template>

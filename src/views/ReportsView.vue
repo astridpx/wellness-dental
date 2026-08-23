@@ -57,6 +57,8 @@ const retainedCompany = ref<CompanyOption | null>(null)
 let dentistSearchTimer: number | undefined
 let companySearchTimer: number | undefined
 
+
+
 const reportModes: Array<{
   value: AvailmentReportMode
   label: string
@@ -329,9 +331,7 @@ watch(
   ([availableDentists, selectedId]) => {
     const options: DentistOption[] = availableDentists.map((dentist) => ({
       value: Number(dentist.dentistidno),
-      label:
-        dentist.dentistname ||
-        [dentist.firstname, dentist.middleinitial, dentist.lastname].filter(Boolean).join(' '),
+      label: formatLegacyDentistName(dentist),
       description: [dentist.dentistcode, dentist.prcno, dentist.specialization]
         .filter(Boolean)
         .join(' | '),
@@ -379,6 +379,18 @@ onMounted(() => {
   void fetchPartnerCompanies()
   void fetchProcedures()
 })
+
+
+function formatLegacyDentistName(dentist: { dentistname?: string | null; firstname?: string | null; middleinitial?: string | null; lastname?: string | null }) {
+  if (dentist.dentistname?.trim()) return dentist.dentistname.trim()
+
+  const firstName = String(dentist.firstname || '').trim()
+  const middleInitial = String(dentist.middleinitial || '').trim().replace(/\.+$/, '')
+  const lastName = String(dentist.lastname || '').trim()
+  const rightSide = [firstName, middleInitial ? `${middleInitial}.` : ''].filter(Boolean).join(' ').trim()
+
+  return [lastName, rightSide].filter(Boolean).join(', ').trim()
+}
 </script>
 
 <template>

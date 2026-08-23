@@ -58,7 +58,7 @@ export function useDentalAvailmentHistory() {
     const params = new URLSearchParams({
       page: String(currentPage.value),
       perPage: '10',
-      sortBy: 'availdate',
+      sortBy: 'dentalid',
       sortOrder: 'desc',
     })
 

@@ -78,9 +78,7 @@ watch(
   ([availableDentists, selectedId, dentistname, prcno, email, dentistcode, isActive]) => {
     const options = availableDentists.map((dentist) => ({
       value: Number(dentist.dentistidno),
-      label:
-        dentist.dentistname ||
-        [dentist.firstname, dentist.middleinitial, dentist.lastname].filter(Boolean).join(' '),
+      label: formatLegacyDentistName(dentist),
       description: [dentist.prcno && `PRC ${dentist.prcno}`, dentist.dentistcode]
         .filter(Boolean)
         .join(' · '),
@@ -172,6 +170,20 @@ const setupSteps = [
   'Contact and schedule',
   'Operating status',
 ]
+
+
+
+
+function formatLegacyDentistName(dentist: { dentistname?: string | null; firstname?: string | null; middleinitial?: string | null; lastname?: string | null }) {
+  if (dentist.dentistname?.trim()) return dentist.dentistname.trim()
+
+  const firstName = String(dentist.firstname || '').trim()
+  const middleInitial = String(dentist.middleinitial || '').trim().replace(/\.+$/, '')
+  const lastName = String(dentist.lastname || '').trim()
+  const rightSide = [firstName, middleInitial ? `${middleInitial}.` : ''].filter(Boolean).join(' ').trim()
+
+  return [lastName, rightSide].filter(Boolean).join(', ').trim()
+}
 </script>
 
 <template>

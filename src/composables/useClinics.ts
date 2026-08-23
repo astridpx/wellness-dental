@@ -24,6 +24,7 @@ export function useClinics(options: UseClinicsOptions = {}) {
     clinicIdNo: '',
     clinicName: '',
     clinicCode: '',
+    dentistId: '',
   })
 
   async function fetchClinics() {
@@ -38,6 +39,7 @@ export function useClinics(options: UseClinicsOptions = {}) {
     if (filters.clinicIdNo) params.set('clinicIdNo', filters.clinicIdNo)
     if (filters.clinicName) params.set('clinicName', filters.clinicName)
     if (filters.clinicCode) params.set('clinicCode', filters.clinicCode)
+    if (filters.dentistId) params.set('dentistId', filters.dentistId)
 
     const result = await request<Clinic[] | Clinic>(`${CLINICS_ENDPOINT}?${params.toString()}`)
 
