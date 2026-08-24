@@ -23,6 +23,11 @@ export type PartnerMemberBatch = {
   updatedAt?: string
 }
 
+export type PartnerMemberBatchSummary = PartnerMemberBatch & {
+  importedRows: number
+  dentalPremiumTotal: number
+}
+
 export type PartnerMemberRecord = {
   id: number
   batchId: number
@@ -33,6 +38,8 @@ export type PartnerMemberRecord = {
   idNo?: string | null
   fullName: string
   cardNo: string
+  dentalPremium?: number | string | null
+  paymentPeriod?: string | null
   paid: boolean
   paidAt?: string | null
   paymentReference?: string | null
@@ -55,6 +62,7 @@ export type ImportedPartnerMember = {
   idNo?: string | null
   fullName: string
   cardNo: string
+  currentDentalPremium?: number | string | null
   currentBatchId?: number | null
   currentBatchCode?: string | null
   currentPaymentPeriod?: string | null
@@ -75,6 +83,7 @@ export type ImportedPartnerMemberPaymentRecord = {
   paidAt?: string | null
   paymentReference?: string | null
   remarks?: string | null
+  dentalPremium?: number | string | null
   batchCode?: string | null
   companyCode?: string | null
   companyName?: string | null

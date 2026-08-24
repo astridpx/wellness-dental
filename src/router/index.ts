@@ -18,6 +18,7 @@ import TransactionView from '@/views/transactions/TransactionView.vue'
 import OptionsView from '@/views/OptionsView.vue'
 import BusinessPartnerUploadsView from '@/views/BusinessPartnerUploadsView.vue'
 import ImportedPartnerMembersView from '@/views/ImportedPartnerMembersView.vue'
+import IwcWorkbookExtractionView from '@/views/IwcWorkbookExtractionView.vue'
 import PaymentExtractionView from '@/views/PaymentExtractionView.vue'
 import PlansView from '@/views/PlansView.vue'
 import MembershipDetailsView from '@/views/MembershipDetailsView.vue'
@@ -209,6 +210,20 @@ const router = createRouter({
         navGroup: {
           name: 'IMS',
           icon: 'feather:layers',
+        },
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
+      },
+    },
+    {
+      path: '/partner-members/iwc-workbook-extraction',
+      name: 'iwcWorkbookExtraction',
+      component: IwcWorkbookExtractionView,
+      meta: {
+        title: 'IWC Batch Totals',
+        icon: 'feather:database',
+        navGroup: {
+          name: 'Partners',
+          icon: 'feather:users',
         },
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
       },

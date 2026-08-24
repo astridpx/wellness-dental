@@ -171,8 +171,9 @@ const availableDentistOptions = computed(() => {
 })
 
 const assignedDentistName = computed(() => {
-  if (!selectedDentists.value.length) return 'Not assigned yet'
-  if (selectedDentists.value.length === 1) return selectedDentists.value[0].dentistname
+  const [firstDentist] = selectedDentists.value
+  if (!firstDentist) return 'Not assigned yet'
+  if (selectedDentists.value.length === 1) return firstDentist.dentistname
   return `${selectedDentists.value.length} dentists assigned`
 })
 

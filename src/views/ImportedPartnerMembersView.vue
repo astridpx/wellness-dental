@@ -3,7 +3,7 @@ import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
 import { AppButton, AppDialog, AppInput, AppLoadingScreen, AppModal } from '@/components/app'
 import { useImportedPartnerMembers } from '@/composables'
-import { formatDate } from '@/utils'
+import { formatCurrency, formatDate } from '@/utils'
 
 const {
   members,
@@ -193,6 +193,7 @@ function formatPaymentPeriod(value?: string | null) {
               <tr>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Batch</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Payment Period</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Dental Premium</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Status</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Reference</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Paid At</th>
@@ -213,6 +214,9 @@ function formatPaymentPeriod(value?: string | null) {
                   {{ formatPaymentPeriod(payment.paymentPeriod) }}
                 </td>
                 <td class="px-6 py-4 align-top text-onyx">
+                  {{ formatCurrency(payment.dentalPremium) }}
+                </td>
+                <td class="px-6 py-4 align-top text-onyx">
                   <span
                     class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
                     :class="
@@ -231,7 +235,7 @@ function formatPaymentPeriod(value?: string | null) {
                 <td class="px-6 py-4 align-top text-onyx">{{ formatDate(payment.uploadedAt) }}</td>
               </tr>
               <tr v-if="!paymentRecords.length">
-                <td colspan="6" class="w-full px-6 py-14 text-center text-onyx">
+                <td colspan="7" class="w-full px-6 py-14 text-center text-onyx">
                   <div class="flex w-full flex-col items-center">
                     <span
                       class="flex h-12 w-12 items-center justify-center rounded-2xl bg-fog text-smoke"
@@ -376,6 +380,7 @@ function formatPaymentPeriod(value?: string | null) {
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Member</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Company</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Payment Period</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Dental Premium</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">
                   Received from Partner
                 </th>
@@ -413,6 +418,11 @@ function formatPaymentPeriod(value?: string | null) {
                   </div>
                 </td>
                 <td class="px-6 py-4 align-top text-onyx">
+                  <div class="min-w-36 text-sm font-semibold text-onyx">
+                    {{ formatCurrency(member.currentDentalPremium) }}
+                  </div>
+                </td>
+                <td class="px-6 py-4 align-top text-onyx">
                   <div class="min-w-32 text-sm text-slate">
                     {{ formatDateOnly(member.currentPaidAt) }}
                   </div>
@@ -441,7 +451,7 @@ function formatPaymentPeriod(value?: string | null) {
                 </td>
               </tr>
               <tr v-if="totalEntries <= 0">
-                <td colspan="6" class="w-full px-6 py-14 text-center text-onyx">
+                <td colspan="7" class="w-full px-6 py-14 text-center text-onyx">
                   <div class="flex w-full flex-col items-center">
                     <span
                       class="flex h-12 w-12 items-center justify-center rounded-2xl bg-fog text-smoke"
