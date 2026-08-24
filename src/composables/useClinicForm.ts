@@ -36,6 +36,7 @@ const emptyClinicData: ClinicFormData = {
   PF: '',
   CON: '',
   dentistId: null,
+  assignedDentistIds: [],
   dentistname: '',
   prcno: '',
   email: '',
@@ -117,6 +118,9 @@ export function useClinicForm() {
       PF: toFormValue(clinic.PF),
       CON: toFormValue(clinic.CON),
       dentistId: clinic.dentistId == null ? null : Number(clinic.dentistId),
+      assignedDentistIds:
+        clinic.assignedDentistIds?.map((dentistId) => Number(dentistId)).filter(Boolean) ||
+        (clinic.dentistId == null ? [] : [Number(clinic.dentistId)]),
       dentistname: clinic.dentistname || '',
       prcno: clinic.prcno || '',
       email: clinic.email || '',
@@ -161,7 +165,7 @@ export function useClinicForm() {
     if (!clinicData.value.clinicName.trim()) return 'Clinic name is required.'
     if (!clinicData.value.clinicCode.trim()) return 'Clinic code is required.'
     if (!clinicData.value.address.trim()) return 'Clinic address is required.'
-    if (clinicData.value.dentistId == null) return 'Please assign a dentist.'
+    if (!clinicData.value.assignedDentistIds.length) return 'Please assign at least one dentist.'
 
     for (const [field, label] of clinicFeeFields) {
       const value = clinicData.value[field].trim()
@@ -206,7 +210,7 @@ export function useClinicForm() {
       LC: toNumber(clinicData.value.LC),
       PF: toNumber(clinicData.value.PF),
       CON: toNumber(clinicData.value.CON),
-      dentistId: clinicData.value.dentistId,
+      assignedDentistIds: clinicData.value.assignedDentistIds,
     }
   }
 
@@ -275,6 +279,7 @@ export function useClinicForm() {
     isEditMode,
     loadClinicProfile,
     loading,
+    loadedClinic,
     profileMissing,
     save,
     saving,

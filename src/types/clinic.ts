@@ -39,6 +39,17 @@ export type Clinic = {
   email?: string | null
   dentistcode?: string | null
   isActive?: string | number | null
+  assignedDentistIds?: number[] | null
+  assignedDentists?: ClinicAssignedDentist[] | null
+}
+
+export type ClinicAssignedDentist = {
+  dentistId: number | null
+  dentistname: string | null
+  prcno?: string | null
+  email?: string | null
+  dentistcode?: string | null
+  isActive?: string | number | null
 }
 
 export type ClinicFormData = {
@@ -67,6 +78,7 @@ export type ClinicFormData = {
   PF: string
   CON: string
   dentistId: number | null
+  assignedDentistIds: number[]
   dentistname: string
   prcno: string
   email: string

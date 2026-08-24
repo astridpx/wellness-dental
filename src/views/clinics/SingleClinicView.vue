@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { watchDebounced } from '@vueuse/core'
-import { ref, watch } from 'vue'
-import { AppButton, AppInput, AppLoadingScreen, AppSearchSelect } from '@/components/app'
+import { computed, ref, watch } from 'vue'
+import { AppButton, AppInput, AppLoadingScreen } from '@/components/app'
 import { useClinicForm, useDentists } from '@/composables'
+import type { ClinicAssignedDentist, Dentist } from '@/types'
 
 const {
   clearError,
@@ -13,6 +14,7 @@ const {
   goBackToList,
   isEditMode,
   loadClinicProfile,
+  loadedClinic,
   loading,
   profileMissing,
   save,
@@ -32,6 +34,7 @@ type DentistOption = {
   value: number
   label: string
   description: string
+  dentist: SelectedDentistDetails
 }
 
 type SelectedDentistDetails = {
@@ -44,15 +47,6 @@ type SelectedDentistDetails = {
 }
 
 const dentistSearch = ref('')
-const dentistOptions = ref<DentistOption[]>([])
-const assignedDentistName = ref('Not assigned yet')
-const selectedDentist = ref<SelectedDentistDetails | null>(null)
-const selectedDentistStatus = ref('')
-const clinicStatusLabel = ref('Unknown')
-const clinicCodeLabel = ref('Not assigned yet')
-const clinicLocationLabel = ref('Not assigned yet')
-const clinicAccreditationLabel = ref('Not accredited')
-
 const clinicFeeFields = [
   { key: 'TWLB', label: 'TWLB' },
   { key: 'OP', label: 'OP' },
@@ -65,94 +59,6 @@ const clinicFeeFields = [
   { key: 'CON', label: 'CON' },
 ] as const
 
-watch(
-  [
-    dentists,
-    () => clinicData.value.dentistId,
-    () => clinicData.value.dentistname,
-    () => clinicData.value.prcno,
-    () => clinicData.value.email,
-    () => clinicData.value.dentistcode,
-    () => clinicData.value.isActive,
-  ],
-  ([availableDentists, selectedId, dentistname, prcno, email, dentistcode, isActive]) => {
-    const options = availableDentists.map((dentist) => ({
-      value: Number(dentist.dentistidno),
-      label: formatLegacyDentistName(dentist),
-      description: [dentist.prcno && `PRC ${dentist.prcno}`, dentist.dentistcode]
-        .filter(Boolean)
-        .join(' · '),
-    }))
-
-    const normalizedSelectedId = selectedId == null ? null : Number(selectedId)
-    const matchedDentist = availableDentists.find(
-      (dentist) => Number(dentist.dentistidno) === normalizedSelectedId,
-    )
-
-    if (matchedDentist) {
-      selectedDentist.value = {
-        dentistidno: Number(matchedDentist.dentistidno),
-        dentistname:
-          matchedDentist.dentistname ||
-          [matchedDentist.firstname, matchedDentist.middleinitial, matchedDentist.lastname]
-            .filter(Boolean)
-            .join(' '),
-        prcno: matchedDentist.prcno || '',
-        email: matchedDentist.email || '',
-        dentistcode: matchedDentist.dentistcode || '',
-        isActive: String(matchedDentist.Isactive ?? ''),
-      }
-    } else if (normalizedSelectedId == null) {
-      selectedDentist.value = null
-    } else if (selectedDentist.value?.dentistidno !== normalizedSelectedId) {
-      selectedDentist.value = {
-        dentistidno: normalizedSelectedId,
-        dentistname: String(dentistname || 'Assigned dentist'),
-        prcno: String(prcno || ''),
-        email: String(email || ''),
-        dentistcode: String(dentistcode || ''),
-        isActive: String(isActive || ''),
-      }
-    }
-
-    if (
-      normalizedSelectedId != null &&
-      !options.some((option) => option.value === normalizedSelectedId)
-    ) {
-      const retainedDentist = selectedDentist.value
-      options.unshift({
-        value: normalizedSelectedId,
-        label: retainedDentist?.dentistname || 'Assigned dentist',
-        description:
-          [retainedDentist?.prcno && `PRC ${retainedDentist.prcno}`, retainedDentist?.dentistcode]
-            .filter(Boolean)
-            .join(' · ') || 'Currently assigned dentist',
-      })
-    }
-
-    dentistOptions.value = options
-    assignedDentistName.value =
-      options.find((option) => option.value === normalizedSelectedId)?.label || 'Not assigned yet'
-    selectedDentistStatus.value = selectedDentist.value
-      ? String(selectedDentist.value.isActive) === '1'
-        ? 'Active'
-        : String(selectedDentist.value.isActive) === '0'
-          ? 'Inactive'
-          : 'Unknown'
-      : ''
-    clinicStatusLabel.value = clinicData.value.status || 'Unknown'
-    clinicCodeLabel.value = clinicData.value.clinicCode || 'Not assigned yet'
-    clinicLocationLabel.value =
-      clinicData.value.city || clinicData.value.province
-        ? [clinicData.value.city, clinicData.value.province].filter(Boolean).join(', ')
-        : 'Not assigned yet'
-    clinicAccreditationLabel.value = clinicData.value.isAccredited
-      ? 'Accredited'
-      : 'Not accredited'
-  },
-  { immediate: true },
-)
-
 watchDebounced(
   dentistSearch,
   (dentistName) => {
@@ -164,15 +70,12 @@ watchDebounced(
 
 const setupSteps = [
   'Clinic identity',
-  'Dentist assignment',
+  'Dentist assignments',
   'Procedure fee',
   'Location',
   'Contact and schedule',
   'Operating status',
 ]
-
-
-
 
 function formatLegacyDentistName(dentist: { dentistname?: string | null; firstname?: string | null; middleinitial?: string | null; lastname?: string | null }) {
   if (dentist.dentistname?.trim()) return dentist.dentistname.trim()
@@ -183,6 +86,146 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
   const rightSide = [firstName, middleInitial ? `${middleInitial}.` : ''].filter(Boolean).join(' ').trim()
 
   return [lastName, rightSide].filter(Boolean).join(', ').trim()
+}
+
+function normalizeDentistStatus(value: string | number | null | undefined) {
+  if (String(value) === '1') return 'Active'
+  if (String(value) === '0') return 'Inactive'
+  return 'Unknown'
+}
+
+function mapDentistToSelectedDetails(dentist: Dentist): SelectedDentistDetails {
+  return {
+    dentistidno: Number(dentist.dentistidno),
+    dentistname: formatLegacyDentistName(dentist),
+    prcno: dentist.prcno || '',
+    email: dentist.email || '',
+    dentistcode: dentist.dentistcode || '',
+    isActive: String(dentist.Isactive ?? ''),
+  }
+}
+
+function mapAssignedDentistToSelectedDetails(dentist: ClinicAssignedDentist): SelectedDentistDetails | null {
+  if (dentist.dentistId == null) return null
+
+  return {
+    dentistidno: Number(dentist.dentistId),
+    dentistname: String(dentist.dentistname || 'Assigned dentist'),
+    prcno: String(dentist.prcno || ''),
+    email: String(dentist.email || ''),
+    dentistcode: String(dentist.dentistcode || ''),
+    isActive: String(dentist.isActive || ''),
+  }
+}
+
+const dentistOptions = computed<DentistOption[]>(() =>
+  dentists.value.map((dentist) => ({
+    value: Number(dentist.dentistidno),
+    label: formatLegacyDentistName(dentist),
+    description: [dentist.prcno && `PRC ${dentist.prcno}`, dentist.dentistcode]
+      .filter(Boolean)
+      .join(' · '),
+    dentist: mapDentistToSelectedDetails(dentist),
+  })),
+)
+
+const fallbackAssignedDentists = computed<SelectedDentistDetails[]>(() => {
+  const loadedAssignedDentists = loadedClinic.value?.assignedDentists || []
+  const fromLoaded = loadedAssignedDentists
+    .map(mapAssignedDentistToSelectedDetails)
+    .filter((dentist): dentist is SelectedDentistDetails => dentist !== null)
+
+  if (fromLoaded.length) return fromLoaded
+
+  if (clinicData.value.dentistId == null) return []
+
+  return [{
+    dentistidno: Number(clinicData.value.dentistId),
+    dentistname: clinicData.value.dentistname || 'Assigned dentist',
+    prcno: clinicData.value.prcno || '',
+    email: clinicData.value.email || '',
+    dentistcode: clinicData.value.dentistcode || '',
+    isActive: clinicData.value.isActive || '',
+  }]
+})
+
+function resolveSelectedDentist(dentistId: number) {
+  const matchedOption = dentistOptions.value.find((option) => option.value === dentistId)
+  if (matchedOption) return matchedOption.dentist
+
+  return (
+    fallbackAssignedDentists.value.find((dentist) => dentist.dentistidno === dentistId) ||
+    null
+  )
+}
+
+const selectedDentists = computed<SelectedDentistDetails[]>(() =>
+  clinicData.value.assignedDentistIds
+    .map((dentistId) => resolveSelectedDentist(Number(dentistId)))
+    .filter((dentist): dentist is SelectedDentistDetails => dentist !== null),
+)
+
+const availableDentistOptions = computed(() => {
+  const selectedIds = new Set(clinicData.value.assignedDentistIds)
+  return dentistOptions.value.filter((option) => !selectedIds.has(option.value))
+})
+
+const assignedDentistName = computed(() => {
+  if (!selectedDentists.value.length) return 'Not assigned yet'
+  if (selectedDentists.value.length === 1) return selectedDentists.value[0].dentistname
+  return `${selectedDentists.value.length} dentists assigned`
+})
+
+const selectedDentistStatus = computed(() => {
+  if (!selectedDentists.value.length) return 'No dentist selected'
+
+  const activeCount = selectedDentists.value.filter(
+    (dentist) => normalizeDentistStatus(dentist.isActive) === 'Active',
+  ).length
+
+  return `${activeCount}/${selectedDentists.value.length} active`
+})
+
+const clinicStatusLabel = computed(() => clinicData.value.status || 'Unknown')
+const clinicCodeLabel = computed(() => clinicData.value.clinicCode || 'Not assigned yet')
+const clinicLocationLabel = computed(() =>
+  clinicData.value.city || clinicData.value.province
+    ? [clinicData.value.city, clinicData.value.province].filter(Boolean).join(', ')
+    : 'Not assigned yet',
+)
+const clinicAccreditationLabel = computed(() =>
+  clinicData.value.isAccredited ? 'Accredited' : 'Not accredited',
+)
+
+watch(
+  selectedDentists,
+  (dentistsList) => {
+    const primaryDentist = dentistsList[0] || null
+
+    clinicData.value.dentistId = primaryDentist?.dentistidno ?? null
+    clinicData.value.dentistname = primaryDentist?.dentistname || ''
+    clinicData.value.prcno = primaryDentist?.prcno || ''
+    clinicData.value.email = primaryDentist?.email || ''
+    clinicData.value.dentistcode = primaryDentist?.dentistcode || ''
+    clinicData.value.isActive = primaryDentist?.isActive || ''
+  },
+  { immediate: true },
+)
+
+function addDentistAssignment(option: DentistOption) {
+  if (clinicData.value.assignedDentistIds.includes(option.value)) return
+
+  clinicData.value.assignedDentistIds = [
+    ...clinicData.value.assignedDentistIds,
+    option.value,
+  ]
+  dentistSearch.value = ''
+}
+
+function removeDentistAssignment(dentistId: number) {
+  clinicData.value.assignedDentistIds = clinicData.value.assignedDentistIds.filter(
+    (assignedDentistId) => assignedDentistId !== dentistId,
+  )
 }
 
 function scrollToTop() {
@@ -332,7 +375,7 @@ async function submitClinicForm() {
               <p class="mt-2 text-sm font-semibold">{{ clinicCodeLabel }}</p>
             </div>
             <div class="rounded-2xl bg-white/8 px-4 py-3">
-              <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Assigned dentist</p>
+              <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Assigned dentists</p>
               <p class="mt-2 text-sm font-semibold">{{ assignedDentistName }}</p>
             </div>
             <div class="rounded-2xl bg-white/8 px-4 py-3">
@@ -359,7 +402,7 @@ async function submitClinicForm() {
             <div class="rounded-2xl bg-white/8 px-4 py-4">
               <p class="text-[11px] uppercase tracking-[0.18em] text-white/50">Dentist status</p>
               <p class="mt-2 text-sm font-semibold">
-                {{ selectedDentistStatus || 'No dentist selected' }}
+                {{ selectedDentistStatus }}
               </p>
             </div>
           </div>
@@ -446,7 +489,8 @@ async function submitClinicForm() {
           </div>
 
           <p class="mt-3 text-sm leading-6 text-slate">
-            Search the dentist roster by provider name, PRC number, or dentist code.
+            Search the dentist roster by provider name, PRC number, or dentist code, then add one
+            or more dentists to this clinic.
           </p>
 
           <div
@@ -463,51 +507,131 @@ async function submitClinicForm() {
             </button>
           </div>
 
-          <div class="mt-6">
-            <AppSearchSelect
-              v-model="clinicData.dentistId"
-              v-model:search="dentistSearch"
-              :options="dentistOptions"
-              :loading="loadingDentists"
-              label="Assigned Dentist"
-              placeholder="Search for a dentist"
-              empty-text="No dentists match your search."
-            />
-          </div>
-
-          <div class="mt-6 grid gap-5 border-t border-pebble pt-6 md:grid-cols-2">
-            <div class="md:col-span-2">
+          <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+            <div class="space-y-4">
               <AppInput
-                :model-value="selectedDentist?.dentistname || ''"
-                label="Dentist Name"
-                placeholder="Select a dentist to view their details"
-                readonly
+                v-model="dentistSearch"
+                label="Find Dentists"
+                placeholder="Search by name, PRC number, or dentist code"
               />
+
+              <div class="rounded-3xl border border-pebble bg-cloud/55 p-3">
+                <div class="flex items-center justify-between gap-3 px-2 pb-3">
+                  <p class="text-sm font-semibold text-onyx">Search results</p>
+                  <span class="text-xs text-slate">
+                    {{ loadingDentists ? 'Loading...' : `${availableDentistOptions.length} available` }}
+                  </span>
+                </div>
+
+                <div
+                  v-if="availableDentistOptions.length"
+                  class="max-h-80 space-y-2 overflow-y-auto pr-1"
+                >
+                  <button
+                    v-for="option in availableDentistOptions"
+                    :key="option.value"
+                    type="button"
+                    class="flex w-full items-start justify-between gap-4 rounded-2xl border border-transparent bg-white px-4 py-3 text-left shadow-sm transition hover:border-tangerine/30 hover:bg-tangerine-light/40"
+                    @click="addDentistAssignment(option)"
+                  >
+                    <div class="min-w-0">
+                      <p class="text-sm font-semibold text-onyx">{{ option.label }}</p>
+                      <p class="mt-1 text-xs text-slate">
+                        {{ option.description || 'Dentist record available for assignment' }}
+                      </p>
+                    </div>
+                    <span class="shrink-0 rounded-full bg-onyx px-3 py-1 text-xs font-semibold text-white">
+                      Add
+                    </span>
+                  </button>
+                </div>
+
+                <div
+                  v-else
+                  class="rounded-2xl border border-dashed border-pebble bg-white px-4 py-6 text-center text-sm text-slate"
+                >
+                  {{
+                    dentistSearch
+                      ? 'No dentists match your search.'
+                      : 'All loaded dentists are already assigned or no dentists are available yet.'
+                  }}
+                </div>
+              </div>
             </div>
-            <AppInput
-              :model-value="selectedDentist?.email || ''"
-              label="Email Address"
-              placeholder="No dentist selected"
-              readonly
-            />
-            <AppInput
-              :model-value="selectedDentist?.prcno || ''"
-              label="PRC Number"
-              placeholder="No dentist selected"
-              readonly
-            />
-            <AppInput
-              :model-value="selectedDentist?.dentistcode || ''"
-              label="Dentist Code"
-              placeholder="No dentist selected"
-              readonly
-            />
-            <AppInput
-              :model-value="selectedDentistStatus"
-              label="Account Status"
-              placeholder="No dentist selected"
-              readonly
-            />
+
+            <div class="space-y-4">
+              <div class="rounded-3xl border border-pebble bg-white p-4 shadow-sm">
+                <div class="flex items-center justify-between gap-3">
+                  <div>
+                    <p class="text-sm font-semibold text-onyx">Assigned dentists</p>
+                    <p class="mt-1 text-xs text-slate">
+                      The first assigned dentist is used as the primary summary on this profile.
+                    </p>
+                  </div>
+                  <span class="rounded-full bg-cloud px-3 py-1 text-xs font-semibold text-slate">
+                    {{ clinicData.assignedDentistIds.length }} selected
+                  </span>
+                </div>
+
+                <div v-if="selectedDentists.length" class="mt-4 space-y-3">
+                  <article
+                    v-for="dentist in selectedDentists"
+                    :key="dentist.dentistidno"
+                    class="rounded-2xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fafcff_100%)] p-4"
+                  >
+                    <div class="flex items-start justify-between gap-4">
+                      <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                          <p class="text-sm font-semibold text-onyx">{{ dentist.dentistname }}</p>
+                          <span
+                            v-if="dentist.dentistidno === clinicData.assignedDentistIds[0]"
+                            class="rounded-full bg-tangerine-light px-2.5 py-1 text-[11px] font-semibold text-tangerine"
+                          >
+                            Primary
+                          </span>
+                        </div>
+                        <p class="mt-1 text-xs text-slate">
+                          {{
+                            [dentist.prcno && `PRC ${dentist.prcno}`, dentist.dentistcode]
+                              .filter(Boolean)
+                              .join(' · ') || 'Dentist details'
+                          }}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        class="rounded-full border border-ruby/20 bg-ruby-light px-3 py-1 text-xs font-semibold text-ruby transition hover:border-ruby/40"
+                        @click="removeDentistAssignment(dentist.dentistidno)"
+                      >
+                        Remove
+                      </button>
+                    </div>
+
+                    <div class="mt-4 grid gap-3 md:grid-cols-2">
+                      <div class="rounded-2xl bg-cloud px-3 py-3">
+                        <p class="text-[11px] uppercase tracking-[0.18em] text-smoke">Email</p>
+                        <p class="mt-1 text-sm font-medium text-onyx">
+                          {{ dentist.email || 'No email on file' }}
+                        </p>
+                      </div>
+                      <div class="rounded-2xl bg-cloud px-3 py-3">
+                        <p class="text-[11px] uppercase tracking-[0.18em] text-smoke">Status</p>
+                        <p class="mt-1 text-sm font-medium text-onyx">
+                          {{ normalizeDentistStatus(dentist.isActive) }}
+                        </p>
+                      </div>
+                    </div>
+                  </article>
+                </div>
+
+                <div
+                  v-else
+                  class="mt-4 rounded-2xl border border-dashed border-pebble bg-cloud px-4 py-6 text-center text-sm text-slate"
+                >
+                  No dentists assigned yet.
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
