@@ -3,7 +3,14 @@ import { Icon } from '@iconify/vue'
 import * as XLSX from 'xlsx'
 import { AppButton, AppLoadingScreen, AppTable } from '@/components/app'
 import { useIwcBatchExtraction } from '@/composables'
-import { formatCurrency, formatDate, formatDateTime } from '@/utils'
+import {
+  autoFitWorksheetColumns,
+  formatCurrency,
+  formatDate,
+  formatDateTime,
+  formatExcelDateManila,
+  formatExcelDateTimeManila,
+} from '@/utils'
 
 const {
   loadingBatchOptions,
@@ -41,12 +48,13 @@ async function exportToExcel() {
       'Card No.': row.cardNo || '',
       'Area/Location': row.areaLocation || '',
       'Dental Premium': row.dentalPremium || '',
-      'Payment Period': row.paymentPeriod || '',
+      'Payment Period': formatExcelDateManila(row.paymentPeriod),
       Status: row.paid ? 'Received' : 'Pending',
-      'Paid At': row.paidAt || '',
+      'Paid At': formatExcelDateTimeManila(row.paidAt),
       'Payment Reference': row.paymentReference || '',
     })),
   )
+  autoFitWorksheetColumns(worksheet)
 
   const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Imported Batch Rows')

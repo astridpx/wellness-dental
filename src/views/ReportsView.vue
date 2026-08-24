@@ -5,7 +5,14 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { AppButton, AppInput, AppLoadingScreen, AppSearchSelect, AppTable } from '@/components/app'
 import { useAvailmentReports, useDentists, useProcedures } from '@/composables'
 import type { AvailmentCompanyFilterBy, AvailmentReportMode } from '@/types'
-import { formatDate, formatDateTime, formatMoney } from '@/utils'
+import {
+  autoFitWorksheetColumns,
+  formatDate,
+  formatDateTime,
+  formatExcelDateManila,
+  formatExcelDateTimeManila,
+  formatMoney,
+} from '@/utils'
 
 const {
   canGenerate,
@@ -212,6 +219,8 @@ function exportReport() {
         label,
         key === 'no'
           ? index + 1
+          : key === 'availDate'
+            ? formatExcelDateManila(row.availDate)
           : key === 'procedureName'
             ? procedureName(row.procedures)
           : key === 'paymentStatus'
@@ -219,12 +228,13 @@ function exportReport() {
               ? 'Paid'
               : 'Unpaid'
             : key === 'paidToDentistAt'
-              ? formatDateTime(row[key])
+              ? formatExcelDateTimeManila(row[key])
               : (row[key] ?? ''),
       ]),
     ),
   )
   const worksheet = XLSX.utils.json_to_sheet(exportRows)
+  autoFitWorksheetColumns(worksheet)
   const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Availment Report')
 

@@ -4,7 +4,12 @@ import * as XLSX from 'xlsx'
 import { computed } from 'vue'
 import { AppButton, AppInput, AppLoadingScreen, AppTable } from '@/components/app'
 import { usePaymentExtraction } from '@/composables'
-import { formatCurrency, formatDate } from '@/utils'
+import {
+  autoFitWorksheetColumns,
+  formatCurrency,
+  formatDate,
+  formatExcelDateManila,
+} from '@/utils'
 
 const { canExtract, clearExtraction, errorMessage, extractImsPayments, form, loading, rows } =
   usePaymentExtraction()
@@ -41,10 +46,18 @@ function exportToExcel() {
 
   const exportRows = rows.value.map((row, index) =>
     Object.fromEntries(
-      excelColumns.map(([key, label]) => [label, key === 'no' ? index + 1 : (row[key] ?? '')]),
+      excelColumns.map(([key, label]) => [
+        label,
+        key === 'no'
+          ? index + 1
+          : key === 'posteddate' || key === 'payment_period'
+            ? formatExcelDateManila(row[key])
+            : (row[key] ?? ''),
+      ]),
     ),
   )
   const worksheet = XLSX.utils.json_to_sheet(exportRows)
+  autoFitWorksheetColumns(worksheet)
   const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(workbook, worksheet, 'IMS Wellness Payables')
 
