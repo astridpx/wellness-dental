@@ -3,6 +3,7 @@ import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
 import {
   AppButton,
+  AppDialog,
   AppInput,
   AppLoadingScreen,
   AppSearchSelect,
@@ -56,6 +57,7 @@ const selectedClinicId = ref<string | number | null>(null)
 const clinicSearch = ref('')
 const retainedClinicRecord = ref<Record<string, unknown> | null>(null)
 const memberSearchSubmitted = ref(false)
+const showCreateConfirmation = ref(false)
 const toast = ref({
   show: false,
   variant: 'success',
@@ -324,6 +326,23 @@ async function submitCreate() {
   }
 }
 
+function openCreateConfirmation() {
+  if (!createReady.value || creating.value) return
+  showCreateConfirmation.value = true
+}
+
+function closeCreateConfirmation() {
+  if (creating.value) return
+  showCreateConfirmation.value = false
+}
+
+async function confirmCreate() {
+  await submitCreate()
+  if (!errorMessage.value) {
+    showCreateConfirmation.value = false
+  }
+}
+
 async function handleGenerateApprovalNo() {
   const generated = await generateApprovalNo()
 
@@ -499,6 +518,64 @@ watch(clinicSearch, (search) => {
 </script>
 
 <template>
+  <AppDialog
+    title="Create Approval"
+    :show="showCreateConfirmation"
+    :disabled="Boolean(creating)"
+    :confirm-label="creating ? 'Creating...' : 'Confirm Create'"
+    max-width="sm:max-w-3xl"
+    @close="closeCreateConfirmation"
+    @confirm="confirmCreate"
+  >
+    <template #dialog-content>
+      <div class="space-y-4">
+        <div
+          class="rounded-[1.5rem] border border-tangerine/15 bg-[linear-gradient(135deg,#fff8ef_0%,#ffffff_100%)] p-5"
+        >
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-tangerine">
+            Approval confirmation
+          </p>
+          <p class="mt-2 text-sm leading-6 text-slate">
+            Review the approval details before creating the availment record.
+          </p>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Approval</p>
+            <p class="mt-2 font-mono text-sm font-bold text-onyx">
+              {{ form.approvalNo || 'Auto generate' }}
+            </p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Availment Date</p>
+            <p class="mt-2 text-sm font-bold text-onyx">{{ formatDate(form.availDate) }}</p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4 sm:col-span-2">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Member</p>
+            <p class="mt-2 text-sm font-bold text-onyx">{{ form.memberName || 'N/A' }}</p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Dentist</p>
+            <p class="mt-2 text-sm font-bold text-onyx">{{ form.dentistName || 'N/A' }}</p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Clinic</p>
+            <p class="mt-2 text-sm font-bold text-onyx">{{ form.clinicName || 'N/A' }}</p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Procedure Rows</p>
+            <p class="mt-2 text-sm font-bold text-onyx">{{ form.procedureItems.length }}</p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Total Amount</p>
+            <p class="mt-2 text-sm font-bold text-onyx">{{ formatMoney(procedureTotal) }}</p>
+          </div>
+        </div>
+      </div>
+    </template>
+  </AppDialog>
+
   <div class="space-y-6">
     <section
       class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#fff7ed_0%,#ffffff_48%,#f8fbff_100%)] shadow-sm"
@@ -901,7 +978,7 @@ watch(clinicSearch, (search) => {
             btn-theme="primary"
             class="normal-case"
             :disabled="!createReady || creating"
-            @click="submitCreate"
+            @click="openCreateConfirmation"
           >
             <Icon
               :icon="creating ? 'feather:loader' : 'feather:check-circle'"

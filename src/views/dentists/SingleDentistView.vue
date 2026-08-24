@@ -2,7 +2,14 @@
 import { Icon } from '@iconify/vue'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { AppButton, AppInput, AppLoadingScreen, AppTextArea } from '@/components/app'
+import {
+  AppButton,
+  AppDialog,
+  AppInput,
+  AppLoadingScreen,
+  AppTextArea,
+  AppToast,
+} from '@/components/app'
 import { useDentistBankAccounts, useDentistForm, usePaymentModes } from '@/composables'
 import type { DentistBankAccount, DentistBankAccountInput } from '@/types'
 
@@ -16,7 +23,7 @@ const {
   loadDentistProfile,
   loading,
   profileMissing,
-  save,
+  save: saveDentist,
   saving,
   successMessage,
 } = useDentistForm()
@@ -202,6 +209,13 @@ const bankAccountFeedback = ref('')
 const bankAccountValidationVisible = ref(false)
 const visibleBankAccountId = ref<number | null>(null)
 const pendingDeleteBankAccountId = ref<number | null>(null)
+const showSaveConfirmation = ref(false)
+const toast = ref({
+  show: false,
+  variant: 'success',
+  title: '',
+  message: '',
+})
 
 const bankAccountEditorOpen = computed(
   () => creatingBankAccount.value || editingBankAccountId.value !== null,
@@ -311,6 +325,47 @@ function toggleAccountNumberVisibility(bankAccountId: number) {
   visibleBankAccountId.value = visibleBankAccountId.value === bankAccountId ? null : bankAccountId
 }
 
+function closeToast() {
+  toast.value.show = false
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function openSaveConfirmation() {
+  if (saving.value) return
+  showSaveConfirmation.value = true
+}
+
+function closeSaveConfirmation() {
+  if (saving.value) return
+  showSaveConfirmation.value = false
+}
+
+async function confirmSave() {
+  const saved = await saveDentist()
+  showSaveConfirmation.value = false
+
+  toast.value = {
+    show: true,
+    variant: saved ? 'success' : 'error',
+    title: saved
+      ? isEditMode.value
+        ? 'Provider updated'
+        : 'Provider created'
+      : 'Provider was not saved',
+    message: saved
+      ? successMessage.value ||
+        (isEditMode.value
+          ? 'Dentist profile updated successfully.'
+          : 'Dentist profile created successfully.')
+      : errorMessage.value || 'Please review the form and try again.',
+  }
+
+  scrollToTop()
+}
+
 watch(
   [isEditMode, dentistId],
   ([editing, id]) => {
@@ -324,6 +379,59 @@ watch(
 </script>
 
 <template>
+  <AppDialog
+    :title="isEditMode ? 'Update Provider Setup' : 'Create Provider Setup'"
+    :show="showSaveConfirmation"
+    :disabled="Boolean(saving)"
+    :confirm-label="saving ? 'Saving...' : isEditMode ? 'Confirm Update' : 'Confirm Create'"
+    max-width="sm:max-w-3xl"
+    @close="closeSaveConfirmation"
+    @confirm="confirmSave"
+  >
+    <template #dialog-content>
+      <div class="space-y-4">
+        <div
+          class="rounded-[1.5rem] border border-tangerine/15 bg-[linear-gradient(135deg,#fff8ef_0%,#ffffff_100%)] p-5"
+        >
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-tangerine">
+            Provider confirmation
+          </p>
+          <p class="mt-2 text-sm leading-6 text-slate">
+            Review the core provider details before
+            {{ isEditMode ? 'updating' : 'creating' }} this record.
+          </p>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Provider</p>
+            <p class="mt-2 text-sm font-bold text-onyx">Dr. {{ dentistName }}</p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Status</p>
+            <p class="mt-2 text-sm font-bold text-onyx">{{ dentistStatusLabel }}</p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">PRC License</p>
+            <p class="mt-2 text-sm font-bold text-onyx">{{ dentistData.license || 'N/A' }}</p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Specialty</p>
+            <p class="mt-2 text-sm font-bold text-onyx">{{ dentistSpecialtyLabel }}</p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Mode of Payment</p>
+            <p class="mt-2 text-sm font-bold text-onyx">{{ dentistPaymentModeLabel }}</p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Mobile Number</p>
+            <p class="mt-2 text-sm font-bold text-onyx">{{ dentistContactLabel }}</p>
+          </div>
+        </div>
+      </div>
+    </template>
+  </AppDialog>
+
   <section class="space-y-6">
     <section
       class="overflow-hidden rounded-4xl border border-pebble bg-[radial-gradient(circle_at_top_left,#fff7ed_0%,#ffffff_48%,#f8fbff_100%)] shadow-sm"
@@ -516,7 +624,7 @@ watch(
       </aside>
 
       <div class="space-y-6">
-        <form class="space-y-6" @submit.prevent="save">
+        <form class="space-y-6" @submit.prevent="openSaveConfirmation">
           <section class="rounded-4xl border border-pebble bg-white p-6 shadow-sm">
             <div class="flex items-center justify-between gap-4">
               <div>
@@ -1156,4 +1264,12 @@ watch(
       </div>
     </div>
   </section>
+
+  <AppToast
+    :show="toast.show"
+    :variant="toast.variant"
+    :title="toast.title"
+    :message="toast.message"
+    @close="closeToast"
+  />
 </template>

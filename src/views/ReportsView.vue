@@ -92,6 +92,13 @@ const reportModes: Array<{
 ]
 
 const selectedMode = computed(() => reportModes.find((mode) => mode.value === form.mode))
+const showRemarksColumn = computed(
+  () =>
+    form.mode === 'companyPeriod' ||
+    form.mode === 'dentistPeriod' ||
+    form.mode === 'daily' ||
+    form.mode === 'period',
+)
 const companyScopeOptions = [
   {
     value: 'all',
@@ -594,23 +601,26 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
       />
       <AppTable
         v-else
-        :theads="[
-          'Company',
-          'Approval',
-          'Member',
-          'Availment Date',
-          'Dentist / Clinic',
-          'Procedure',
-          'Amount',
-          'Payment',
-          'Paid to Dentist At',
-          'Encoded By',
-        ]"
+        :theads="
+          [
+            'Company',
+            'Approval',
+            'Member',
+            'Availment Date',
+            'Dentist / Clinic',
+            'Procedure',
+            'Amount',
+            'Payment',
+            'Paid to Dentist At',
+            ...(showRemarksColumn ? ['Remarks'] : []),
+            'Encoded By',
+          ]
+        "
         :total-entries="rows.length"
       >
         <template #trs>
           <tr v-if="!rows.length">
-            <td colspan="10" class="py-12! text-center! text-sm text-slate">
+            <td :colspan="showRemarksColumn ? 11 : 10" class="py-12! text-center! text-sm text-slate">
               No report rows generated yet.
             </td>
           </tr>
@@ -642,6 +652,11 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
             </td>
             <td>
               {{ formatDateTime(row.paidToDentistAt) }}
+            </td>
+            <td v-if="showRemarksColumn">
+              <span class="block max-w-56 whitespace-normal text-sm text-slate">
+                {{ row.remarks || 'N/A' }}
+              </span>
             </td>
             <td>{{ row.encodedBy || 'N/A' }}</td>
           </tr>

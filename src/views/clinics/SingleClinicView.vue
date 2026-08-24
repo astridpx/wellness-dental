@@ -184,6 +184,15 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
 
   return [lastName, rightSide].filter(Boolean).join(', ').trim()
 }
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+async function submitClinicForm() {
+  await save()
+  scrollToTop()
+}
 </script>
 
 <template>
@@ -282,7 +291,7 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
     <form
       v-else-if="!profileMissing"
       class="grid items-start gap-6 xl:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)]"
-      @submit.prevent="save"
+      @submit.prevent="submitClinicForm"
     >
       <aside class="space-y-5">
         <div class="rounded-4xl bg-[#122833] p-6 text-white shadow-lg xl:sticky xl:top-6">
