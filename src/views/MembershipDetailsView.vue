@@ -204,7 +204,7 @@ function getPaymentRemittanceStatus(payment: { remittedWell?: string | null }) {
             >
               <tr>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Plan</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Membership Fee</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Dental Premium</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Remittance</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">
                   Wellness Remittance Code
@@ -227,7 +227,7 @@ function getPaymentRemittanceStatus(payment: { remittedWell?: string | null }) {
                   </span>
                 </td>
                 <td class="px-6 py-4 align-top text-onyx">
-                  {{ formatCurrency(payment.membershipFee) }}
+                  {{ formatCurrency(selectedMember?.dentalPremium) }}
                 </td>
                 <td class="px-6 py-4 align-top text-onyx">
                   <span
