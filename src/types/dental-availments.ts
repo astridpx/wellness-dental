@@ -42,7 +42,12 @@ export type DentalProcedureItemInput = {
   toothNo?: string
 }
 
-export type DentalMemberSearchScope = 'ims_all' | 'ims_paid' | 'partner_all' | 'partner_paid'
+export type DentalMemberSearchScope =
+  | 'ims_all'
+  | 'ims_paid'
+  | 'partner_all'
+  | 'partner_paid'
+  | 'manual'
 
 export type DentalAvailmentMemberOption = {
   id: string

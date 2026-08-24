@@ -110,6 +110,7 @@ const createReady = computed(
 const selectedSourceLabel = computed(
   () => memberSourceOptions.find((option) => option.value === memberSource.value)?.label || '',
 )
+const isManualAvailmentMode = computed(() => memberSource.value === 'manual')
 
 const memberSourceOptions: Array<{
   value: DentalMemberSearchScope
@@ -125,6 +126,11 @@ const memberSourceOptions: Array<{
     value: 'partner_all',
     label: 'Partner all members',
     description: 'Search every uploaded partner member.',
+  },
+  {
+    value: 'manual',
+    label: 'Manual Availment',
+    description: 'Directly encode the member details when the member is not yet uploaded.',
   },
 ]
 
@@ -221,6 +227,11 @@ function selectMemberSource(value: DentalMemberSearchScope) {
   memberSearchSubmitted.value = false
   clearSelectedMember()
   memberSearchResults.value = []
+  memberSearch.value = ''
+
+  if (value === 'manual') {
+    form.memberSource = 'manual'
+  }
 }
 
 function selectMember(member: DentalAvailmentMemberOption) {
@@ -241,7 +252,7 @@ function clearSelectedMember() {
   form.planHolderId = ''
   form.clientCode = ''
   form.officeCode = ''
-  form.memberSource = ''
+  form.memberSource = isManualAvailmentMode.value ? 'manual' : ''
 }
 
 function changeSelectedMember() {
@@ -264,9 +275,11 @@ function resetAvailmentForm() {
   clinicFilters.clinicName = ''
   memberSearch.value = ''
   memberSearchSubmitted.value = false
+  form.memberSource = isManualAvailmentMode.value ? 'manual' : ''
 }
 
 async function submitMemberSearch() {
+  if (isManualAvailmentMode.value) return
   clearSelectedMember()
   memberSearchSubmitted.value = true
   await searchDentalMembers(memberSearch.value, memberSource.value)
@@ -698,103 +711,126 @@ watch(clinicSearch, (search) => {
               </button>
             </div>
 
-            <div class="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-              <AppInput
-                v-model="memberSearch"
-                label="Search Member"
-                placeholder="Search by name, card no., birth date, or policy no."
-                icon="feather:search"
-              />
-              <AppButton
-                type="button"
-                btn-theme="primary"
-                class="normal-case sm:min-w-36"
-                :disabled="searchingMembers || memberSearch.trim().length < 2"
-                @click="submitMemberSearch"
-              >
-                <Icon
-                  :icon="searchingMembers ? 'feather:loader' : 'feather:search'"
-                  class="h-4 w-4"
-                  :class="{ 'animate-spin': searchingMembers }"
-                />
-                Search
-              </AppButton>
-            </div>
-
             <div
-              v-if="searchingMembers"
-              class="mt-3 flex items-center gap-2 rounded-xl border border-pebble bg-white px-4 py-3 text-sm text-slate"
+              v-if="isManualAvailmentMode"
+              class="mt-4 rounded-xl border border-[#d8c5a0] bg-[linear-gradient(180deg,#fff8ef_0%,#ffffff_100%)] px-4 py-4"
             >
-              <Icon icon="feather:loader" class="h-4 w-4 animate-spin" />
-              Searching members...
-            </div>
-            <p
-              v-else-if="memberSearchErrorMessage"
-              class="mt-3 rounded-xl bg-ruby-light px-4 py-3 text-sm text-ruby"
-            >
-              {{ memberSearchErrorMessage }}
-            </p>
-            <div
-              v-else-if="memberSearchSubmitted && memberSearchResults.length"
-              class="mt-3 max-h-72 overflow-auto rounded-xl border border-pebble bg-white p-2"
-            >
-              <button
-                v-for="member in memberSearchResults"
-                :key="member.id"
-                type="button"
-                class="block w-full rounded-lg px-3 py-3 text-left transition hover:bg-tangerine-light"
-                @click="selectMember(member)"
-              >
-                <span class="flex items-start justify-between gap-3">
-                  <span class="min-w-0">
-                    <span class="block text-sm font-bold text-onyx">{{ member.memberName }}</span>
-                    <span class="mt-1 block text-xs leading-5 text-slate">
-                      {{ memberDescription(member) }}
-                    </span>
-                  </span>
-                  <span
-                    class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
-                    :class="member.paid ? 'bg-emerald-light text-emerald' : 'bg-fog text-slate'"
-                  >
-                    {{ memberPaymentStatus(member) }}
-                  </span>
-                </span>
-              </button>
-            </div>
-            <p
-              v-else-if="memberSearchSubmitted"
-              class="mt-3 rounded-xl border border-pebble bg-white px-4 py-3 text-sm text-slate"
-            >
-              No matching members found.
-            </p>
-
-            <div
-              v-if="selectedMember"
-              class="mt-4 flex flex-col gap-3 rounded-xl border border-emerald/20 bg-emerald-light px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div class="flex min-w-0 items-start gap-3">
+              <div class="flex items-start gap-3">
                 <div
-                  class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-emerald"
+                  class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-tangerine"
                 >
-                  <Icon icon="feather:check-circle" class="h-5 w-5" />
+                  <Icon icon="feather:edit-3" class="h-5 w-5" />
                 </div>
-                <div class="min-w-0">
-                  <p class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald">
-                    Selected member
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-[0.16em] text-tangerine">
+                    Manual availment mode
                   </p>
-                  <p class="mt-1 font-black text-onyx">{{ selectedMember.memberName }}</p>
-                  <p class="mt-1 text-xs leading-5 text-slate">
-                    {{ memberDescription(selectedMember) }}
-                  </p>
-                  <p class="mt-1 text-xs font-semibold text-emerald">
-                    {{ memberPaymentStatus(selectedMember) }}
+                  <p class="mt-1 text-sm leading-6 text-slate">
+                    Search is skipped in this mode. Encode the member name directly below and continue
+                    with the usual availment details.
                   </p>
                 </div>
               </div>
-              <AppButton btn-theme="outline" class="normal-case" @click="changeSelectedMember">
-                Change
-              </AppButton>
             </div>
+            <template v-else>
+              <div class="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                <AppInput
+                  v-model="memberSearch"
+                  label="Search Member"
+                  placeholder="Search by name, card no., birth date, or policy no."
+                  icon="feather:search"
+                />
+                <AppButton
+                  type="button"
+                  btn-theme="primary"
+                  class="normal-case sm:min-w-36"
+                  :disabled="searchingMembers || memberSearch.trim().length < 2"
+                  @click="submitMemberSearch"
+                >
+                  <Icon
+                    :icon="searchingMembers ? 'feather:loader' : 'feather:search'"
+                    class="h-4 w-4"
+                    :class="{ 'animate-spin': searchingMembers }"
+                  />
+                  Search
+                </AppButton>
+              </div>
+
+              <div
+                v-if="searchingMembers"
+                class="mt-3 flex items-center gap-2 rounded-xl border border-pebble bg-white px-4 py-3 text-sm text-slate"
+              >
+                <Icon icon="feather:loader" class="h-4 w-4 animate-spin" />
+                Searching members...
+              </div>
+              <p
+                v-else-if="memberSearchErrorMessage"
+                class="mt-3 rounded-xl bg-ruby-light px-4 py-3 text-sm text-ruby"
+              >
+                {{ memberSearchErrorMessage }}
+              </p>
+              <div
+                v-else-if="memberSearchSubmitted && memberSearchResults.length"
+                class="mt-3 max-h-72 overflow-auto rounded-xl border border-pebble bg-white p-2"
+              >
+                <button
+                  v-for="member in memberSearchResults"
+                  :key="member.id"
+                  type="button"
+                  class="block w-full rounded-lg px-3 py-3 text-left transition hover:bg-tangerine-light"
+                  @click="selectMember(member)"
+                >
+                  <span class="flex items-start justify-between gap-3">
+                    <span class="min-w-0">
+                      <span class="block text-sm font-bold text-onyx">{{ member.memberName }}</span>
+                      <span class="mt-1 block text-xs leading-5 text-slate">
+                        {{ memberDescription(member) }}
+                      </span>
+                    </span>
+                    <span
+                      class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                      :class="member.paid ? 'bg-emerald-light text-emerald' : 'bg-fog text-slate'"
+                    >
+                      {{ memberPaymentStatus(member) }}
+                    </span>
+                  </span>
+                </button>
+              </div>
+              <p
+                v-else-if="memberSearchSubmitted"
+                class="mt-3 rounded-xl border border-pebble bg-white px-4 py-3 text-sm text-slate"
+              >
+                No matching members found.
+              </p>
+
+              <div
+                v-if="selectedMember"
+                class="mt-4 flex flex-col gap-3 rounded-xl border border-emerald/20 bg-emerald-light px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div class="flex min-w-0 items-start gap-3">
+                  <div
+                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-emerald"
+                  >
+                    <Icon icon="feather:check-circle" class="h-5 w-5" />
+                  </div>
+                  <div class="min-w-0">
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald">
+                      Selected member
+                    </p>
+                    <p class="mt-1 font-black text-onyx">{{ selectedMember.memberName }}</p>
+                    <p class="mt-1 text-xs leading-5 text-slate">
+                      {{ memberDescription(selectedMember) }}
+                    </p>
+                    <p class="mt-1 text-xs font-semibold text-emerald">
+                      {{ memberPaymentStatus(selectedMember) }}
+                    </p>
+                  </div>
+                </div>
+                <AppButton btn-theme="outline" class="normal-case" @click="changeSelectedMember">
+                  Change
+                </AppButton>
+              </div>
+            </template>
           </div>
 
           <div class="rounded-2xl border border-pebble bg-white p-4">
@@ -809,6 +845,15 @@ watch(clinicSearch, (search) => {
             </div>
 
             <div class="grid gap-5 md:grid-cols-2">
+              <AppInput
+                v-model="form.memberName"
+                class="md:col-span-2"
+                label="Member Name"
+                placeholder="Enter member name"
+                icon="feather:user"
+                :readonly="!isManualAvailmentMode"
+              />
+
               <div class="md:col-span-2">
                 <label class="mb-2 block text-sm font-medium text-onyx">Approval No.</label>
                 <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
