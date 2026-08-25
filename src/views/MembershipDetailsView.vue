@@ -1,16 +1,8 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, ref } from 'vue'
-import {
-  AppButton,
-  AppDialog,
-  AppInput,
-  AppLoadingScreen,
-  AppModal,
-  AppTable,
-} from '@/components/app'
+import { AppButton, AppInput, AppLoadingScreen, AppModal } from '@/components/app'
 import { useMembershipDetails } from '@/composables'
-import { formatCurrency, formatDate } from '@/utils'
+import { formatCurrency } from '@/utils'
 
 const {
   members,
@@ -19,6 +11,7 @@ const {
   loadingMembers,
   loadingPayments,
   showPaymentsModal,
+  hasSearched,
   errorMessage,
   paymentErrorMessage,
   currentPage,
@@ -32,12 +25,6 @@ const {
   openPaymentsModal,
   closePaymentsModal,
 } = useMembershipDetails()
-
-const showFilterModal = ref(false)
-
-const activeFilterCount = computed(
-  () => Object.values(filters).filter((value) => value.trim()).length,
-)
 
 function formatDateOnly(value?: string | null) {
   if (!value) return 'N/A'
@@ -55,15 +42,6 @@ function formatDateOnly(value?: string | null) {
   return normalized.includes('T') ? normalized.split('T')[0] || normalized : normalized
 }
 
-function openFilters() {
-  showFilterModal.value = true
-}
-
-function confirmFilters() {
-  showFilterModal.value = false
-  applyFilters()
-}
-
 function getPaymentRemittanceStatus(payment: { remittedWell?: string | null }) {
   if (payment.remittedWell) {
     return {
@@ -77,81 +55,39 @@ function getPaymentRemittanceStatus(payment: { remittedWell?: string | null }) {
     className: 'bg-ruby-light text-ruby',
   }
 }
+
+function getWellnessRemittanceCode(payment: {
+  remcodeWell?: string | null
+  remcode_well?: string | null
+  remcodewell?: string | null
+  remCodeWell?: string | null
+  remcode?: string | null
+}) {
+  const record = payment as Record<string, unknown>
+  const candidates = [
+    payment.remcodeWell,
+    payment.remcode_well,
+    payment.remcodewell,
+    payment.remCodeWell,
+    payment.remcode,
+    record.remcodeWell,
+    record.remcode_well,
+    record.remcodewell,
+    record.remCodeWell,
+    record.remcode,
+  ]
+
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim()
+    }
+  }
+
+  return 'N/A'
+}
 </script>
 
 <template>
-  <AppDialog
-    title="Filter Membership Details"
-    :show="showFilterModal"
-    max-width="sm:max-w-4xl"
-    confirm-label="Apply Filters"
-    @close="showFilterModal = false"
-    @confirm="confirmFilters"
-  >
-    <template #dialog-content>
-      <div class="space-y-5">
-        <div
-          class="rounded-[1.5rem] border border-tangerine/15 bg-[linear-gradient(135deg,#fff8ef_0%,#ffffff_100%)] p-5"
-        >
-          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-tangerine">
-            Verification Filters
-          </p>
-          <p class="mt-2 text-sm leading-6 text-slate">
-            Search only members whose plan includes a dental premium.
-          </p>
-        </div>
-
-        <div class="grid gap-5 md:grid-cols-2">
-          <AppInput
-            v-model="filters.search"
-            label="Quick Search"
-            placeholder="Member, card number, or birth date"
-            icon="feather:search"
-          />
-          <AppInput
-            v-model="filters.memberName"
-            label="Member Name"
-            placeholder="e.g. Juan Dela Cruz"
-            icon="feather:user"
-          />
-          <AppInput
-            v-model="filters.company"
-            label="Company"
-            placeholder="e.g. Acme Corp"
-            icon="feather:briefcase"
-          />
-          <AppInput
-            v-model="filters.planCode"
-            label="Plan Code"
-            placeholder="e.g. XNT003"
-            icon="feather:tag"
-          />
-          <div class="md:col-span-2">
-            <label class="mb-2 block text-sm font-medium text-onyx">Status</label>
-            <select
-              v-model="filters.status"
-              class="w-full rounded-xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fafcff_100%)] px-4 py-3.5 text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
-            >
-              <option value="">All statuses</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-              <option value="Cancelled">Cancelled</option>
-            </select>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          class="inline-flex items-center gap-2 text-sm font-semibold text-slate transition hover:text-tangerine"
-          @click="clearFilters"
-        >
-          <Icon icon="feather:rotate-ccw" class="h-4 w-4" />
-          Clear fields
-        </button>
-      </div>
-    </template>
-  </AppDialog>
-
   <AppModal
     :show="showPaymentsModal"
     title="Membership Payment History"
@@ -210,7 +146,6 @@ function getPaymentRemittanceStatus(payment: { remittedWell?: string | null }) {
                   Wellness Remittance Code
                 </th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Period</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Posted</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-pebble/65">
@@ -237,13 +172,14 @@ function getPaymentRemittanceStatus(payment: { remittedWell?: string | null }) {
                     {{ getPaymentRemittanceStatus(payment).label }}
                   </span>
                 </td>
-                <td class="px-6 py-4 align-top text-onyx">{{ payment.remittedWell || 'N/A' }}</td>
+                <td class="px-6 py-4 align-top text-onyx">
+                  {{ getWellnessRemittanceCode(payment) }}
+                </td>
                 <td class="px-6 py-4 align-top text-onyx">
                   <span class="font-semibold text-onyx">
                     {{ formatDateOnly(payment.paymentPeriod) }}
                   </span>
                 </td>
-                <td class="px-6 py-4 align-top text-onyx">{{ formatDate(payment.datePosted) }}</td>
               </tr>
               <tr v-if="!paymentRecords.length">
                 <td colspan="7" class="w-full px-6 py-14 text-center text-onyx">
@@ -292,6 +228,33 @@ function getPaymentRemittanceStatus(payment: { remittedWell?: string | null }) {
             Verify membership information and cleared payment history for members whose plans
             include dental premium coverage. Plans without dental premium are automatically hidden.
           </p>
+
+          <div class="mt-6 max-w-3xl rounded-[1.75rem] border border-pebble bg-white/90 p-4 shadow-sm">
+            <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
+              <AppInput
+                v-model="filters.search"
+                label="Search Member"
+                placeholder="Member name, card number, or birth date"
+                icon="feather:search"
+                @keydown.enter="applyFilters"
+              />
+              <AppButton class="normal-case md:self-end" @click="applyFilters">
+                <Icon icon="feather:search" class="h-4 w-4" />
+                Search
+              </AppButton>
+              <AppButton
+                v-if="filters.search.trim()"
+                btn-theme="outline"
+                class="normal-case md:self-end"
+                @click="clearFilters"
+              >
+                Clear
+              </AppButton>
+            </div>
+            <p class="mt-3 text-sm text-slate">
+              Search first to load the IMS verification directory.
+            </p>
+          </div>
         </div>
 
         <div class="rounded-[1.6rem] border border-pebble bg-white/90 p-5 shadow-sm">
@@ -332,34 +295,16 @@ function getPaymentRemittanceStatus(payment: { remittedWell?: string | null }) {
       </div>
     </section>
 
-    <section class="rounded-[1.5rem] border border-pebble bg-white p-5 shadow-sm sm:p-6">
+    <section
+      v-if="hasSearched"
+      class="rounded-[1.5rem] border border-pebble bg-white p-5 shadow-sm sm:p-6"
+    >
       <div class="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 class="text-xl font-black text-onyx">Verification Directory</h2>
           <p class="mt-1 text-sm text-slate">
-            Search member records and inspect their payment history without showing non-dental
-            plans.
+            Search results for members whose plans include dental premium coverage.
           </p>
-        </div>
-        <div class="flex flex-wrap items-center gap-3">
-          <button
-            v-if="activeFilterCount"
-            type="button"
-            class="text-sm font-semibold text-slate transition hover:text-tangerine"
-            @click="clearFilters"
-          >
-            Clear filters
-          </button>
-          <AppButton btn-theme="outline" class="normal-case" @click="openFilters">
-            <Icon icon="feather:filter" class="h-4 w-4" />
-            Filter
-            <span
-              v-if="activeFilterCount"
-              class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-tangerine px-1.5 text-[10px] font-bold text-white"
-            >
-              {{ activeFilterCount }}
-            </span>
-          </AppButton>
         </div>
       </div>
 
@@ -457,8 +402,8 @@ function getPaymentRemittanceStatus(payment: { remittedWell?: string | null }) {
                     </span>
                     <p class="mt-3 font-semibold text-onyx">No eligible members found</p>
                     <p class="mt-1 text-sm text-slate">
-                      Try changing the filters. Members on non-dental-premium plans will not appear
-                      here.
+                      Try a different search term. Members on non-dental-premium plans will not
+                      appear here.
                     </p>
                   </div>
                 </td>

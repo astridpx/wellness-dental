@@ -31,6 +31,11 @@ export type MembershipPaymentRecord = {
   datePosted?: string | null
   dateClearedByFinance?: string | null
   remittedWell?: string | null
+  remcodeWell?: string | null
+  remcode_well?: string | null
+  remcodewell?: string | null
+  remCodeWell?: string | null
+  remcode?: string | null
   orNumber?: string | null
   orDate?: string | null
   remarks?: string | null

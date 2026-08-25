@@ -1,4 +1,4 @@
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import type {
   MembershipPaginationMetadata,
   MembershipPaymentRecord,
@@ -14,9 +14,10 @@ export function useMembershipDetails() {
   const paymentRecords = ref<MembershipPaymentRecord[]>([])
   const selectedMember = ref<MembershipRecord | null>(null)
 
-  const loadingMembers = ref(true)
+  const loadingMembers = ref(false)
   const loadingPayments = ref(false)
   const showPaymentsModal = ref(false)
+  const hasSearched = ref(false)
 
   const errorMessage = ref('')
   const paymentErrorMessage = ref('')
@@ -45,7 +46,22 @@ export function useMembershipDetails() {
     remittedMembers: remittedMembers.value,
   }))
 
+  function hasSearchCriteria() {
+    return Object.values(filters).some((value) => value.trim().length > 0)
+  }
+
+  function resetMemberResults() {
+    members.value = []
+    totalEntries.value = 0
+    totalPages.value = 1
+    remittedMembers.value = 0
+    unremittedMembers.value = 0
+    errorMessage.value = ''
+    loadingMembers.value = false
+  }
+
   async function fetchMembers() {
+    hasSearched.value = true
     loadingMembers.value = true
     errorMessage.value = ''
 
@@ -120,6 +136,13 @@ export function useMembershipDetails() {
   }
 
   function applyFilters() {
+    if (!hasSearchCriteria()) {
+      hasSearched.value = false
+      currentPage.value = 1
+      resetMemberResults()
+      return
+    }
+
     if (currentPage.value !== 1) {
       currentPage.value = 1
       return
@@ -134,7 +157,9 @@ export function useMembershipDetails() {
     filters.company = ''
     filters.planCode = ''
     filters.status = ''
-    applyFilters()
+    hasSearched.value = false
+    currentPage.value = 1
+    resetMemberResults()
   }
 
   function openPaymentsModal(member: MembershipRecord) {
@@ -156,16 +181,13 @@ export function useMembershipDetails() {
   }
 
   watch(currentPage, () => {
+    if (!hasSearchCriteria()) return
     void fetchMembers()
   })
 
   watch(paymentCurrentPage, () => {
     if (!showPaymentsModal.value) return
     void fetchPaymentRecords()
-  })
-
-  onMounted(() => {
-    void fetchMembers()
   })
 
   return {
@@ -175,6 +197,7 @@ export function useMembershipDetails() {
     loadingMembers,
     loadingPayments,
     showPaymentsModal,
+    hasSearched,
     errorMessage,
     paymentErrorMessage,
     currentPage,
