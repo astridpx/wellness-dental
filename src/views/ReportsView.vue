@@ -144,7 +144,7 @@ const imsCompanyOptions = computed<CompanyOption[]>(() => {
             {
               value: company.mainCompany!.trim(),
               label: company.mainCompany!.trim(),
-              description: company.companyName || company.officeCode,
+              description: '',
             },
           ]),
       ).values(),
@@ -169,6 +169,41 @@ const partnerCompanyOptions = computed<CompanyOption[]>(() =>
 const activeCompanySourceOptions = computed<CompanyOption[]>(() =>
   form.companyScope === 'partner' ? partnerCompanyOptions.value : imsCompanyOptions.value,
 )
+const selectedCompanyLabel = computed(() => {
+  if (!requiresCompany.value) return 'All Companies'
+
+  if (retainedCompany.value?.label?.trim()) return retainedCompany.value.label.trim()
+  if (form.company.trim()) return form.company.trim()
+
+  if (form.companyScope === 'both') return 'All Companies'
+  if (form.companyScope === 'ims') return 'All IMS Companies'
+  if (form.companyScope === 'partner') return 'All Partner Member Companies'
+
+  return 'All Companies'
+})
+const selectedCompanyScopeLabel = computed(() => {
+  if (!requiresCompany.value) return 'Not applicable'
+
+  if (form.companyScope === 'partner') return 'Partner Member Company'
+  if (form.companyScope === 'specificIms') {
+    return form.companyFilterBy === 'mainCompany' ? 'Per Mother Company' : 'Per Deployment'
+  }
+
+  if (form.companyScope === 'ims') return 'IMS Companies Only'
+  return 'All Companies'
+})
+const selectedReportTitle = computed(() => {
+  if (form.mode === 'companyPeriod') {
+    if (form.companyScope === 'partner') return 'Partner Company + Availment Report'
+    if (form.companyFilterBy === 'mainCompany') return 'Mother Company + Availment Report'
+    return 'Company + Availment Report'
+  }
+
+  if (form.mode === 'dentistPeriod') return 'Dentist + Availment Report'
+  if (form.mode === 'period') return 'Availment Date Report'
+
+  return 'Daily Availment Report'
+})
 const excelColumns = [
   ['no', 'No.'],
   ['companyName', 'Company Name'],
@@ -210,6 +245,12 @@ function isPaid(row: { ifPaid?: boolean | number | string | null }) {
   return row.ifPaid === true || Number(row.ifPaid || 0) === 1
 }
 
+function paymentFilterLabel() {
+  if (form.dentistPaymentStatus === 'paid') return 'Paid only'
+  if (form.dentistPaymentStatus === 'unpaid') return 'Unpaid only'
+  return 'All dentist payments'
+}
+
 function exportReport() {
   if (!rows.value.length) return
 
@@ -230,17 +271,63 @@ function exportReport() {
             : key === 'paidToDentistAt'
               ? formatExcelDateTimeManila(row[key])
               : (row[key] ?? ''),
-      ]),
+        ]),
     ),
   )
-  const worksheet = XLSX.utils.json_to_sheet(exportRows)
+  const reportGeneratedAt = formatExcelDateTimeManila(new Date(), '')
+  const dateFromLabel = form.dateFrom ? formatDate(form.dateFrom) : 'N/A'
+  const dateToLabel = form.dateTo ? formatDate(form.dateTo) : 'N/A'
+  const dentistLabel = form.dentist.trim() || 'All Dentists'
+  const totalRows = rows.value.length
+  const totalAmountLabel = formatMoney(totalAmount.value)
+  const headerRows = [
+    ['IWC WELLNESS PREVENTIVE CARE'],
+    [selectedReportTitle.value],
+    [],
+    ['REPORT DETAILS'],
+    ['Date and Time Generated', reportGeneratedAt],
+    ['Company Scope', selectedCompanyScopeLabel.value],
+    ['Company Selected', selectedCompanyLabel.value],
+    ['Availment Date From', dateFromLabel],
+    ['Availment Date To', dateToLabel],
+    ['Dentist Selected', dentistLabel],
+    ['Dentist Payment Filter', paymentFilterLabel()],
+    [],
+    ['SUMMARY'],
+    ['Total Rows', totalRows],
+    ['Total Amount', totalAmountLabel],
+    [],
+    ['AVAILMENT DATA'],
+    [],
+  ]
+
+  const worksheet = XLSX.utils.aoa_to_sheet(headerRows)
+  const dataStartRow = headerRows.length + 1
+  XLSX.utils.sheet_add_json(worksheet, exportRows, {
+    origin: `A${dataStartRow}`,
+    skipHeader: false,
+  })
+
+  const lastColumnIndex = Math.max(0, excelColumns.length - 1)
+  worksheet['!merges'] = [
+    XLSX.utils.decode_range(`A1:${XLSX.utils.encode_col(lastColumnIndex)}1`),
+    XLSX.utils.decode_range(`A2:${XLSX.utils.encode_col(lastColumnIndex)}2`),
+  ]
+  worksheet['!autofilter'] = {
+    ref: `A${dataStartRow}:${XLSX.utils.encode_col(lastColumnIndex)}${dataStartRow + exportRows.length}`,
+  }
   autoFitWorksheetColumns(worksheet)
   const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Availment Report')
 
   const datePart = new Date().toISOString().slice(0, 10)
   const modePart = selectedMode.value?.label.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'report'
-  XLSX.writeFile(workbook, `wellness-availment-${modePart}-${datePart}.xlsx`)
+  const companyPart = selectedCompanyLabel.value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  const fileParts = ['wellness-availment', modePart, companyPart || 'all-companies', datePart]
+  XLSX.writeFile(workbook, `${fileParts.join('-')}.xlsx`)
 }
 
 function clearReportsView() {
