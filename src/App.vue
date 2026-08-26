@@ -4,6 +4,7 @@ import { Icon } from '@iconify/vue'
 import { computed, inject, ref, watch } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuth, useNavigation } from '@/composables'
+import MaintenanceView from '@/views/MaintenanceView.vue'
 
 type NavItem = {
   name: string
@@ -15,6 +16,7 @@ type NavItem = {
 const route = useRoute()
 const router = useRouter()
 const { logout, getStoredRoles, getStoredUser } = useAuth()
+const isMaintenanceMode = import.meta.env.VITE_APP_MAINTENANCE_MODE === 'true'
 
 const sidebarOpen = ref(false)
 const appVer = inject('appVer') as string
@@ -87,6 +89,8 @@ watch(
 </script>
 
 <template>
+  <MaintenanceView v-if="isMaintenanceMode" />
+
   <RouterView v-if="route.name === 'login'" />
 
   <div
