@@ -9,7 +9,7 @@ import {
   TransitionRoot,
 } from '@headlessui/vue'
 import { Icon } from '@iconify/vue'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 export type SearchSelectOption = {
   value: string | number
@@ -38,6 +38,16 @@ const props = withDefaults(
 const model = defineModel<string | number | null>({ default: null })
 const search = defineModel<string>('search', { default: '' })
 const retainedOption = ref<SearchSelectOption | null>(null)
+const filteredOptions = computed(() => {
+  const normalizedSearch = search.value.trim().toLowerCase()
+
+  if (!normalizedSearch) return props.options
+
+  return props.options.filter((option) => {
+    const haystack = [option.label, option.description || ''].join(' ').toLowerCase()
+    return haystack.includes(normalizedSearch)
+  })
+})
 
 watch(
   [() => props.options, model],
@@ -95,20 +105,33 @@ function displayValue(value: unknown) {
         @after-leave="search = ''">
         <ComboboxOptions
           class="absolute z-30 mt-2 max-h-72 w-full overflow-auto rounded-2xl border border-pebble bg-white p-2 shadow-[0_20px_50px_rgba(15,23,42,0.16)] focus:outline-none">
-          <div v-if="!loading && !options.length" class="px-4 py-5 text-center text-sm text-slate">
+          <div
+            v-if="!loading && !filteredOptions.length"
+            class="px-4 py-5 text-center text-sm text-slate"
+          >
             {{ emptyText }}
           </div>
 
-          <ComboboxOption v-for="option in options" :key="option.value" v-slot="{ active, selected }"
-            :value="option.value" as="template">
-            <li class="relative cursor-pointer rounded-xl px-4 py-3 pr-10 transition"
-              :class="active ? 'bg-tangerine-light text-tangerine-dark' : 'text-onyx'">
+          <ComboboxOption
+            v-for="option in filteredOptions"
+            :key="option.value"
+            v-slot="{ active, selected }"
+            :value="option.value"
+            as="template"
+          >
+            <li
+              class="relative cursor-pointer rounded-xl px-4 py-3 pr-10 transition"
+              :class="active ? 'bg-tangerine-light text-tangerine-dark' : 'text-onyx'"
+            >
               <p class="text-sm font-semibold">{{ option.label }}</p>
               <p v-if="option.description" class="mt-1 text-xs text-slate">
                 {{ option.description }}
               </p>
-              <Icon v-if="selected" icon="feather:check"
-                class="absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 text-tangerine" />
+              <Icon
+                v-if="selected"
+                icon="feather:check"
+                class="absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 text-tangerine"
+              />
             </li>
           </ComboboxOption>
         </ComboboxOptions>
