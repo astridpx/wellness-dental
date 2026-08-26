@@ -258,7 +258,7 @@ async function confirmDentistBill() {
 }
 
 function openDentistPaymentDialog(record: DentalAvailmentRecord, paid: boolean) {
-  if (updatingPaymentId.value || isDoctorCancelled(record) || !record.billingReceivedAt) return
+  if (updatingPaymentId.value || isDoctorCancelled(record)) return
   dentistPaymentTarget.value = {
     record,
     paid,
@@ -529,8 +529,8 @@ function clearActiveFilters() {
             Dentist payment
           </p>
           <p class="mt-2 text-sm leading-6 text-slate">
-            This final step marks the availment as paid after the dentist bill has already been
-            received.
+            Mark this availment as paid and record the actual paid date. Billing received can still
+            be recorded separately when needed.
           </p>
         </div>
         <div class="grid gap-3 sm:grid-cols-2">
@@ -806,7 +806,6 @@ function clearActiveFilters() {
                       {{ record.billingReceivedAt ? 'Update Bill' : 'Receive Bill' }}
                     </button>
                     <button
-                      v-if="record.billingReceivedAt"
                       type="button"
                       class="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
                       :class="

@@ -333,7 +333,7 @@ async function confirmBillStatus() {
 }
 
 function openPaymentDialog(record: DentalAvailmentRecord, paid: boolean) {
-  if (updatingPaymentId.value || !record.billingReceivedAt) return
+  if (updatingPaymentId.value) return
   paymentTarget.value = {
     record,
     paid,
@@ -810,8 +810,8 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
             Dentist payment
           </p>
           <p class="mt-2 text-sm leading-6 text-slate">
-            This final step marks the availment as paid after the dentist bill has already been
-            received.
+            Mark this availment as paid and record the actual paid date. Billing received can still
+            be recorded separately when needed.
           </p>
         </div>
         <div class="grid gap-3 sm:grid-cols-2">
@@ -1175,7 +1175,7 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
                   />
                 </button>
                 <button
-                  v-if="isValidAvailment(record) && record.billingReceivedAt"
+                  v-if="isValidAvailment(record)"
                   type="button"
                   class="inline-flex size-10 items-center justify-center rounded-full text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
                   :class="
