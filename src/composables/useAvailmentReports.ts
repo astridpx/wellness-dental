@@ -27,12 +27,15 @@ export function useAvailmentReports() {
   const partnerCompanies = ref<PartnerReportCompany[]>([])
   const totalAmount = ref(0)
   const form = reactive({
-    mode: 'period' as AvailmentReportMode,
+    mode: 'billMonitoring' as AvailmentReportMode,
     companyScope: 'both' as AvailmentCompanyScope,
     companyFilterBy: 'classification' as AvailmentCompanyFilterBy,
     company: '',
     dentist: '',
     dentistPaymentStatus: '',
+    monitoringStatus: '',
+    daysRemainingFrom: '',
+    daysRemainingTo: '',
     dateFrom: '',
     dateTo: '',
   })
@@ -47,7 +50,13 @@ export function useAvailmentReports() {
       return false
     }
     if (requiresDentist.value && !form.dentist.trim()) return false
-    if (requiresDates.value && (!form.dateFrom || !form.dateTo)) return false
+    if (
+      requiresDates.value &&
+      (form.mode !== 'billMonitoring' || !form.monitoringStatus.trim()) &&
+      (!form.dateFrom || !form.dateTo)
+    ) {
+      return false
+    }
     return true
   })
 
@@ -167,12 +176,15 @@ export function useAvailmentReports() {
   }
 
   function clearReport() {
-    form.mode = 'period'
+    form.mode = 'billMonitoring'
     form.companyScope = 'both'
     form.companyFilterBy = 'classification'
     form.company = ''
     form.dentist = ''
     form.dentistPaymentStatus = ''
+    form.monitoringStatus = ''
+    form.daysRemainingFrom = ''
+    form.daysRemainingTo = ''
     form.dateFrom = ''
     form.dateTo = ''
     rows.value = []

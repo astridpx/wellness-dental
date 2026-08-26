@@ -33,7 +33,6 @@ const {
   requiresDates,
   requiresDentist,
   rows,
-  totalAmount,
 } = useAvailmentReports()
 const {
   dentists,
@@ -109,6 +108,7 @@ const reportModes: Array<{
 const selectedMode = computed(() => reportModes.find((mode) => mode.value === form.mode))
 const isBillMonitoringMode = computed(() => form.mode === 'billMonitoring')
 const isPaymentMonitoringMode = computed(() => form.mode === 'paymentMonitoring')
+const showMonitoringDueFilters = computed(() => isBillMonitoringMode.value)
 const showRemarksColumn = computed(
   () =>
     form.mode === 'companyPeriod' ||
@@ -231,6 +231,58 @@ const dateRangeLabel = computed(() => {
   if (isPaymentMonitoringMode.value) return 'Paid Date'
   return 'Availment Date'
 })
+const normalizedDaysRemainingFrom = computed(() => {
+  const value = Number(form.daysRemainingFrom)
+  return Number.isInteger(value) ? value : null
+})
+const normalizedDaysRemainingTo = computed(() => {
+  const value = Number(form.daysRemainingTo)
+  return Number.isInteger(value) ? value : null
+})
+const visibleRows = computed(() =>
+  rows.value.filter((row) => {
+    if (!showMonitoringDueFilters.value) return true
+
+    const paid = isPaid(row)
+    const remaining = billingDaysRemaining(row.billingReceivedAt)
+    const monitoringStatus = form.monitoringStatus.trim()
+
+    if (monitoringStatus === 'overdueOnly') {
+      return !paid && remaining !== null && remaining < 0
+    }
+
+    if (monitoringStatus === 'dueSoonOnly') {
+      if (paid || remaining === null || remaining < 0) return false
+
+      const min = normalizedDaysRemainingFrom.value ?? 1
+      const max = normalizedDaysRemainingTo.value ?? 10
+      return remaining >= min && remaining <= max
+    }
+
+    if (
+      !paid &&
+      remaining !== null &&
+      normalizedDaysRemainingFrom.value !== null &&
+      remaining < normalizedDaysRemainingFrom.value
+    ) {
+      return false
+    }
+
+    if (
+      !paid &&
+      remaining !== null &&
+      normalizedDaysRemainingTo.value !== null &&
+      remaining > normalizedDaysRemainingTo.value
+    ) {
+      return false
+    }
+
+    return true
+  }),
+)
+const visibleTotalAmount = computed(() =>
+  visibleRows.value.reduce((sum, row) => sum + Number(row.amount || 0), 0),
+)
 const excelColumns = computed(() => [
   ['no', 'No.'],
   ['companyName', 'Company Name'],
@@ -380,9 +432,9 @@ function paymentFilterLabel() {
 }
 
 function exportReport() {
-  if (!rows.value.length) return
+  if (!visibleRows.value.length) return
 
-  const exportRows = rows.value.map((row, index) =>
+  const exportRows = visibleRows.value.map((row, index) =>
     Object.fromEntries(
       excelColumns.value.map(([key, label]) => [
         label,
@@ -393,8 +445,8 @@ function exportReport() {
   const reportGeneratedAt = formatExcelDateTimeManila(new Date(), '')
   const dateFromLabel = form.dateFrom ? formatDate(form.dateFrom) : 'N/A'
   const dateToLabel = form.dateTo ? formatDate(form.dateTo) : 'N/A'
-  const totalRows = rows.value.length
-  const totalAmountLabel = formatMoney(totalAmount.value)
+  const totalRows = visibleRows.value.length
+  const totalAmountLabel = formatMoney(visibleTotalAmount.value)
   const headerRows = [
     ['IWC WELLNESS AND PREVENTIVE CONSULTANCY INC.'],
     [selectedReportTitle.value],
@@ -404,6 +456,17 @@ function exportReport() {
     ['Company Selected', selectedCompanyLabel.value],
     [`${dateRangeLabel.value} From`, dateFromLabel],
     [`${dateRangeLabel.value} To`, dateToLabel],
+    ...(showMonitoringDueFilters.value
+      ? [
+          ['Monitoring Status', form.monitoringStatus === 'overdueOnly'
+            ? 'Overdue only'
+            : form.monitoringStatus === 'dueSoonOnly'
+              ? 'Due soon only'
+              : 'All billing rows'],
+          ['Days Remaining From', form.daysRemainingFrom || 'N/A'],
+          ['Days Remaining To', form.daysRemainingTo || 'N/A'],
+        ]
+      : []),
     [],
     ['SUMMARY'],
     ['Total Rows', totalRows],
@@ -450,6 +513,31 @@ function clearReportsView() {
   selectedCompanyCode.value = null
   companySearch.value = ''
 }
+
+watch(
+  () => form.mode,
+  (mode) => {
+    if (mode !== 'billMonitoring') {
+      form.monitoringStatus = ''
+      form.daysRemainingFrom = ''
+      form.daysRemainingTo = ''
+    }
+  },
+)
+
+watch(
+  () => form.monitoringStatus,
+  (status) => {
+    if (status === 'dueSoonOnly') {
+      if (!form.daysRemainingFrom) form.daysRemainingFrom = '1'
+      if (!form.daysRemainingTo) form.daysRemainingTo = '10'
+      return
+    }
+
+    form.daysRemainingFrom = ''
+    form.daysRemainingTo = ''
+  },
+)
 
 function resetSelectedCompany() {
   form.company = ''
@@ -633,7 +721,7 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
       <div class="grid border-t border-pebble/80 bg-white/72 md:grid-cols-3">
         <div class="border-b border-pebble/80 px-6 py-4 md:border-b-0 md:border-r">
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Rows</p>
-          <p class="mt-2 text-2xl font-black text-onyx">{{ rows.length }}</p>
+          <p class="mt-2 text-2xl font-black text-onyx">{{ visibleRows.length }}</p>
         </div>
         <div class="border-b border-pebble/80 px-6 py-4 md:border-b-0 md:border-r">
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Report Mode</p>
@@ -641,7 +729,7 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
         </div>
         <div class="px-6 py-4">
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Total Amount</p>
-          <p class="mt-2 text-2xl font-black text-emerald">{{ formatMoney(totalAmount) }}</p>
+          <p class="mt-2 text-2xl font-black text-emerald">{{ formatMoney(visibleTotalAmount) }}</p>
         </div>
       </div>
     </section>
@@ -773,6 +861,35 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
           <AppInput v-model="form.dateFrom" :label="`${dateRangeLabel} From`" type="date" />
           <AppInput v-model="form.dateTo" :label="`${dateRangeLabel} To`" type="date" />
         </div>
+        <div v-if="showMonitoringDueFilters" class="grid gap-4 md:col-span-2 md:grid-cols-3">
+          <div>
+            <label class="mb-2 block text-sm font-medium text-onyx">Due Monitoring</label>
+            <select
+              v-model="form.monitoringStatus"
+              class="w-full rounded-xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fafcff_100%)] px-4 py-3.5 text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+            >
+              <option value="">All billing rows</option>
+              <option value="overdueOnly">Overdue only</option>
+              <option value="dueSoonOnly">Due soon only</option>
+            </select>
+          </div>
+          <AppInput
+            v-if="form.monitoringStatus === 'dueSoonOnly'"
+            v-model="form.daysRemainingFrom"
+            label="Days Remaining From"
+            type="number"
+            min="0"
+            placeholder="1"
+          />
+          <AppInput
+            v-if="form.monitoringStatus === 'dueSoonOnly'"
+            v-model="form.daysRemainingTo"
+            label="Days Remaining To"
+            type="number"
+            min="0"
+            placeholder="10"
+          />
+        </div>
       </div>
 
       <p v-if="errorMessage" class="mt-5 rounded-xl bg-ruby-light px-4 py-3 text-sm text-ruby">
@@ -795,7 +912,7 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
         <AppButton
           btn-theme="primary"
           class="normal-case"
-          :disabled="loading || !rows.length"
+          :disabled="loading || !visibleRows.length"
           @click="exportReport"
         >
           <Icon icon="feather:file-text" class="h-4 w-4" />
@@ -828,18 +945,18 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
             'Encoded By',
           ]
         "
-        :total-entries="rows.length"
+        :total-entries="visibleRows.length"
       >
         <template #trs>
-          <tr v-if="!rows.length">
+          <tr v-if="!visibleRows.length">
             <td
               :colspan="8 + (showBillingColumns ? 3 : 0) + 2 + (showRemarksColumn ? 1 : 0)"
               class="py-12! text-center! text-sm text-slate"
             >
-              No report rows generated yet.
+              {{ rows.length ? 'No report rows match the current monitoring filters.' : 'No report rows generated yet.' }}
             </td>
           </tr>
-          <tr v-for="(row, index) in rows" v-else :key="`${row.approvalNo}-${index}`">
+          <tr v-for="(row, index) in visibleRows" v-else :key="`${row.approvalNo}-${index}`">
             <td>{{ row.companyName || 'N/A' }}</td>
             <td>
               <span class="font-mono text-sm font-black text-onyx">

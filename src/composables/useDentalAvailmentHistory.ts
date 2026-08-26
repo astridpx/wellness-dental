@@ -259,7 +259,7 @@ export function useDentalAvailmentHistory() {
       payload.billingReceivedAt = billingReceivedAt || null
     }
 
-    if (paidAt !== undefined) {
+    if (paid && paidAt !== undefined) {
       payload.paidAt = paidAt || null
     }
 
