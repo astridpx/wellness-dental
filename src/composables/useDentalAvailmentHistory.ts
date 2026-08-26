@@ -241,16 +241,33 @@ export function useDentalAvailmentHistory() {
     return true
   }
 
-  async function updateDoctorPaymentStatus(record: DentalAvailmentRecord, paid: boolean) {
+  async function updateDoctorPaymentStatus(
+    record: DentalAvailmentRecord,
+    paid: boolean,
+    billingReceivedAt?: string,
+    paidAt?: string,
+  ) {
     updatingPaymentId.value = record.dentalid
     errorMessage.value = ''
     successMessage.value = ''
+
+    const payload: Record<string, unknown> = {
+      paid,
+    }
+
+    if (billingReceivedAt !== undefined) {
+      payload.billingReceivedAt = billingReceivedAt || null
+    }
+
+    if (paidAt !== undefined) {
+      payload.paidAt = paidAt || null
+    }
 
     const result = await request<DentalAvailmentRecord>(
       `/wellness/dentalAvailments/${record.dentalid}/payment`,
       {
         method: 'PATCH',
-        body: JSON.stringify({ paid }),
+        body: JSON.stringify(payload),
       },
       { includeContentType: true },
     )
@@ -266,6 +283,38 @@ export function useDentalAvailmentHistory() {
     successMessage.value = `Dentist payment for ${record.approvalno} was marked ${
       paid ? 'paid' : 'unpaid'
     }.`
+    await fetchHistory()
+    if (selectedApproval.value?.approvalNo === record.approvalno) {
+      await openApprovalDetails(record.approvalno)
+    }
+    return true
+  }
+
+  async function updateDoctorBillingReceivedAt(
+    record: DentalAvailmentRecord,
+    billingReceivedAt?: string,
+  ) {
+    updatingPaymentId.value = record.dentalid
+    errorMessage.value = ''
+    successMessage.value = ''
+
+    const result = await request<DentalAvailmentRecord>(
+      `/wellness/dentalAvailments/${record.dentalid}/payment`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ billingReceivedAt: billingReceivedAt || null }),
+      },
+      { includeContentType: true },
+    )
+
+    updatingPaymentId.value = null
+
+    if (!result.ok) {
+      errorMessage.value = result.error || 'Unable to update dentist billing received date.'
+      return false
+    }
+
+    successMessage.value = `Billing received date for ${record.approvalno} was updated.`
     await fetchHistory()
     if (selectedApproval.value?.approvalNo === record.approvalno) {
       await openApprovalDetails(record.approvalno)
@@ -313,6 +362,7 @@ export function useDentalAvailmentHistory() {
     unpaidAmount,
     totalAmount,
     updateAvailment,
+    updateDoctorBillingReceivedAt,
     updateDoctorPaymentStatus,
     updatingPaymentId,
     updatingId,

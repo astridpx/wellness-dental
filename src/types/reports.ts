@@ -1,4 +1,9 @@
-export type AvailmentReportMode = 'companyPeriod' | 'dentistPeriod' | 'period' | 'daily'
+export type AvailmentReportMode =
+  | 'companyPeriod'
+  | 'dentistPeriod'
+  | 'period'
+  | 'billMonitoring'
+  | 'paymentMonitoring'
 
 export type AvailmentCompanyScope = 'both' | 'ims' | 'partner' | 'specificIms'
 
@@ -16,6 +21,7 @@ export type AvailmentReportRow = {
   amount?: number | string | null
   ifPaid?: boolean | number | string | null
   paidToDentistAt?: string | null
+  billingReceivedAt?: string | null
   paymentReceived?: boolean | number | string | null
   paymentReceivedAt?: string | null
   remarks?: string | null

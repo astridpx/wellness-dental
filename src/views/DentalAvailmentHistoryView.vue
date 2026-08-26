@@ -12,7 +12,7 @@ import {
 } from '@/components/app'
 import { useClinics, useDentalAvailmentHistory, useDentists, useProcedures } from '@/composables'
 import type { DentalAvailmentRecord } from '@/types'
-import { formatDate, formatDateTime, formatMoney } from '@/utils'
+import { addWorkingDays, differenceInWorkingDays, formatDate, formatDateTime, formatMoney } from '@/utils'
 
 const {
   cancelAvailment,
@@ -30,6 +30,7 @@ const {
   totalPages,
   paidRows,
   updateAvailment,
+  updateDoctorBillingReceivedAt,
   updateDoctorPaymentStatus,
   uncancelAvailment,
   uncancellingId,
@@ -49,7 +50,15 @@ const showFilterDialog = ref(false)
 const cancelTarget = ref<DentalAvailmentRecord | null>(null)
 const uncancelTarget = ref<DentalAvailmentRecord | null>(null)
 const editTarget = ref<DentalAvailmentRecord | null>(null)
-const paymentTarget = ref<{ record: DentalAvailmentRecord; paid: boolean } | null>(null)
+const billTarget = ref<{
+  record: DentalAvailmentRecord
+  billingReceivedAt: string
+} | null>(null)
+const paymentTarget = ref<{
+  record: DentalAvailmentRecord
+  paid: boolean
+  paidAt: string
+} | null>(null)
 const selectedProcedureId = ref<string | number | null>(null)
 const procedureSearch = ref('')
 const selectedDentistId = ref<string | number | null>(null)
@@ -242,9 +251,94 @@ function isValidAvailment(record?: DentalAvailmentRecord | null) {
   return String(record.status || 'VALID').toUpperCase() === 'VALID'
 }
 
-function openPaymentDialog(record: DentalAvailmentRecord, paid: boolean) {
+function billingDueDate(value?: string | null) {
+  return addWorkingDays(value, 10)
+}
+
+function billingDaysRemaining(value?: string | null) {
+  const dueDate = billingDueDate(value)
+  if (!dueDate) return null
+
+  return differenceInWorkingDays(new Date(), dueDate)
+}
+
+function billingCountdown(record?: DentalAvailmentRecord | null) {
+  if (!record?.billingReceivedAt) {
+    return {
+      label: 'No billing date',
+      className: 'bg-fog text-slate',
+    }
+  }
+
+  if (isDoctorPaid(record)) {
+    return {
+      label: 'Paid',
+      className: 'bg-emerald-light text-emerald',
+    }
+  }
+
+  const remaining = billingDaysRemaining(record.billingReceivedAt)
+  if (remaining === null) {
+    return {
+      label: 'No due date',
+      className: 'bg-fog text-slate',
+    }
+  }
+
+  if (remaining < 0) {
+    return {
+      label: `Overdue by ${Math.abs(remaining)} day${Math.abs(remaining) === 1 ? '' : 's'}`,
+      className: 'bg-ruby-light text-ruby',
+    }
+  }
+
+  if (remaining <= 3) {
+    return {
+      label: `${remaining} day${remaining === 1 ? '' : 's'} left`,
+      className: 'bg-ruby-light text-ruby',
+    }
+  }
+
+  return {
+    label: `${remaining} days left`,
+    className: 'bg-amber-light text-amber',
+  }
+}
+
+function currentDateInputValue() {
+  return '2026-08-26'
+}
+
+function openBillDialog(record: DentalAvailmentRecord) {
   if (updatingPaymentId.value) return
-  paymentTarget.value = { record, paid }
+  billTarget.value = {
+    record,
+    billingReceivedAt: normalizeDateInput(record.billingReceivedAt),
+  }
+}
+
+function closeBillDialog() {
+  if (updatingPaymentId.value) return
+  billTarget.value = null
+}
+
+async function confirmBillStatus() {
+  if (!billTarget.value) return
+
+  const updated = await updateDoctorBillingReceivedAt(
+    billTarget.value.record,
+    billTarget.value.billingReceivedAt,
+  )
+  if (updated) billTarget.value = null
+}
+
+function openPaymentDialog(record: DentalAvailmentRecord, paid: boolean) {
+  if (updatingPaymentId.value || !record.billingReceivedAt) return
+  paymentTarget.value = {
+    record,
+    paid,
+    paidAt: paid ? normalizeDateInput(record.paidAt) || currentDateInputValue() : '',
+  }
 }
 
 function closePaymentDialog() {
@@ -258,6 +352,8 @@ async function confirmPaymentStatus() {
   const updated = await updateDoctorPaymentStatus(
     paymentTarget.value.record,
     paymentTarget.value.paid,
+    undefined,
+    paymentTarget.value.paidAt,
   )
   if (updated) paymentTarget.value = null
 }
@@ -614,9 +710,87 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
   </AppDialog>
 
   <AppDialog
+    title="Receive Dentist Bill"
+    :show="Boolean(billTarget)"
+    :disabled="Boolean(updatingPaymentId)"
+    :confirm-label="updatingPaymentId ? 'Saving...' : 'Save Billing Date'"
+    @close="closeBillDialog"
+    @confirm="confirmBillStatus"
+  >
+    <template #dialog-content>
+      <div v-if="billTarget" class="space-y-4">
+        <div
+          class="rounded-[1.5rem] border border-tangerine/15 bg-[linear-gradient(135deg,#fff8ef_0%,#ffffff_100%)] p-5"
+        >
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-tangerine">
+            Dentist bill
+          </p>
+          <p class="mt-2 text-sm leading-6 text-slate">
+            Record when the dentist or clinic bill was received. This starts the 10 working-day
+            due countdown before payment.
+          </p>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Approval</p>
+            <p class="mt-2 font-mono text-sm font-bold text-onyx">
+              {{ billTarget.record.approvalno || 'N/A' }}
+            </p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Procedure</p>
+            <p class="mt-2 text-sm font-bold text-onyx">
+              {{ billTarget.record.procedures || 'N/A' }}
+            </p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4 sm:col-span-2">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Dentist / Clinic</p>
+            <p class="mt-2 text-sm font-bold text-onyx">
+              {{ billTarget.record.dentistname || 'N/A' }} ·
+              {{ billTarget.record.clinicname || 'N/A' }}
+            </p>
+          </div>
+        </div>
+        <AppInput
+          v-model="billTarget.billingReceivedAt"
+          label="Billing Received Date"
+          type="date"
+        />
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Due Date</p>
+            <p class="mt-2 text-sm font-bold text-onyx">
+              {{ formatDate(billingDueDate(billTarget.billingReceivedAt)) }}
+            </p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Working-Day Status</p>
+            <p
+              class="mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold"
+              :class="
+                billingCountdown({
+                  ...billTarget.record,
+                  billingReceivedAt: billTarget.billingReceivedAt,
+                }).className
+              "
+            >
+              {{
+                billingCountdown({
+                  ...billTarget.record,
+                  billingReceivedAt: billTarget.billingReceivedAt,
+                }).label
+              }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </template>
+  </AppDialog>
+
+  <AppDialog
     :title="paymentTarget?.paid ? 'Mark dentist as paid' : 'Mark dentist as unpaid'"
     :show="Boolean(paymentTarget)"
-    :disabled="Boolean(updatingPaymentId)"
+    :disabled="Boolean(updatingPaymentId) || Boolean(paymentTarget?.paid && !paymentTarget.paidAt)"
     :confirm-label="
       updatingPaymentId
         ? 'Saving...'
@@ -628,7 +802,7 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
     @confirm="confirmPaymentStatus"
   >
     <template #dialog-content>
-      <div class="space-y-4">
+      <div v-if="paymentTarget" class="space-y-4">
         <div
           class="rounded-[1.5rem] border border-emerald/15 bg-[linear-gradient(135deg,#ecfdf5_0%,#ffffff_100%)] p-5"
         >
@@ -636,30 +810,40 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
             Dentist payment
           </p>
           <p class="mt-2 text-sm leading-6 text-slate">
-            This tracks whether the dentist/clinic has already been paid for this availment row.
+            This final step marks the availment as paid after the dentist bill has already been
+            received.
           </p>
         </div>
         <div class="grid gap-3 sm:grid-cols-2">
           <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
             <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Approval</p>
             <p class="mt-2 font-mono text-sm font-bold text-onyx">
-              {{ paymentTarget?.record.approvalno || 'N/A' }}
+              {{ paymentTarget.record.approvalno || 'N/A' }}
             </p>
           </div>
           <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Procedure</p>
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Billing Received</p>
             <p class="mt-2 text-sm font-bold text-onyx">
-              {{ paymentTarget?.record.procedures || 'N/A' }}
+              {{ formatDate(paymentTarget.record.billingReceivedAt) }}
             </p>
           </div>
           <div class="rounded-2xl border border-pebble bg-white px-4 py-4 sm:col-span-2">
             <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Dentist / Clinic</p>
             <p class="mt-2 text-sm font-bold text-onyx">
-              {{ paymentTarget?.record.dentistname || 'N/A' }} ·
-              {{ paymentTarget?.record.clinicname || 'N/A' }}
+              {{ paymentTarget.record.dentistname || 'N/A' }} ·
+              {{ paymentTarget.record.clinicname || 'N/A' }}
             </p>
           </div>
         </div>
+        <AppInput
+          v-if="paymentTarget.paid"
+          v-model="paymentTarget.paidAt"
+          label="Paid Date"
+          type="date"
+        />
+        <p v-else class="rounded-xl bg-fog px-4 py-3 text-sm text-slate">
+          This will clear the saved paid date for this availment row.
+        </p>
       </div>
     </template>
   </AppDialog>
@@ -859,6 +1043,9 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
           'Member',
           'Procedure',
           'Dentist / Clinic',
+          'Billing Received',
+          'Due Date',
+          'Days Remaining',
           'Amount',
           'Dentist Payment',
           'Paid to Dentist At',
@@ -873,7 +1060,7 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
       >
         <template #trs>
           <tr v-if="!records.length">
-            <td colspan="11" class="py-10! text-center! text-sm text-slate">
+            <td colspan="14" class="py-10! text-center! text-sm text-slate">
               No availment history found.
             </td>
           </tr>
@@ -913,6 +1100,16 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
               }}</span>
               <span class="mt-1 block text-xs text-slate">{{ record.clinicname || 'N/A' }}</span>
             </td>
+            <td class="text-sm text-slate">{{ formatDate(record.billingReceivedAt) }}</td>
+            <td class="text-sm text-slate">{{ formatDate(billingDueDate(record.billingReceivedAt)) }}</td>
+            <td>
+              <span
+                class="rounded-full px-3 py-1 text-xs font-semibold"
+                :class="billingCountdown(record).className"
+              >
+                {{ billingCountdown(record).label }}
+              </span>
+            </td>
             <td class="text-sm font-black text-onyx">{{ formatMoney(record.amount) }}</td>
             <td>
               <span
@@ -951,25 +1148,43 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
                 <button
                   v-if="isValidAvailment(record)"
                   type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-tangerine/20 bg-tangerine-light/35 px-3.5 py-2 text-xs font-semibold text-tangerine-dark transition hover:border-tangerine/40 hover:bg-white"
+                  class="inline-flex size-10 items-center justify-center rounded-full border border-tangerine/20 bg-tangerine-light/35 text-tangerine-dark transition hover:border-tangerine/40 hover:bg-white"
                   title="Edit availment"
                   aria-label="Edit availment"
                   @click.stop="openEditDialog(record)"
                 >
                   <Icon icon="feather:edit-2" class="h-4 w-4" />
-                  Edit
                 </button>
                 <button
                   v-if="isValidAvailment(record)"
                   type="button"
-                  class="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
+                  class="inline-flex size-10 items-center justify-center rounded-full border border-[#d8c5a0] bg-[linear-gradient(180deg,#f8eddc_0%,#efe1cb_100%)] text-[#8c6320] shadow-[0_10px_20px_rgba(176,138,52,0.12)] transition hover:border-[#c59a42] disabled:cursor-not-allowed disabled:opacity-60"
+                  :title="record.billingReceivedAt ? 'Update bill received' : 'Receive bill'"
+                  :aria-label="record.billingReceivedAt ? 'Update bill received' : 'Receive bill'"
+                  :disabled="updatingPaymentId === record.dentalid"
+                  @click.stop="openBillDialog(record)"
+                >
+                  <Icon
+                    :icon="
+                      updatingPaymentId === record.dentalid
+                        ? 'feather:loader'
+                        : 'feather:file-plus'
+                    "
+                    class="h-4 w-4"
+                    :class="{ 'animate-spin': updatingPaymentId === record.dentalid }"
+                  />
+                </button>
+                <button
+                  v-if="isValidAvailment(record) && record.billingReceivedAt"
+                  type="button"
+                  class="inline-flex size-10 items-center justify-center rounded-full text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
                   :class="
                     isDoctorPaid(record)
                       ? 'border border-[#cbd7dd] bg-[linear-gradient(180deg,#edf5f7_0%,#e2ecef_100%)] text-[#2d5562] shadow-[0_10px_20px_rgba(54,89,99,0.08)] hover:border-[#9bb6bf]'
                       : 'border border-emerald/20 bg-emerald-light text-emerald hover:border-emerald/40 hover:bg-white'
                   "
-                  title="Update dentist payment"
-                  aria-label="Update dentist payment"
+                  :title="isDoctorPaid(record) ? 'Mark unpaid' : 'Mark paid'"
+                  :aria-label="isDoctorPaid(record) ? 'Mark unpaid' : 'Mark paid'"
                   :disabled="updatingPaymentId === record.dentalid"
                   @click.stop="openPaymentDialog(record, !isDoctorPaid(record))"
                 >
@@ -984,12 +1199,11 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
                     class="h-4 w-4"
                     :class="{ 'animate-spin': updatingPaymentId === record.dentalid }"
                   />
-                  {{ isDoctorPaid(record) ? 'Mark Unpaid' : 'Mark Paid' }}
                 </button>
                 <button
                   v-if="isValidAvailment(record)"
                   type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-ruby/20 bg-ruby-light px-3.5 py-2 text-xs font-semibold text-ruby transition hover:bg-ruby hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  class="inline-flex size-10 items-center justify-center rounded-full border border-ruby/20 bg-ruby-light text-ruby transition hover:bg-ruby hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                   title="Cancel availment"
                   aria-label="Cancel availment"
                   :disabled="cancellingId === record.dentalid"
@@ -1000,12 +1214,11 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
                     class="h-4 w-4"
                     :class="{ 'animate-spin': cancellingId === record.dentalid }"
                   />
-                  Cancel
                 </button>
                 <button
                   v-else
                   type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-emerald/20 bg-emerald-light px-3.5 py-2 text-xs font-semibold text-emerald transition hover:border-emerald/40 hover:bg-white"
+                  class="inline-flex size-10 items-center justify-center rounded-full border border-emerald/20 bg-emerald-light text-emerald transition hover:border-emerald/40 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                   title="Uncancel availment"
                   aria-label="Uncancel availment"
                   :disabled="uncancellingId === record.dentalid"
@@ -1018,7 +1231,6 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
                     class="h-4 w-4"
                     :class="{ 'animate-spin': uncancellingId === record.dentalid }"
                   />
-                  {{ uncancellingId === record.dentalid ? 'Restoring...' : 'Uncancel' }}
                 </button>
               </div>
             </td>

@@ -21,6 +21,7 @@ export type DentalAvailmentRecord = {
   ifPaid?: number | boolean | null
   ifpaid?: number | boolean | null
   paidAt?: string | null
+  billingReceivedAt?: string | null
   dtCancelled?: string | null
   CancelledBy?: string | null
   status?: string

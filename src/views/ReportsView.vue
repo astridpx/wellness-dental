@@ -6,6 +6,8 @@ import { AppButton, AppInput, AppLoadingScreen, AppSearchSelect, AppTable } from
 import { useAvailmentReports, useDentists, useProcedures } from '@/composables'
 import type { AvailmentCompanyFilterBy, AvailmentReportMode } from '@/types'
 import {
+  addWorkingDays,
+  differenceInWorkingDays,
   autoFitWorksheetColumns,
   formatDate,
   formatDateTime,
@@ -73,10 +75,16 @@ const reportModes: Array<{
   icon: string
 }> = [
   {
-    value: 'daily',
-    label: 'Daily Report',
-    description: 'Availments encoded for today.',
-    icon: 'feather:calendar',
+    value: 'billMonitoring',
+    label: 'Billing Monitoring',
+    description: 'Monitor dentist bill receipt dates, due dates, and remaining working days.',
+    icon: 'feather:alert-circle',
+  },
+  {
+    value: 'paymentMonitoring',
+    label: 'Payment Monitoring',
+    description: 'Track availments by dentist paid date and review billing-to-payment turnaround.',
+    icon: 'feather:check-circle',
   },
   {
     value: 'period',
@@ -99,12 +107,25 @@ const reportModes: Array<{
 ]
 
 const selectedMode = computed(() => reportModes.find((mode) => mode.value === form.mode))
+const isBillMonitoringMode = computed(() => form.mode === 'billMonitoring')
+const isPaymentMonitoringMode = computed(() => form.mode === 'paymentMonitoring')
 const showRemarksColumn = computed(
   () =>
     form.mode === 'companyPeriod' ||
     form.mode === 'dentistPeriod' ||
-    form.mode === 'daily' ||
+    form.mode === 'paymentMonitoring' ||
+    form.mode === 'billMonitoring' ||
     form.mode === 'period',
+)
+const showBillingColumns = computed(() => isBillMonitoringMode.value || isPaymentMonitoringMode.value)
+const showDentistPaymentFilter = computed(
+  () => form.mode === 'dentistPeriod' || form.mode === 'billMonitoring',
+)
+const showDentistFilter = computed(
+  () =>
+    form.mode === 'dentistPeriod' ||
+    form.mode === 'billMonitoring' ||
+    form.mode === 'paymentMonitoring',
 )
 const companyScopeOptions = [
   {
@@ -200,11 +221,17 @@ const selectedReportTitle = computed(() => {
   }
 
   if (form.mode === 'dentistPeriod') return 'Dentist + Availment Report'
+  if (form.mode === 'billMonitoring') return 'Billing Monitoring Report'
+  if (form.mode === 'paymentMonitoring') return 'Wellness Availment Payment Monitoring Report'
   if (form.mode === 'period') return 'Availment Date Report'
-
-  return 'Daily Availment Report'
+  return 'Availment Report'
 })
-const excelColumns = [
+const dateRangeLabel = computed(() => {
+  if (isBillMonitoringMode.value) return 'Billing Received Date'
+  if (isPaymentMonitoringMode.value) return 'Paid Date'
+  return 'Availment Date'
+})
+const excelColumns = computed(() => [
   ['no', 'No.'],
   ['companyName', 'Company Name'],
   ['approvalNo', 'Approval No.'],
@@ -214,12 +241,19 @@ const excelColumns = [
   ['clinicName', 'Clinic Name'],
   ['toothNo', 'Tooth No.'],
   ['procedureName', 'Procedure Name'],
+  ...(showBillingColumns.value
+    ? [
+        ['billingReceivedAt', 'Billing Received Date'],
+        ['dueDate', 'Due Date'],
+        [isPaymentMonitoringMode.value ? 'paymentLeadTime' : 'daysRemaining', isPaymentMonitoringMode.value ? 'Turnaround' : 'Days Remaining'],
+      ]
+    : []),
   ['amount', 'Amount'],
   ['paymentStatus', 'Payment Status'],
   ['paidToDentistAt', 'Paid to Dentist At'],
   ['remarks', 'Remarks'],
   ['encodedBy', 'Encoded By'],
-] as const
+] as const)
 
 const procedureNameMap = computed(
   () => new Map(procedures.value.map((procedure) => [procedure.code.trim().toUpperCase(), procedure.name])),
@@ -245,6 +279,100 @@ function isPaid(row: { ifPaid?: boolean | number | string | null }) {
   return row.ifPaid === true || Number(row.ifPaid || 0) === 1
 }
 
+function billingDueDate(value?: string | null) {
+  return addWorkingDays(value, 10)
+}
+
+function billingDaysRemaining(value?: string | null) {
+  const dueDate = billingDueDate(value)
+  if (!dueDate) return null
+  return differenceInWorkingDays(new Date(), dueDate)
+}
+
+function billingStatusLabel(value?: string | null, paid?: boolean) {
+  if (!value) return 'No billing date'
+  if (paid) return 'Paid'
+
+  const remaining = billingDaysRemaining(value)
+  if (remaining === null) return 'No due date'
+  if (remaining < 0) return `Overdue by ${Math.abs(remaining)} day${Math.abs(remaining) === 1 ? '' : 's'}`
+  if (remaining <= 3) return `${remaining} day${remaining === 1 ? '' : 's'} left`
+  return `${remaining} days left`
+}
+
+function billingStatusClass(value?: string | null, paid?: boolean) {
+  if (!value) return 'bg-fog text-slate'
+  if (paid) return 'bg-emerald-light text-emerald'
+
+  const remaining = billingDaysRemaining(value)
+  if (remaining !== null && remaining <= 3) return 'bg-ruby-light text-ruby'
+  if (remaining !== null && remaining < 0) return 'bg-ruby-light text-ruby'
+  return 'bg-amber-light text-amber'
+}
+
+function paymentLeadTimeLabel(
+  billingReceivedAt?: string | null,
+  paidToDentistAt?: string | null,
+) {
+  if (!billingReceivedAt || !paidToDentistAt) return 'N/A'
+
+  const paidDate = new Date(paidToDentistAt)
+  const dueDate = billingDueDate(billingReceivedAt)
+  if (Number.isNaN(paidDate.getTime()) || !dueDate) return 'N/A'
+
+  const workingDays = differenceInWorkingDays(new Date(billingReceivedAt), paidDate)
+  const dueDelta = differenceInWorkingDays(paidDate, dueDate)
+  if (workingDays === null || dueDelta === null) return 'N/A'
+
+  if (dueDelta < 0) {
+    return `${workingDays} work day${workingDays === 1 ? '' : 's'} | ${Math.abs(dueDelta)} day${Math.abs(dueDelta) === 1 ? '' : 's'} late`
+  }
+
+  if (dueDelta === 0) {
+    return `${workingDays} work day${workingDays === 1 ? '' : 's'} | On due date`
+  }
+
+  return `${workingDays} work day${workingDays === 1 ? '' : 's'} | ${dueDelta} day${dueDelta === 1 ? '' : 's'} early`
+}
+
+function exportCellValue(
+  row: Record<string, unknown>,
+  key: string,
+  index: number,
+) {
+  if (key === 'no') return index + 1
+  if (key === 'availDate') return formatExcelDateManila(row.availDate as string | null | undefined)
+  if (key === 'procedureName') return procedureName(row.procedures as string | null | undefined)
+  if (key === 'paymentStatus') {
+    return isPaid({ ifPaid: row.ifPaid as boolean | number | string | null | undefined })
+      ? 'Paid'
+      : 'Unpaid'
+  }
+  if (key === 'billingReceivedAt') {
+    return formatExcelDateManila(row.billingReceivedAt as string | null | undefined)
+  }
+  if (key === 'dueDate') {
+    return formatExcelDateManila(billingDueDate(row.billingReceivedAt as string | null | undefined))
+  }
+  if (key === 'daysRemaining') {
+    return billingStatusLabel(
+      row.billingReceivedAt as string | null | undefined,
+      isPaid({ ifPaid: row.ifPaid as boolean | number | string | null | undefined }),
+    )
+  }
+  if (key === 'paymentLeadTime') {
+    return paymentLeadTimeLabel(
+      row.billingReceivedAt as string | null | undefined,
+      row.paidToDentistAt as string | null | undefined,
+    )
+  }
+  if (key === 'paidToDentistAt') {
+    return formatExcelDateTimeManila(row.paidToDentistAt as string | null | undefined)
+  }
+
+  return row[key] ?? ''
+}
+
 function paymentFilterLabel() {
   if (form.dentistPaymentStatus === 'paid') return 'Paid only'
   if (form.dentistPaymentStatus === 'unpaid') return 'Unpaid only'
@@ -256,39 +384,26 @@ function exportReport() {
 
   const exportRows = rows.value.map((row, index) =>
     Object.fromEntries(
-      excelColumns.map(([key, label]) => [
+      excelColumns.value.map(([key, label]) => [
         label,
-        key === 'no'
-          ? index + 1
-          : key === 'availDate'
-            ? formatExcelDateManila(row.availDate)
-          : key === 'procedureName'
-            ? procedureName(row.procedures)
-          : key === 'paymentStatus'
-            ? isPaid(row)
-              ? 'Paid'
-              : 'Unpaid'
-            : key === 'paidToDentistAt'
-              ? formatExcelDateTimeManila(row[key])
-              : (row[key] ?? ''),
+        exportCellValue(row as Record<string, unknown>, key, index),
         ]),
     ),
   )
   const reportGeneratedAt = formatExcelDateTimeManila(new Date(), '')
   const dateFromLabel = form.dateFrom ? formatDate(form.dateFrom) : 'N/A'
   const dateToLabel = form.dateTo ? formatDate(form.dateTo) : 'N/A'
-  const dentistLabel = form.dentist.trim() || 'All Dentists'
   const totalRows = rows.value.length
   const totalAmountLabel = formatMoney(totalAmount.value)
   const headerRows = [
-    ['IWC WELLNESS PREVENTIVE CARE'],
+    ['IWC WELLNESS AND PREVENTIVE CONSULTANCY INC.'],
     [selectedReportTitle.value],
     [],
     ['REPORT DETAILS'],
     ['Date and Time Generated', reportGeneratedAt],
     ['Company Selected', selectedCompanyLabel.value],
-    ['Availment Date From', dateFromLabel],
-    ['Availment Date To', dateToLabel],
+    [`${dateRangeLabel.value} From`, dateFromLabel],
+    [`${dateRangeLabel.value} To`, dateToLabel],
     [],
     ['SUMMARY'],
     ['Total Rows', totalRows],
@@ -305,7 +420,7 @@ function exportReport() {
     skipHeader: false,
   })
 
-  const lastColumnIndex = Math.max(0, excelColumns.length - 1)
+  const lastColumnIndex = Math.max(0, excelColumns.value.length - 1)
   worksheet['!merges'] = [
     XLSX.utils.decode_range(`A1:${XLSX.utils.encode_col(lastColumnIndex)}1`),
     XLSX.utils.decode_range(`A2:${XLSX.utils.encode_col(lastColumnIndex)}2`),
@@ -509,8 +624,8 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
           </div>
           <h1 class="mt-4 text-3xl font-black tracking-tight text-onyx">Reports</h1>
           <p class="mt-3 max-w-3xl text-sm leading-6 text-slate">
-            Generate valid dental availment reports by company, dentist, date range, or daily
-            activity, then export the preview to Excel.
+            Generate polished dental availment reports by billing date, paid date, company, dentist,
+            or availment period, then export the preview to Excel.
           </p>
         </div>
       </div>
@@ -634,7 +749,7 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
           "
         />
         <AppSearchSelect
-          v-if="requiresDentist"
+          v-if="showDentistFilter"
           v-model="selectedDentistId"
           v-model:search="dentistSearch"
           :options="dentistOptions"
@@ -643,7 +758,7 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
           placeholder="Search dentist"
           empty-text="No matching dentists found."
         />
-        <div v-if="requiresDentist">
+        <div v-if="showDentistPaymentFilter">
           <label class="mb-2 block text-sm font-medium text-onyx">Dentist Payment</label>
           <select
             v-model="form.dentistPaymentStatus"
@@ -655,8 +770,8 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
           </select>
         </div>
         <div v-if="requiresDates" class="grid gap-4 md:col-span-2 md:grid-cols-2">
-          <AppInput v-model="form.dateFrom" label="Availment Date From" type="date" />
-          <AppInput v-model="form.dateTo" label="Availment Date To" type="date" />
+          <AppInput v-model="form.dateFrom" :label="`${dateRangeLabel} From`" type="date" />
+          <AppInput v-model="form.dateTo" :label="`${dateRangeLabel} To`" type="date" />
         </div>
       </div>
 
@@ -703,6 +818,9 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
             'Availment Date',
             'Dentist / Clinic',
             'Procedure',
+            ...(showBillingColumns
+              ? ['Billing Received', 'Due Date', isPaymentMonitoringMode ? 'Turnaround' : 'Days Remaining']
+              : []),
             'Amount',
             'Payment',
             'Paid to Dentist At',
@@ -714,7 +832,10 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
       >
         <template #trs>
           <tr v-if="!rows.length">
-            <td :colspan="showRemarksColumn ? 11 : 10" class="py-12! text-center! text-sm text-slate">
+            <td
+              :colspan="8 + (showBillingColumns ? 3 : 0) + 2 + (showRemarksColumn ? 1 : 0)"
+              class="py-12! text-center! text-sm text-slate"
+            >
               No report rows generated yet.
             </td>
           </tr>
@@ -734,6 +855,20 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
             <td>
               <p class="font-semibold text-onyx">{{ procedureName(row.procedures) }}</p>
               <p class="mt-1 text-xs text-slate">Tooth {{ row.toothNo || 'N/A' }}</p>
+            </td>
+            <td v-if="showBillingColumns">{{ formatDate(row.billingReceivedAt) }}</td>
+            <td v-if="showBillingColumns">{{ formatDate(billingDueDate(row.billingReceivedAt)) }}</td>
+            <td v-if="showBillingColumns">
+              <template v-if="isPaymentMonitoringMode">
+                {{ paymentLeadTimeLabel(row.billingReceivedAt, row.paidToDentistAt) }}
+              </template>
+              <span
+                v-else
+                class="rounded-full px-3 py-1 text-xs font-semibold"
+                :class="billingStatusClass(row.billingReceivedAt, isPaid(row))"
+              >
+                {{ billingStatusLabel(row.billingReceivedAt, isPaid(row)) }}
+              </span>
             </td>
             <td class="font-black text-onyx">{{ formatMoney(row.amount) }}</td>
             <td>

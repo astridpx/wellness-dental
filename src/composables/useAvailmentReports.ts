@@ -27,7 +27,7 @@ export function useAvailmentReports() {
   const partnerCompanies = ref<PartnerReportCompany[]>([])
   const totalAmount = ref(0)
   const form = reactive({
-    mode: 'daily' as AvailmentReportMode,
+    mode: 'period' as AvailmentReportMode,
     companyScope: 'both' as AvailmentCompanyScope,
     companyFilterBy: 'classification' as AvailmentCompanyFilterBy,
     company: '',
@@ -40,7 +40,7 @@ export function useAvailmentReports() {
   const requiresCompany = computed(() => form.mode === 'companyPeriod')
   const requiresDentist = computed(() => form.mode === 'dentistPeriod')
   const requiresDates = computed(() =>
-    ['companyPeriod', 'dentistPeriod', 'period'].includes(form.mode),
+    ['companyPeriod', 'dentistPeriod', 'period', 'billMonitoring', 'paymentMonitoring'].includes(form.mode),
   )
   const canGenerate = computed(() => {
     if (requiresCompany.value && form.companyScope === 'specificIms' && !form.company.trim()) {
@@ -167,7 +167,7 @@ export function useAvailmentReports() {
   }
 
   function clearReport() {
-    form.mode = 'daily'
+    form.mode = 'period'
     form.companyScope = 'both'
     form.companyFilterBy = 'classification'
     form.company = ''
