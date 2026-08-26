@@ -449,11 +449,11 @@ async function submitClinicForm() {
               <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
                 Section 1
               </p>
-              <h2 class="mt-2 text-2xl font-black text-onyx">Clinic identity</h2>
+              <h2 class="mt-2 text-2xl font-black text-onyx">
+                Clinic identity
+                <span aria-hidden="true" class="ml-1 text-ruby">*</span>
+              </h2>
             </div>
-            <span class="rounded-full bg-cloud px-3 py-1 text-xs font-semibold text-slate">
-              Required
-            </span>
           </div>
 
           <div class="mt-6 grid gap-5 md:grid-cols-2">
@@ -461,6 +461,7 @@ async function submitClinicForm() {
               v-model="clinicData.clinicName"
               label="Clinic Name"
               placeholder="Wellness Dental Clinic"
+              required
             />
             <AppInput
               v-model="clinicData.clinicCode"
@@ -482,11 +483,11 @@ async function submitClinicForm() {
               <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-smoke">
                 Section 2
               </p>
-              <h2 class="mt-2 text-2xl font-black text-onyx">Dentist assignment</h2>
+              <h2 class="mt-2 text-2xl font-black text-onyx">
+                Dentist assignment
+                <span aria-hidden="true" class="ml-1 text-ruby">*</span>
+              </h2>
             </div>
-            <span class="rounded-full bg-cloud px-3 py-1 text-xs font-semibold text-slate">
-              Required
-            </span>
           </div>
 
           <p class="mt-3 text-sm leading-6 text-slate">

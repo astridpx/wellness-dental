@@ -68,6 +68,7 @@ function updateModel(event: Event) {
   <div class="w-full">
     <label v-if="label" class="mb-2 block text-sm font-medium text-onyx">
       {{ label }}
+      <span v-if="required" aria-hidden="true" class="ml-1 text-ruby">*</span>
     </label>
 
     <div v-if="icon" class="relative">

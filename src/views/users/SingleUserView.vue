@@ -365,16 +365,21 @@ async function confirmUnlock() {
 
           <div class="grid gap-5 md:grid-cols-2">
             <div>
-              <label class="mb-2 block text-sm font-medium text-slate">Username</label>
-              <AppInput v-model="userData.username" placeholder="username" />
+              <label class="mb-2 block text-sm font-medium text-slate">
+                Username
+                <span aria-hidden="true" class="ml-1 text-ruby">*</span>
+              </label>
+              <AppInput v-model="userData.username" placeholder="username" required />
             </div>
             <div>
               <label class="mb-2 block text-sm font-medium text-slate">
                 {{ isEditMode ? 'New Password (Optional)' : 'Password' }}
+                <span v-if="!isEditMode" aria-hidden="true" class="ml-1 text-ruby">*</span>
               </label>
               <AppInput
                 v-model="userData.password"
                 type="password"
+                :required="!isEditMode"
                 :placeholder="
                   isEditMode ? 'Leave blank to keep current password' : 'Minimum 8 characters'
                 "
@@ -396,20 +401,29 @@ async function confirmUnlock() {
               </p>
             </div>
             <div>
-              <label class="mb-2 block text-sm font-medium text-slate">First Name</label>
-              <AppInput v-model="userData.firstName" placeholder="Olivia" />
+              <label class="mb-2 block text-sm font-medium text-slate">
+                First Name
+                <span aria-hidden="true" class="ml-1 text-ruby">*</span>
+              </label>
+              <AppInput v-model="userData.firstName" placeholder="Olivia" required />
             </div>
             <div>
-              <label class="mb-2 block text-sm font-medium text-slate">Last Name</label>
-              <AppInput v-model="userData.lastName" placeholder="Ramos" />
+              <label class="mb-2 block text-sm font-medium text-slate">
+                Last Name
+                <span aria-hidden="true" class="ml-1 text-ruby">*</span>
+              </label>
+              <AppInput v-model="userData.lastName" placeholder="Ramos" required />
             </div>
             <div>
               <label class="mb-2 block text-sm font-medium text-slate">Middle Name</label>
               <AppInput v-model="userData.middleName" placeholder="Optional" />
             </div>
             <div>
-              <label class="mb-2 block text-sm font-medium text-slate">Email Address</label>
-              <AppInput v-model="userData.email" placeholder="name@clinic.com" />
+              <label class="mb-2 block text-sm font-medium text-slate">
+                Email Address
+                <span aria-hidden="true" class="ml-1 text-ruby">*</span>
+              </label>
+              <AppInput v-model="userData.email" placeholder="name@clinic.com" required />
             </div>
             <div>
               <label class="mb-2 block text-sm font-medium text-slate">Mobile Number</label>
@@ -459,7 +473,10 @@ async function confirmUnlock() {
 
           <div class="grid gap-5 md:grid-cols-2">
             <div class="md:col-span-2">
-              <label class="mb-2 block text-sm font-medium text-slate">Role Assignment</label>
+              <label class="mb-2 block text-sm font-medium text-slate">
+                Role Assignment
+                <span aria-hidden="true" class="ml-1 text-ruby">*</span>
+              </label>
               <div class="rounded-lg border border-pebble bg-white p-3">
                 <div class="grid gap-2.5 md:grid-cols-2">
                   <label

@@ -633,9 +633,6 @@ watch(
                 </p>
                 <h2 class="mt-2 text-2xl font-black text-onyx">Identity and credentials</h2>
               </div>
-              <span class="rounded-full bg-cloud px-3 py-1 text-xs font-semibold text-slate"
-                >Required</span
-              >
             </div>
 
             <div class="mt-6 grid gap-5 md:grid-cols-2">
