@@ -127,7 +127,7 @@ const router = createRouter({
       meta: {
         title: 'Add Dentists',
         icon: 'feather:home',
-        navItem: [false, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
+        navItem: [false, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
     {
@@ -137,7 +137,7 @@ const router = createRouter({
       meta: {
         title: 'Edit Dentists',
         icon: 'feather:home',
-        navItem: [false, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
+        navItem: [false, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
     {
@@ -160,7 +160,7 @@ const router = createRouter({
       component: SingleClinicView,
       meta: {
         title: 'Add Clinic',
-        navItem: [false, { visibleTo: ['superAdmin', 'admin'] }],
+        navItem: [false, { visibleTo: ['superAdmin', 'admin', 'regUser'] }],
       },
     },
     {
@@ -169,7 +169,7 @@ const router = createRouter({
       component: SingleClinicView,
       meta: {
         title: 'Edit Clinic',
-        navItem: [false, { visibleTo: ['superAdmin', 'admin'] }],
+        navItem: [false, { visibleTo: ['superAdmin', 'admin', 'regUser'] }],
       },
     },
     {
