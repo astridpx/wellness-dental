@@ -5,7 +5,13 @@ import { useRouter } from 'vue-router'
 import { AppButton, AppDialog, AppInput, AppLoadingScreen, AppTable } from '@/components/app'
 import { useBusinessPartnerUploads, useDentalAvailmentHistory, useProcedures } from '@/composables'
 import type { DentalAvailmentRecord, PartnerMemberRecord } from '@/types'
-import { addWorkingDays, differenceInWorkingDays, formatDate, formatDateTime, formatMoney } from '@/utils'
+import {
+  addWorkingDays,
+  differenceInWorkingDays,
+  formatDate,
+  formatDateTime,
+  formatMoney,
+} from '@/utils'
 
 type LedgerTab = 'dentist' | 'partner'
 
@@ -34,8 +40,6 @@ const {
   applyFilters: applyDentistFilters,
   loading: loadingDentistPayments,
   records: dentistRows,
-  paidRows: dentistPaidRows,
-  unpaidRows: dentistUnpaidRows,
   unpaidAmount: visibleDentistPayable,
   totalEntries: dentistTotalEntries,
   totalPages: dentistTotalPages,
@@ -53,8 +57,6 @@ const {
   recordFilters,
   recordCurrentPage,
   recordTotalEntries,
-  recordPaidEntries: partnerReceivedRows,
-  recordUnpaidEntries: partnerPendingRows,
   recordTotalPages,
   updatePaymentStatus,
 } = useBusinessPartnerUploads()
@@ -64,14 +66,17 @@ recordScope.value = 'all'
 
 const tabs: Array<{ value: LedgerTab; label: string; icon: string }> = [
   { value: 'dentist', label: 'Dentist Payments', icon: 'feather:briefcase' },
-  { value: 'partner', label: 'Payments Received', icon: 'feather:repeat' },
+  { value: 'partner', label: 'Date from Partners', icon: 'feather:repeat' },
 ]
 
 const dentistFilterCount = computed(
   () =>
-    [dentistFilters.memberName, dentistFilters.clientCode, dentistFilters.status].filter((value) =>
-      String(value).trim(),
-    ).length,
+    [
+      dentistFilters.approvalNo,
+      dentistFilters.memberName,
+      dentistFilters.clientCode,
+      dentistFilters.status,
+    ].filter((value) => String(value).trim()).length,
 )
 const partnerFilterCount = computed(
   () =>
@@ -97,7 +102,10 @@ const dentistStatusOptions = computed(() => {
   return Array.from(statuses).sort((left, right) => left.localeCompare(right))
 })
 const procedureNameMap = computed(
-  () => new Map(procedures.value.map((procedure) => [procedure.code.trim().toUpperCase(), procedure.name])),
+  () =>
+    new Map(
+      procedures.value.map((procedure) => [procedure.code.trim().toUpperCase(), procedure.name]),
+    ),
 )
 
 function formatStatusLabel(value?: string | null) {
@@ -254,9 +262,7 @@ function openDentistPaymentDialog(record: DentalAvailmentRecord, paid: boolean) 
   dentistPaymentTarget.value = {
     record,
     paid,
-    paidAt: paid
-      ? normalizeDateInput(record.paidAt) || currentDateInputValue()
-      : '',
+    paidAt: paid ? normalizeDateInput(record.paidAt) || currentDateInputValue() : '',
   }
 }
 
@@ -342,13 +348,19 @@ function clearActiveFilters() {
           <p class="mt-2 text-sm leading-6 text-slate">
             {{
               activeTab === 'dentist'
-                ? 'Narrow dentist payment rows by member, company/client code, and availment status.'
+                ? 'Narrow dentist payment rows by approval number, member, company/client code, and availment status.'
                 : 'Narrow received-payment rows by member, company code, and payment state.'
             }}
           </p>
         </div>
 
         <div v-if="activeTab === 'dentist'" class="grid gap-5 md:grid-cols-2">
+          <AppInput
+            v-model="dentistFilters.approvalNo"
+            label="Approval No."
+            placeholder="Search approval no."
+            icon="feather:hash"
+          />
           <AppInput
             v-model="dentistFilters.memberName"
             label="Member Name"
@@ -430,8 +442,8 @@ function clearActiveFilters() {
             Dentist bill
           </p>
           <p class="mt-2 text-sm leading-6 text-slate">
-            Record when the dentist or clinic bill was received. This starts the 10 working-day
-            due countdown before payment.
+            Record when the dentist or clinic bill was received. This starts the 10 working-day due
+            countdown before payment.
           </p>
         </div>
         <div class="grid gap-3 sm:grid-cols-2">
@@ -494,7 +506,10 @@ function clearActiveFilters() {
   <AppDialog
     :title="dentistPaymentTarget?.paid ? 'Mark dentist as paid' : 'Mark dentist as unpaid'"
     :show="Boolean(dentistPaymentTarget)"
-    :disabled="Boolean(updatingPaymentId) || Boolean(dentistPaymentTarget?.paid && !dentistPaymentTarget.paidAt)"
+    :disabled="
+      Boolean(updatingPaymentId) ||
+      Boolean(dentistPaymentTarget?.paid && !dentistPaymentTarget.paidAt)
+    "
     :confirm-label="
       updatingPaymentId
         ? 'Saving...'
@@ -648,32 +663,14 @@ function clearActiveFilters() {
         </div>
       </div>
 
-      <div class="grid border-t border-pebble/80 bg-white/72 md:grid-cols-4">
-        <div class="border-b border-pebble/80 px-6 py-4 md:border-b-0 md:border-r">
+      <div class="grid border-t border-pebble/80 bg-white/72 md:grid-cols-1">
+        <div class="px-6 py-4">
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">
             Dentist Payables
           </p>
           <p class="mt-2 text-2xl font-black text-onyx">
             {{ formatMoney(visibleDentistPayable) }}
           </p>
-        </div>
-        <div class="border-b border-pebble/80 px-6 py-4 md:border-b-0 md:border-r">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">
-            Unpaid Availments
-          </p>
-          <p class="mt-2 text-2xl font-black text-amber">{{ dentistUnpaidRows }}</p>
-        </div>
-        <div class="border-b border-pebble/80 px-6 py-4 md:border-b-0 md:border-r">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">
-            Payments Received
-          </p>
-          <p class="mt-2 text-2xl font-black text-emerald">{{ partnerReceivedRows }}</p>
-        </div>
-        <div class="px-6 py-4">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">
-            Pending Payment
-          </p>
-          <p class="mt-2 text-2xl font-black text-amber">{{ partnerPendingRows }}</p>
         </div>
       </div>
     </section>
