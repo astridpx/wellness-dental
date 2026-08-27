@@ -231,6 +231,10 @@ const dateRangeLabel = computed(() => {
   if (isPaymentMonitoringMode.value) return 'Paid Date'
   return 'Availment Date'
 })
+const paymentCoveredLabel = computed(() => {
+  if (!form.dateFrom || !form.dateTo) return 'P.Covered'
+  return `P.Covered (${formatDate(form.dateFrom)} - ${formatDate(form.dateTo)})`
+})
 const normalizedDaysRemainingFrom = computed(() => {
   const value = Number(form.daysRemainingFrom)
   return Number.isInteger(value) ? value : null
@@ -280,7 +284,19 @@ const filteredRows = computed(() =>
     return true
   }),
 )
-const visibleRows = computed(() =>
+function billMonitoringGroupKey(row: {
+  billingReceivedAt?: string | null
+  dentistName?: string | null
+  memberName?: string | null
+}) {
+  return [
+    String(row.billingReceivedAt || '').trim(),
+    String(row.dentistName || '').trim().toLowerCase(),
+    String(row.memberName || '').trim().toLowerCase(),
+  ].join('::')
+}
+
+const baseVisibleRows = computed(() =>
   [...filteredRows.value].sort((left, right) => {
     const leftTime = left.availDate ? new Date(left.availDate).getTime() : Number.POSITIVE_INFINITY
     const rightTime = right.availDate
@@ -292,32 +308,129 @@ const visibleRows = computed(() =>
     return String(left.approvalNo || '').localeCompare(String(right.approvalNo || ''))
   }),
 )
+const visibleRows = computed(() => {
+  if (!isBillMonitoringMode.value) return baseVisibleRows.value
+
+  const groupedRows = new Map<string, (typeof baseVisibleRows.value)[number]>()
+
+  for (const row of baseVisibleRows.value) {
+    const groupKey = billMonitoringGroupKey(row)
+
+    const existingRow = groupedRows.get(groupKey)
+    if (!existingRow) {
+      groupedRows.set(groupKey, {
+        ...row,
+        amount: Number(row.amount || 0),
+      })
+      continue
+    }
+
+    existingRow.amount = Number(existingRow.amount || 0) + Number(row.amount || 0)
+
+    const existingAvailDate = String(existingRow.availDate || '').trim()
+    const nextAvailDate = String(row.availDate || '').trim()
+
+    if (
+      nextAvailDate &&
+      (!existingAvailDate || new Date(nextAvailDate).getTime() < new Date(existingAvailDate).getTime())
+    ) {
+      existingRow.availDate = nextAvailDate
+    }
+
+    const existingRemarks = String(existingRow.remarks || '').trim()
+    const nextRemarks = String(row.remarks || '').trim()
+
+    if (!existingRemarks && nextRemarks) {
+      existingRow.remarks = nextRemarks
+    }
+  }
+
+  return Array.from(groupedRows.values()).sort((left, right) => {
+    const leftBillingTime = left.billingReceivedAt
+      ? new Date(left.billingReceivedAt).getTime()
+      : Number.POSITIVE_INFINITY
+    const rightBillingTime = right.billingReceivedAt
+      ? new Date(right.billingReceivedAt).getTime()
+      : Number.POSITIVE_INFINITY
+
+    if (leftBillingTime !== rightBillingTime) return leftBillingTime - rightBillingTime
+
+    const dentistComparison = String(left.dentistName || '').localeCompare(String(right.dentistName || ''))
+    if (dentistComparison !== 0) return dentistComparison
+
+    return String(left.memberName || '').localeCompare(String(right.memberName || ''))
+  })
+})
 const visibleTotalAmount = computed(() =>
   visibleRows.value.reduce((sum, row) => sum + Number(row.amount || 0), 0),
 )
-const excelColumns = computed(() => [
-  ['no', 'No.'],
-  ['companyName', 'Company Name'],
-  ['approvalNo', 'Approval No.'],
-  ['memberName', 'Member Name'],
-  ['availDate', 'Availment Date'],
-  ['dentistName', 'Dentist Name'],
-  ['clinicName', 'Clinic Name'],
-  ['toothNo', 'Tooth No.'],
-  ['procedureName', 'Procedure Name'],
-  ...(showBillingColumns.value
-    ? [
-        ['billingReceivedAt', 'Billing Received Date'],
-        ['dueDate', 'Due Date'],
-        [isPaymentMonitoringMode.value ? 'paymentLeadTime' : 'daysRemaining', isPaymentMonitoringMode.value ? 'Turnaround' : 'Days Remaining'],
-      ]
-    : []),
-  ['amount', 'Amount'],
-  ['paymentStatus', 'Payment Status'],
-  ['paidToDentistAt', 'Paid to Dentist At'],
-  ['remarks', 'Remarks'],
-  ['encodedBy', 'Encoded By'],
-] as const)
+const paymentCoveredByGroup = computed(() => {
+  const ranges = new Map<string, { earliest: string; latest: string }>()
+
+  if (!isBillMonitoringMode.value) return ranges
+
+  for (const row of baseVisibleRows.value) {
+    const groupKey = billMonitoringGroupKey(row)
+    const availDate = String(row.availDate || '').trim()
+
+    if (!groupKey || !availDate) continue
+
+    const existingRange = ranges.get(groupKey)
+    if (!existingRange) {
+      ranges.set(groupKey, { earliest: availDate, latest: availDate })
+      continue
+    }
+
+    if (new Date(availDate).getTime() < new Date(existingRange.earliest).getTime()) {
+      existingRange.earliest = availDate
+    }
+
+    if (new Date(availDate).getTime() > new Date(existingRange.latest).getTime()) {
+      existingRange.latest = availDate
+    }
+  }
+
+  return ranges
+})
+const excelColumns = computed(() => {
+  if (isBillMonitoringMode.value) {
+    return [
+      ['billingReceivedAt', 'Billing Date'],
+      ['dueDate', 'Due Date'],
+      ['dentistName', 'Dentist'],
+      ['memberName', 'Patient'],
+      ['bankName', 'Bank Name'],
+      ['accountNumber', 'Account #'],
+      ['amount', 'Amount Due'],
+      ['paymentCovered', paymentCoveredLabel.value],
+      ['remarks', 'Remarks'],
+    ] as const
+  }
+
+  return [
+    ['no', 'No.'],
+    ['companyName', 'Company Name'],
+    ['approvalNo', 'Approval No.'],
+    ['memberName', 'Member Name'],
+    ['availDate', 'Availment Date'],
+    ['dentistName', 'Dentist Name'],
+    ['clinicName', 'Clinic Name'],
+    ['toothNo', 'Tooth No.'],
+    ['procedureName', 'Procedure Name'],
+    ...(showBillingColumns.value
+      ? [
+          ['billingReceivedAt', 'Billing Received Date'],
+          ['dueDate', 'Due Date'],
+          [isPaymentMonitoringMode.value ? 'paymentLeadTime' : 'daysRemaining', isPaymentMonitoringMode.value ? 'Turnaround' : 'Days Remaining'],
+        ]
+      : []),
+    ['amount', 'Amount'],
+    ['paymentStatus', 'Payment Status'],
+    ['paidToDentistAt', 'Paid to Dentist At'],
+    ['remarks', 'Remarks'],
+    ['encodedBy', 'Encoded By'],
+  ] as const
+})
 
 const procedureNameMap = computed(
   () => new Map(procedures.value.map((procedure) => [procedure.code.trim().toUpperCase(), procedure.name])),
@@ -399,6 +512,24 @@ function paymentLeadTimeLabel(
   return `${workingDays} work day${workingDays === 1 ? '' : 's'} | ${dueDelta} day${dueDelta === 1 ? '' : 's'} early`
 }
 
+function paymentCoveredValue() {
+  return 'N/A'
+}
+
+function paymentCoveredValueForRow(row: {
+  billingReceivedAt?: string | null
+  dentistName?: string | null
+  memberName?: string | null
+}) {
+  const range = paymentCoveredByGroup.value.get(billMonitoringGroupKey(row))
+  if (!range) return 'N/A'
+
+  const earliestLabel = formatDate(range.earliest)
+  const latestLabel = formatDate(range.latest)
+
+  return earliestLabel === latestLabel ? earliestLabel : `${earliestLabel} - ${latestLabel}`
+}
+
 function exportCellValue(
   row: Record<string, unknown>,
   key: string,
@@ -418,6 +549,13 @@ function exportCellValue(
   }
   if (key === 'dueDate') {
     return formatExcelDateManila(billingDueDate(row.billingReceivedAt as string | null | undefined))
+  }
+  if (key === 'paymentCovered') {
+    return paymentCoveredValueForRow({
+      billingReceivedAt: row.billingReceivedAt as string | null | undefined,
+      dentistName: row.dentistName as string | null | undefined,
+      memberName: row.memberName as string | null | undefined,
+    })
   }
   if (key === 'daysRemaining') {
     return billingStatusLabel(
@@ -1023,35 +1161,60 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
       <AppTable
         v-else
         :theads="
-          [
-            'Company',
-            'Approval',
-            'Member',
-            'Availment Date',
-            'Dentist / Clinic',
-            'Procedure',
-            ...(showBillingColumns
-              ? ['Billing Received', 'Due Date', isPaymentMonitoringMode ? 'Turnaround' : 'Days Remaining']
-              : []),
-            'Amount',
-            'Payment',
-            'Paid to Dentist At',
-            ...(showRemarksColumn ? ['Remarks'] : []),
-            'Encoded By',
-          ]
+          isBillMonitoringMode
+            ? ['Billing Date', 'Due Date', 'Dentist', 'Patient', 'Bank Name', 'Account #', 'Amount Due', paymentCoveredLabel, 'Remarks']
+            : [
+                'Company',
+                'Approval',
+                'Member',
+                'Availment Date',
+                'Dentist / Clinic',
+                'Procedure',
+                ...(showBillingColumns
+                  ? ['Billing Received', 'Due Date', isPaymentMonitoringMode ? 'Turnaround' : 'Days Remaining']
+                  : []),
+                'Amount',
+                'Payment',
+                'Paid to Dentist At',
+                ...(showRemarksColumn ? ['Remarks'] : []),
+                'Encoded By',
+              ]
         "
         :total-entries="visibleRows.length"
       >
         <template #trs>
           <tr v-if="!visibleRows.length">
             <td
-              :colspan="8 + (showBillingColumns ? 3 : 0) + 2 + (showRemarksColumn ? 1 : 0)"
+              :colspan="isBillMonitoringMode ? 9 : 8 + (showBillingColumns ? 3 : 0) + 2 + (showRemarksColumn ? 1 : 0)"
               class="py-12! text-center! text-sm text-slate"
             >
               {{ rows.length ? 'No report rows match the current monitoring filters.' : 'No report rows generated yet.' }}
             </td>
           </tr>
-          <tr v-for="(row, index) in visibleRows" v-else :key="`${row.approvalNo}-${index}`">
+          <tr
+            v-for="(row, index) in visibleRows"
+            v-else
+            :key="`${row.approvalNo}-${index}`"
+          >
+            <template v-if="isBillMonitoringMode">
+              <td>{{ formatDate(row.billingReceivedAt) }}</td>
+              <td>{{ formatDate(billingDueDate(row.billingReceivedAt)) }}</td>
+              <td>
+                <p class="font-semibold text-onyx">{{ row.dentistName || 'N/A' }}</p>
+                <p class="mt-1 text-xs text-slate">{{ row.clinicName || 'N/A' }}</p>
+              </td>
+              <td>{{ row.memberName || 'N/A' }}</td>
+              <td>{{ row.bankName || 'N/A' }}</td>
+              <td>{{ row.accountNumber || 'N/A' }}</td>
+              <td class="font-black text-onyx">{{ formatMoney(row.amount) }}</td>
+              <td>{{ paymentCoveredValueForRow(row) }}</td>
+              <td>
+                <span class="block max-w-56 whitespace-normal text-sm text-slate">
+                  {{ row.remarks || 'N/A' }}
+                </span>
+              </td>
+            </template>
+            <template v-else>
             <td>{{ row.companyName || 'N/A' }}</td>
             <td>
               <span class="font-mono text-sm font-black text-onyx">
@@ -1100,6 +1263,7 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
               </span>
             </td>
             <td>{{ row.encodedBy || 'N/A' }}</td>
+            </template>
           </tr>
         </template>
       </AppTable>

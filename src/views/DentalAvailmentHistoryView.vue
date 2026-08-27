@@ -30,7 +30,6 @@ const {
   totalPages,
   paidRows,
   updateAvailment,
-  updateDoctorBillingReceivedAt,
   updateDoctorPaymentStatus,
   uncancelAvailment,
   uncancellingId,
@@ -50,10 +49,6 @@ const showFilterDialog = ref(false)
 const cancelTarget = ref<DentalAvailmentRecord | null>(null)
 const uncancelTarget = ref<DentalAvailmentRecord | null>(null)
 const editTarget = ref<DentalAvailmentRecord | null>(null)
-const billTarget = ref<{
-  record: DentalAvailmentRecord
-  billingReceivedAt: string
-} | null>(null)
 const paymentTarget = ref<{
   record: DentalAvailmentRecord
   paid: boolean
@@ -306,30 +301,7 @@ function billingCountdown(record?: DentalAvailmentRecord | null) {
 }
 
 function currentDateInputValue() {
-  return '2026-08-26'
-}
-
-function openBillDialog(record: DentalAvailmentRecord) {
-  if (updatingPaymentId.value) return
-  billTarget.value = {
-    record,
-    billingReceivedAt: normalizeDateInput(record.billingReceivedAt),
-  }
-}
-
-function closeBillDialog() {
-  if (updatingPaymentId.value) return
-  billTarget.value = null
-}
-
-async function confirmBillStatus() {
-  if (!billTarget.value) return
-
-  const updated = await updateDoctorBillingReceivedAt(
-    billTarget.value.record,
-    billTarget.value.billingReceivedAt,
-  )
-  if (updated) billTarget.value = null
+  return '2026-08-27'
 }
 
 function openPaymentDialog(record: DentalAvailmentRecord, paid: boolean) {
@@ -525,9 +497,6 @@ watch(clinicSearch, (search) => {
   }, 350)
 })
 
-
-
-
 function formatLegacyDentistName(dentist: { dentistname?: string | null; firstname?: string | null; middleinitial?: string | null; lastname?: string | null }) {
   if (dentist.dentistname?.trim()) return dentist.dentistname.trim()
 
@@ -702,84 +671,6 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
             <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Member</p>
             <p class="mt-2 text-sm font-bold text-onyx">
               {{ uncancelTarget?.membername || 'N/A' }}
-            </p>
-          </div>
-        </div>
-      </div>
-    </template>
-  </AppDialog>
-
-  <AppDialog
-    title="Receive Dentist Bill"
-    :show="Boolean(billTarget)"
-    :disabled="Boolean(updatingPaymentId)"
-    :confirm-label="updatingPaymentId ? 'Saving...' : 'Save Billing Date'"
-    @close="closeBillDialog"
-    @confirm="confirmBillStatus"
-  >
-    <template #dialog-content>
-      <div v-if="billTarget" class="space-y-4">
-        <div
-          class="rounded-[1.5rem] border border-tangerine/15 bg-[linear-gradient(135deg,#fff8ef_0%,#ffffff_100%)] p-5"
-        >
-          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-tangerine">
-            Dentist bill
-          </p>
-          <p class="mt-2 text-sm leading-6 text-slate">
-            Record when the dentist or clinic bill was received. This starts the 10 working-day
-            due countdown before payment.
-          </p>
-        </div>
-        <div class="grid gap-3 sm:grid-cols-2">
-          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Approval</p>
-            <p class="mt-2 font-mono text-sm font-bold text-onyx">
-              {{ billTarget.record.approvalno || 'N/A' }}
-            </p>
-          </div>
-          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Procedure</p>
-            <p class="mt-2 text-sm font-bold text-onyx">
-              {{ billTarget.record.procedures || 'N/A' }}
-            </p>
-          </div>
-          <div class="rounded-2xl border border-pebble bg-white px-4 py-4 sm:col-span-2">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Dentist / Clinic</p>
-            <p class="mt-2 text-sm font-bold text-onyx">
-              {{ billTarget.record.dentistname || 'N/A' }} ·
-              {{ billTarget.record.clinicname || 'N/A' }}
-            </p>
-          </div>
-        </div>
-        <AppInput
-          v-model="billTarget.billingReceivedAt"
-          label="Billing Received Date"
-          type="date"
-        />
-        <div class="grid gap-3 sm:grid-cols-2">
-          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Due Date</p>
-            <p class="mt-2 text-sm font-bold text-onyx">
-              {{ formatDate(billingDueDate(billTarget.billingReceivedAt)) }}
-            </p>
-          </div>
-          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Working-Day Status</p>
-            <p
-              class="mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold"
-              :class="
-                billingCountdown({
-                  ...billTarget.record,
-                  billingReceivedAt: billTarget.billingReceivedAt,
-                }).className
-              "
-            >
-              {{
-                billingCountdown({
-                  ...billTarget.record,
-                  billingReceivedAt: billTarget.billingReceivedAt,
-                }).label
-              }}
             </p>
           </div>
         </div>
@@ -1154,25 +1045,6 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
                   @click.stop="openEditDialog(record)"
                 >
                   <Icon icon="feather:edit-2" class="h-4 w-4" />
-                </button>
-                <button
-                  v-if="isValidAvailment(record)"
-                  type="button"
-                  class="inline-flex size-10 items-center justify-center rounded-full border border-[#d8c5a0] bg-[linear-gradient(180deg,#f8eddc_0%,#efe1cb_100%)] text-[#8c6320] shadow-[0_10px_20px_rgba(176,138,52,0.12)] transition hover:border-[#c59a42] disabled:cursor-not-allowed disabled:opacity-60"
-                  :title="record.billingReceivedAt ? 'Update bill received' : 'Receive bill'"
-                  :aria-label="record.billingReceivedAt ? 'Update bill received' : 'Receive bill'"
-                  :disabled="updatingPaymentId === record.dentalid"
-                  @click.stop="openBillDialog(record)"
-                >
-                  <Icon
-                    :icon="
-                      updatingPaymentId === record.dentalid
-                        ? 'feather:loader'
-                        : 'feather:file-plus'
-                    "
-                    class="h-4 w-4"
-                    :class="{ 'animate-spin': updatingPaymentId === record.dentalid }"
-                  />
                 </button>
                 <button
                   v-if="isValidAvailment(record)"

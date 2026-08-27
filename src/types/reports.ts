@@ -19,6 +19,8 @@ export type AvailmentReportRow = {
   toothNo?: string | null
   procedures?: string | null
   amount?: number | string | null
+  bankName?: string | null
+  accountNumber?: string | null
   ifPaid?: boolean | number | string | null
   paidToDentistAt?: string | null
   billingReceivedAt?: string | null

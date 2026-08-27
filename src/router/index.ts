@@ -4,6 +4,7 @@ import ClinicView from '@/views/clinics/ClinicView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import DentalAvailmentsView from '@/views/DentalAvailmentsView.vue'
 import DentalAvailmentHistoryView from '@/views/DentalAvailmentHistoryView.vue'
+import BillMarkingView from '@/views/BillMarkingView.vue'
 import LoginView from '@/views/LoginView.vue'
 import ReportsView from '@/views/ReportsView.vue'
 import SystemLogsView from '@/views/SystemLogsView.vue'
@@ -89,6 +90,20 @@ const router = createRouter({
       meta: {
         title: 'Availment History',
         icon: 'feather:clock',
+        navGroup: {
+          name: 'Availments',
+          icon: 'feather:file-text',
+        },
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
+      },
+    },
+    {
+      path: '/bill-marking',
+      name: 'billMarking',
+      component: BillMarkingView,
+      meta: {
+        title: 'Bill Marking',
+        icon: 'feather:file-plus',
         navGroup: {
           name: 'Availments',
           icon: 'feather:file-text',

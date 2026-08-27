@@ -22,6 +22,14 @@ export function useDentalAvailmentHistory() {
   const successMessage = ref('')
   const lookupErrorMessage = ref('')
   const selectedApproval = ref<DentalAvailmentApproval | null>(null)
+  const billingLookupRecords = ref<DentalAvailmentRecord[]>([])
+  const loadingBillingLookup = ref(false)
+  const billingLookupErrorMessage = ref('')
+  const lastBillingLookupParams = ref<{
+    approvalNo?: string
+    dentistName?: string
+    memberName?: string
+  } | null>(null)
   const currentPage = ref(1)
   const totalEntries = ref(0)
   const totalPages = ref(1)
@@ -142,6 +150,66 @@ export function useDentalAvailmentHistory() {
     }
 
     selectedApproval.value = approvalLookup.value
+  }
+
+  async function fetchBillingLookup(
+    filters: {
+      approvalNo?: string
+      dentistName?: string
+      memberName?: string
+    },
+    options: { remember?: boolean } = {},
+  ) {
+    const approvalNo = String(filters.approvalNo || '').trim()
+    const dentistName = String(filters.dentistName || '').trim()
+    const memberName = String(filters.memberName || '').trim()
+
+    if (!approvalNo && !dentistName && !memberName) {
+      billingLookupRecords.value = []
+      billingLookupErrorMessage.value = ''
+      if (options.remember !== false) {
+        lastBillingLookupParams.value = null
+      }
+      return false
+    }
+
+    loadingBillingLookup.value = true
+    billingLookupErrorMessage.value = ''
+
+    const params = new URLSearchParams({
+      page: '1',
+      perPage: '100',
+      sortBy: 'availdate',
+      sortOrder: 'asc',
+    })
+
+    if (approvalNo) params.set('approvalNo', approvalNo)
+    if (dentistName) params.set('dentistName', dentistName)
+    if (memberName) params.set('memberName', memberName)
+
+    const result = await request<DentalAvailmentRecord[]>(
+      `/wellness/dentalAvailments?${params.toString()}`,
+    )
+
+    loadingBillingLookup.value = false
+
+    if (!result.ok) {
+      billingLookupErrorMessage.value = result.error || 'Unable to load billing lookup results.'
+      billingLookupRecords.value = []
+      return false
+    }
+
+    billingLookupRecords.value = result.data || []
+    if (options.remember !== false) {
+      lastBillingLookupParams.value = { approvalNo, dentistName, memberName }
+    }
+    return true
+  }
+
+  function clearBillingLookup() {
+    billingLookupRecords.value = []
+    billingLookupErrorMessage.value = ''
+    lastBillingLookupParams.value = null
   }
 
   async function cancelAvailment(record: DentalAvailmentRecord) {
@@ -284,6 +352,9 @@ export function useDentalAvailmentHistory() {
       paid ? 'paid' : 'unpaid'
     }.`
     await fetchHistory()
+    if (lastBillingLookupParams.value) {
+      await fetchBillingLookup(lastBillingLookupParams.value, { remember: false })
+    }
     if (selectedApproval.value?.approvalNo === record.approvalno) {
       await openApprovalDetails(record.approvalno)
     }
@@ -316,8 +387,67 @@ export function useDentalAvailmentHistory() {
 
     successMessage.value = `Billing received date for ${record.approvalno} was updated.`
     await fetchHistory()
+    if (lastBillingLookupParams.value) {
+      await fetchBillingLookup(lastBillingLookupParams.value, { remember: false })
+    }
     if (selectedApproval.value?.approvalNo === record.approvalno) {
       await openApprovalDetails(record.approvalno)
+    }
+    return true
+  }
+
+  async function updateDoctorBillingReceivedAtBulk(
+    recordsToUpdate: DentalAvailmentRecord[],
+    billingReceivedAt?: string,
+  ) {
+    const dentalIds = Array.from(
+      new Set(
+        recordsToUpdate
+          .map((record) => Number(record.dentalid))
+          .filter((dentalId) => Number.isInteger(dentalId) && dentalId > 0),
+      ),
+    )
+
+    if (!dentalIds.length) {
+      errorMessage.value = 'No dental availments were selected for bulk billing update.'
+      return false
+    }
+
+    updatingPaymentId.value = dentalIds[0] || -1
+    errorMessage.value = ''
+    successMessage.value = ''
+
+    const result = await request<{
+      updatedCount: number
+      updatedIds: number[]
+      missingIds?: number[]
+      cancelledIds?: number[]
+    }>(
+      '/wellness/dentalAvailments/payment/bulk',
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          dentalIds,
+          billingReceivedAt: billingReceivedAt || null,
+        }),
+      },
+      { includeContentType: true },
+    )
+
+    updatingPaymentId.value = null
+
+    if (!result.ok) {
+      errorMessage.value = result.error || 'Unable to update dentist billing received dates.'
+      return false
+    }
+
+    const updatedCount = Number(result.data?.updatedCount || dentalIds.length)
+    successMessage.value = `Billing received date was updated for ${updatedCount} availment${
+      updatedCount === 1 ? '' : 's'
+    }.`
+    await fetchHistory()
+    if (lastBillingLookupParams.value) {
+      await fetchBillingLookup(lastBillingLookupParams.value, { remember: false })
     }
     return true
   }
@@ -343,10 +473,15 @@ export function useDentalAvailmentHistory() {
     currentPage,
     errorMessage,
     fetchHistory,
+    fetchBillingLookup,
     filters,
     applyFilters,
+    clearBillingLookup,
     loading,
+    loadingBillingLookup,
     lookingUp,
+    billingLookupErrorMessage,
+    billingLookupRecords,
     lookupErrorMessage,
     openApprovalDetails,
     records,
@@ -363,6 +498,7 @@ export function useDentalAvailmentHistory() {
     totalAmount,
     updateAvailment,
     updateDoctorBillingReceivedAt,
+    updateDoctorBillingReceivedAtBulk,
     updateDoctorPaymentStatus,
     updatingPaymentId,
     updatingId,

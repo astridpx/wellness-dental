@@ -18,10 +18,6 @@ type LedgerTab = 'dentist' | 'partner'
 const router = useRouter()
 const activeTab = ref<LedgerTab>('dentist')
 const showFilterDialog = ref(false)
-const dentistBillTarget = ref<{
-  record: DentalAvailmentRecord
-  billingReceivedAt: string
-} | null>(null)
 const dentistPaymentTarget = ref<{
   record: DentalAvailmentRecord
   paid: boolean
@@ -43,7 +39,6 @@ const {
   unpaidAmount: visibleDentistPayable,
   totalEntries: dentistTotalEntries,
   totalPages: dentistTotalPages,
-  updateDoctorBillingReceivedAt,
   updateDoctorPaymentStatus,
   updatingPaymentId,
 } = useDentalAvailmentHistory()
@@ -177,7 +172,7 @@ function normalizeDateInput(value?: string | null) {
 }
 
 function currentDateInputValue() {
-  return '2026-08-26'
+  return '2026-08-27'
 }
 
 function dentistBillingDueDate(value?: string | null) {
@@ -232,29 +227,6 @@ function dentistBillingCountdown(record?: DentalAvailmentRecord | null) {
     label: `${remaining} days left`,
     className: 'bg-amber-light text-amber',
   }
-}
-
-function openDentistBillDialog(record: DentalAvailmentRecord) {
-  if (updatingPaymentId.value || isDoctorCancelled(record)) return
-  dentistBillTarget.value = {
-    record,
-    billingReceivedAt: normalizeDateInput(record.billingReceivedAt),
-  }
-}
-
-function closeDentistBillDialog() {
-  if (updatingPaymentId.value) return
-  dentistBillTarget.value = null
-}
-
-async function confirmDentistBill() {
-  if (!dentistBillTarget.value) return
-
-  const updated = await updateDoctorBillingReceivedAt(
-    dentistBillTarget.value.record,
-    dentistBillTarget.value.billingReceivedAt,
-  )
-  if (updated) dentistBillTarget.value = null
 }
 
 function openDentistPaymentDialog(record: DentalAvailmentRecord, paid: boolean) {
@@ -326,6 +298,7 @@ function clearActiveFilters() {
   recordFilters.companyCode = ''
   recordFilters.paid = ''
 }
+
 </script>
 
 <template>
@@ -421,84 +394,6 @@ function clearActiveFilters() {
           <Icon icon="feather:rotate-ccw" class="h-4 w-4" />
           Clear fields
         </button>
-      </div>
-    </template>
-  </AppDialog>
-
-  <AppDialog
-    title="Receive Dentist Bill"
-    :show="Boolean(dentistBillTarget)"
-    :disabled="Boolean(updatingPaymentId)"
-    :confirm-label="updatingPaymentId ? 'Saving...' : 'Save Billing Date'"
-    @close="closeDentistBillDialog"
-    @confirm="confirmDentistBill"
-  >
-    <template #dialog-content>
-      <div v-if="dentistBillTarget" class="space-y-4">
-        <div
-          class="rounded-[1.5rem] border border-tangerine/15 bg-[linear-gradient(135deg,#fff8ef_0%,#ffffff_100%)] p-5"
-        >
-          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-tangerine">
-            Dentist bill
-          </p>
-          <p class="mt-2 text-sm leading-6 text-slate">
-            Record when the dentist or clinic bill was received. This starts the 10 working-day due
-            countdown before payment.
-          </p>
-        </div>
-        <div class="grid gap-3 sm:grid-cols-2">
-          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Approval</p>
-            <p class="mt-2 font-mono text-sm font-bold text-onyx">
-              {{ dentistBillTarget.record.approvalno || 'N/A' }}
-            </p>
-          </div>
-          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Procedure</p>
-            <p class="mt-2 text-sm font-bold text-onyx">
-              {{ procedureName(dentistBillTarget.record.procedures) }}
-            </p>
-          </div>
-          <div class="rounded-2xl border border-pebble bg-white px-4 py-4 sm:col-span-2">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Dentist / Clinic</p>
-            <p class="mt-2 text-sm font-bold text-onyx">
-              {{ dentistBillTarget.record.dentistname || 'N/A' }} ·
-              {{ dentistBillTarget.record.clinicname || 'N/A' }}
-            </p>
-          </div>
-        </div>
-        <AppInput
-          v-model="dentistBillTarget.billingReceivedAt"
-          label="Billing Received Date"
-          type="date"
-        />
-        <div class="grid gap-3 sm:grid-cols-2">
-          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Due Date</p>
-            <p class="mt-2 text-sm font-bold text-onyx">
-              {{ formatDate(dentistBillingDueDate(dentistBillTarget.billingReceivedAt)) }}
-            </p>
-          </div>
-          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
-            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Working-Day Status</p>
-            <p
-              class="mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold"
-              :class="
-                dentistBillingCountdown({
-                  ...dentistBillTarget.record,
-                  billingReceivedAt: dentistBillTarget.billingReceivedAt,
-                }).className
-              "
-            >
-              {{
-                dentistBillingCountdown({
-                  ...dentistBillTarget.record,
-                  billingReceivedAt: dentistBillTarget.billingReceivedAt,
-                }).label
-              }}
-            </p>
-          </div>
-        </div>
       </div>
     </template>
   </AppDialog>
@@ -788,23 +683,6 @@ function clearActiveFilters() {
               <td>
                 <div v-if="!isDoctorCancelled(record)" class="flex justify-end">
                   <div class="flex flex-wrap justify-end gap-2">
-                    <button
-                      type="button"
-                      class="inline-flex items-center gap-2 rounded-full border border-[#d8c5a0] bg-[linear-gradient(180deg,#f8eddc_0%,#efe1cb_100%)] px-3.5 py-2 text-xs font-semibold text-[#8c6320] shadow-[0_10px_20px_rgba(176,138,52,0.12)] transition hover:border-[#c59a42] disabled:cursor-not-allowed disabled:opacity-60"
-                      :disabled="updatingPaymentId === record.dentalid"
-                      @click="openDentistBillDialog(record)"
-                    >
-                      <Icon
-                        :icon="
-                          updatingPaymentId === record.dentalid
-                            ? 'feather:loader'
-                            : 'feather:file-plus'
-                        "
-                        class="h-4 w-4"
-                        :class="{ 'animate-spin': updatingPaymentId === record.dentalid }"
-                      />
-                      {{ record.billingReceivedAt ? 'Update Bill' : 'Receive Bill' }}
-                    </button>
                     <button
                       type="button"
                       class="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
