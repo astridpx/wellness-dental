@@ -239,7 +239,7 @@ const normalizedDaysRemainingTo = computed(() => {
   const value = Number(form.daysRemainingTo)
   return Number.isInteger(value) ? value : null
 })
-const visibleRows = computed(() =>
+const filteredRows = computed(() =>
   rows.value.filter((row) => {
     if (!showMonitoringDueFilters.value) return true
 
@@ -278,6 +278,18 @@ const visibleRows = computed(() =>
     }
 
     return true
+  }),
+)
+const visibleRows = computed(() =>
+  [...filteredRows.value].sort((left, right) => {
+    const leftTime = left.availDate ? new Date(left.availDate).getTime() : Number.POSITIVE_INFINITY
+    const rightTime = right.availDate
+      ? new Date(right.availDate).getTime()
+      : Number.POSITIVE_INFINITY
+
+    if (leftTime !== rightTime) return leftTime - rightTime
+
+    return String(left.approvalNo || '').localeCompare(String(right.approvalNo || ''))
   }),
 )
 const visibleTotalAmount = computed(() =>
@@ -393,6 +405,7 @@ function exportCellValue(
   index: number,
 ) {
   if (key === 'no') return index + 1
+  if (key === 'amount') return Number(row.amount || 0)
   if (key === 'availDate') return formatExcelDateManila(row.availDate as string | null | undefined)
   if (key === 'procedureName') return procedureName(row.procedures as string | null | undefined)
   if (key === 'paymentStatus') {
@@ -425,6 +438,51 @@ function exportCellValue(
   return row[key] ?? ''
 }
 
+function applyCurrencyFormat(worksheet: XLSX.WorkSheet, cellAddress: string) {
+  const cell = worksheet[cellAddress]
+  if (!cell || typeof cell.v !== 'number') return
+
+  cell.t = 'n'
+  cell.z = '#,##0.00'
+}
+
+function applyHeaderStyle(worksheet: XLSX.WorkSheet, cellAddress: string) {
+  const cell = worksheet[cellAddress]
+  if (!cell) return
+
+  cell.s = {
+    fill: {
+      patternType: 'solid',
+      fgColor: { rgb: '153A78' },
+    },
+    font: {
+      bold: true,
+      color: { rgb: 'FFFFFF' },
+    },
+    alignment: {
+      horizontal: 'center',
+      vertical: 'center',
+    },
+  }
+}
+
+function applyCenteredTitleStyle(worksheet: XLSX.WorkSheet, cellAddress: string) {
+  const cell = worksheet[cellAddress]
+  if (!cell) return
+
+  cell.s = {
+    font: {
+      bold: true,
+      color: { rgb: '162947' },
+      sz: cellAddress === 'A1' ? 16 : 13,
+    },
+    alignment: {
+      horizontal: 'center',
+      vertical: 'center',
+    },
+  }
+}
+
 function paymentFilterLabel() {
   if (form.dentistPaymentStatus === 'paid') return 'Paid only'
   if (form.dentistPaymentStatus === 'unpaid') return 'Unpaid only'
@@ -446,7 +504,6 @@ function exportReport() {
   const dateFromLabel = form.dateFrom ? formatDate(form.dateFrom) : 'N/A'
   const dateToLabel = form.dateTo ? formatDate(form.dateTo) : 'N/A'
   const totalRows = visibleRows.value.length
-  const totalAmountLabel = formatMoney(visibleTotalAmount.value)
   const headerRows = [
     ['IWC WELLNESS AND PREVENTIVE CONSULTANCY INC.'],
     [selectedReportTitle.value],
@@ -470,11 +527,14 @@ function exportReport() {
     [],
     ['SUMMARY'],
     ['Total Rows', totalRows],
-    ['Total Amount', totalAmountLabel],
+    ['Total Amount', visibleTotalAmount.value],
     [],
     ['AVAILMENT DATA'],
     [],
   ]
+  const summaryTotalAmountRowNumber = headerRows.findIndex(
+    (row) => row[0] === 'Total Amount',
+  ) + 1
 
   const worksheet = XLSX.utils.aoa_to_sheet(headerRows)
   const dataStartRow = headerRows.length + 1
@@ -483,11 +543,46 @@ function exportReport() {
     skipHeader: false,
   })
 
+  for (let columnIndex = 0; columnIndex < excelColumns.value.length; columnIndex += 1) {
+    applyHeaderStyle(worksheet, `${XLSX.utils.encode_col(columnIndex)}${dataStartRow}`)
+  }
+
+  const amountColumnIndex = excelColumns.value.findIndex(([key]) => key === 'amount')
+  const amountColumnLetter =
+    amountColumnIndex >= 0 ? XLSX.utils.encode_col(amountColumnIndex) : null
+
+  if (amountColumnLetter) {
+    for (let rowNumber = dataStartRow + 1; rowNumber <= dataStartRow + exportRows.length; rowNumber += 1) {
+      applyCurrencyFormat(worksheet, `${amountColumnLetter}${rowNumber}`)
+    }
+  }
+
+  const grandTotalRowNumber = dataStartRow + exportRows.length + 1
+  const grandTotalLabelColumn = Math.max(0, amountColumnIndex - 1)
+  XLSX.utils.sheet_add_aoa(
+    worksheet,
+    [[
+      ...Array.from({ length: grandTotalLabelColumn }, () => ''),
+      'Grand Total',
+      visibleTotalAmount.value,
+    ]],
+    { origin: `A${grandTotalRowNumber}` },
+  )
+
+  if (amountColumnLetter) {
+    applyCurrencyFormat(worksheet, `${amountColumnLetter}${grandTotalRowNumber}`)
+  }
+
   const lastColumnIndex = Math.max(0, excelColumns.value.length - 1)
   worksheet['!merges'] = [
     XLSX.utils.decode_range(`A1:${XLSX.utils.encode_col(lastColumnIndex)}1`),
     XLSX.utils.decode_range(`A2:${XLSX.utils.encode_col(lastColumnIndex)}2`),
   ]
+  applyCenteredTitleStyle(worksheet, 'A1')
+  applyCenteredTitleStyle(worksheet, 'A2')
+  if (summaryTotalAmountRowNumber > 0) {
+    applyCurrencyFormat(worksheet, `B${summaryTotalAmountRowNumber}`)
+  }
   worksheet['!autofilter'] = {
     ref: `A${dataStartRow}:${XLSX.utils.encode_col(lastColumnIndex)}${dataStartRow + exportRows.length}`,
   }
