@@ -65,8 +65,6 @@ const retainedCompany = ref<CompanyOption | null>(null)
 let dentistSearchTimer: number | undefined
 let companySearchTimer: number | undefined
 
-
-
 const reportModes: Array<{
   value: AvailmentReportMode
   label: string
@@ -117,7 +115,9 @@ const showRemarksColumn = computed(
     form.mode === 'billMonitoring' ||
     form.mode === 'period',
 )
-const showBillingColumns = computed(() => isBillMonitoringMode.value || isPaymentMonitoringMode.value)
+const showBillingColumns = computed(
+  () => isBillMonitoringMode.value || isPaymentMonitoringMode.value,
+)
 const showDentistPaymentFilter = computed(
   () => form.mode === 'dentistPeriod' || form.mode === 'billMonitoring',
 )
@@ -243,45 +243,43 @@ const normalizedDaysRemainingTo = computed(() => {
   const value = Number(form.daysRemainingTo)
   return Number.isInteger(value) ? value : null
 })
+
+function monitoringStatusLabel() {
+  if (form.monitoringStatus === 'overdueOnly') return 'Overdue only'
+  if (form.monitoringStatus === 'dueSoonOnly') return 'Due soon only'
+  return 'All overdue and due soon'
+}
+
+function matchesDentistPaymentFilter(row: { ifPaid?: boolean | number | string | null }) {
+  const paid = isPaid(row)
+
+  if (form.dentistPaymentStatus === 'paid') return paid
+  if (form.dentistPaymentStatus === 'unpaid') return !paid
+  return true
+}
+
 const filteredRows = computed(() =>
   rows.value.filter((row) => {
     if (!showMonitoringDueFilters.value) return true
 
-    const paid = isPaid(row)
+    if (!matchesDentistPaymentFilter(row)) return false
+
     const remaining = billingDaysRemaining(row.billingReceivedAt)
     const monitoringStatus = form.monitoringStatus.trim()
 
     if (monitoringStatus === 'overdueOnly') {
-      return !paid && remaining !== null && remaining < 0
+      return remaining !== null && remaining < 0
     }
 
     if (monitoringStatus === 'dueSoonOnly') {
-      if (paid || remaining === null || remaining < 0) return false
+      if (remaining === null || remaining < 0) return false
 
-      const min = normalizedDaysRemainingFrom.value ?? 1
+      const min = normalizedDaysRemainingFrom.value ?? 0
       const max = normalizedDaysRemainingTo.value ?? 10
       return remaining >= min && remaining <= max
     }
 
-    if (
-      !paid &&
-      remaining !== null &&
-      normalizedDaysRemainingFrom.value !== null &&
-      remaining < normalizedDaysRemainingFrom.value
-    ) {
-      return false
-    }
-
-    if (
-      !paid &&
-      remaining !== null &&
-      normalizedDaysRemainingTo.value !== null &&
-      remaining > normalizedDaysRemainingTo.value
-    ) {
-      return false
-    }
-
-    return true
+    return remaining !== null
   }),
 )
 function billMonitoringGroupKey(row: {
@@ -291,9 +289,17 @@ function billMonitoringGroupKey(row: {
 }) {
   return [
     String(row.billingReceivedAt || '').trim(),
-    String(row.dentistName || '').trim().toLowerCase(),
-    String(row.memberName || '').trim().toLowerCase(),
+    String(row.dentistName || '')
+      .trim()
+      .toLowerCase(),
+    String(row.memberName || '')
+      .trim()
+      .toLowerCase(),
   ].join('::')
+}
+
+function billMonitoringGroupLabel(row: { memberName?: string | null }) {
+  return String(row.memberName || '').trim() || 'N/A'
 }
 
 const baseVisibleRows = computed(() =>
@@ -332,7 +338,8 @@ const visibleRows = computed(() => {
 
     if (
       nextAvailDate &&
-      (!existingAvailDate || new Date(nextAvailDate).getTime() < new Date(existingAvailDate).getTime())
+      (!existingAvailDate ||
+        new Date(nextAvailDate).getTime() < new Date(existingAvailDate).getTime())
     ) {
       existingRow.availDate = nextAvailDate
     }
@@ -355,10 +362,12 @@ const visibleRows = computed(() => {
 
     if (leftBillingTime !== rightBillingTime) return leftBillingTime - rightBillingTime
 
-    const dentistComparison = String(left.dentistName || '').localeCompare(String(right.dentistName || ''))
+    const dentistComparison = String(left.dentistName || '').localeCompare(
+      String(right.dentistName || ''),
+    )
     if (dentistComparison !== 0) return dentistComparison
 
-    return String(left.memberName || '').localeCompare(String(right.memberName || ''))
+    return billMonitoringGroupLabel(left).localeCompare(billMonitoringGroupLabel(right))
   })
 })
 const visibleTotalAmount = computed(() =>
@@ -398,7 +407,8 @@ const excelColumns = computed(() => {
       ['billingReceivedAt', 'Billing Date'],
       ['dueDate', 'Due Date'],
       ['dentistName', 'Dentist'],
-      ['memberName', 'Patient'],
+      ['billMonitoringGroup', 'Group'],
+      ['paymentStatus', 'Status'],
       ['bankName', 'Bank Name'],
       ['accountNumber', 'Account #'],
       ['amount', 'Amount Due'],
@@ -421,7 +431,10 @@ const excelColumns = computed(() => {
       ? [
           ['billingReceivedAt', 'Billing Received Date'],
           ['dueDate', 'Due Date'],
-          [isPaymentMonitoringMode.value ? 'paymentLeadTime' : 'daysRemaining', isPaymentMonitoringMode.value ? 'Turnaround' : 'Days Remaining'],
+          [
+            isPaymentMonitoringMode.value ? 'paymentLeadTime' : 'daysRemaining',
+            isPaymentMonitoringMode.value ? 'Turnaround' : 'Days Remaining',
+          ],
         ]
       : []),
     ['amount', 'Amount'],
@@ -433,7 +446,10 @@ const excelColumns = computed(() => {
 })
 
 const procedureNameMap = computed(
-  () => new Map(procedures.value.map((procedure) => [procedure.code.trim().toUpperCase(), procedure.name])),
+  () =>
+    new Map(
+      procedures.value.map((procedure) => [procedure.code.trim().toUpperCase(), procedure.name]),
+    ),
 )
 
 function procedureName(value?: string | null) {
@@ -472,7 +488,8 @@ function billingStatusLabel(value?: string | null, paid?: boolean) {
 
   const remaining = billingDaysRemaining(value)
   if (remaining === null) return 'No due date'
-  if (remaining < 0) return `Overdue by ${Math.abs(remaining)} day${Math.abs(remaining) === 1 ? '' : 's'}`
+  if (remaining < 0)
+    return `Overdue by ${Math.abs(remaining)} day${Math.abs(remaining) === 1 ? '' : 's'}`
   if (remaining <= 3) return `${remaining} day${remaining === 1 ? '' : 's'} left`
   return `${remaining} days left`
 }
@@ -487,10 +504,7 @@ function billingStatusClass(value?: string | null, paid?: boolean) {
   return 'bg-amber-light text-amber'
 }
 
-function paymentLeadTimeLabel(
-  billingReceivedAt?: string | null,
-  paidToDentistAt?: string | null,
-) {
+function paymentLeadTimeLabel(billingReceivedAt?: string | null, paidToDentistAt?: string | null) {
   if (!billingReceivedAt || !paidToDentistAt) return 'N/A'
 
   const paidDate = new Date(paidToDentistAt)
@@ -530,11 +544,7 @@ function paymentCoveredValueForRow(row: {
   return earliestLabel === latestLabel ? earliestLabel : `${earliestLabel} - ${latestLabel}`
 }
 
-function exportCellValue(
-  row: Record<string, unknown>,
-  key: string,
-  index: number,
-) {
+function exportCellValue(row: Record<string, unknown>, key: string, index: number) {
   if (key === 'no') return index + 1
   if (key === 'amount') return Number(row.amount || 0)
   if (key === 'availDate') return formatExcelDateManila(row.availDate as string | null | undefined)
@@ -554,6 +564,11 @@ function exportCellValue(
     return paymentCoveredValueForRow({
       billingReceivedAt: row.billingReceivedAt as string | null | undefined,
       dentistName: row.dentistName as string | null | undefined,
+      memberName: row.memberName as string | null | undefined,
+    })
+  }
+  if (key === 'billMonitoringGroup') {
+    return billMonitoringGroupLabel({
       memberName: row.memberName as string | null | undefined,
     })
   }
@@ -635,7 +650,7 @@ function exportReport() {
       excelColumns.value.map(([key, label]) => [
         label,
         exportCellValue(row as Record<string, unknown>, key, index),
-        ]),
+      ]),
     ),
   )
   const reportGeneratedAt = formatExcelDateTimeManila(new Date(), '')
@@ -653,11 +668,7 @@ function exportReport() {
     [`${dateRangeLabel.value} To`, dateToLabel],
     ...(showMonitoringDueFilters.value
       ? [
-          ['Monitoring Status', form.monitoringStatus === 'overdueOnly'
-            ? 'Overdue only'
-            : form.monitoringStatus === 'dueSoonOnly'
-              ? 'Due soon only'
-              : 'All billing rows'],
+          ['Monitoring Status', monitoringStatusLabel()],
           ['Days Remaining From', form.daysRemainingFrom || 'N/A'],
           ['Days Remaining To', form.daysRemainingTo || 'N/A'],
         ]
@@ -670,9 +681,7 @@ function exportReport() {
     ['AVAILMENT DATA'],
     [],
   ]
-  const summaryTotalAmountRowNumber = headerRows.findIndex(
-    (row) => row[0] === 'Total Amount',
-  ) + 1
+  const summaryTotalAmountRowNumber = headerRows.findIndex((row) => row[0] === 'Total Amount') + 1
 
   const worksheet = XLSX.utils.aoa_to_sheet(headerRows)
   const dataStartRow = headerRows.length + 1
@@ -690,7 +699,11 @@ function exportReport() {
     amountColumnIndex >= 0 ? XLSX.utils.encode_col(amountColumnIndex) : null
 
   if (amountColumnLetter) {
-    for (let rowNumber = dataStartRow + 1; rowNumber <= dataStartRow + exportRows.length; rowNumber += 1) {
+    for (
+      let rowNumber = dataStartRow + 1;
+      rowNumber <= dataStartRow + exportRows.length;
+      rowNumber += 1
+    ) {
       applyCurrencyFormat(worksheet, `${amountColumnLetter}${rowNumber}`)
     }
   }
@@ -699,11 +712,13 @@ function exportReport() {
   const grandTotalLabelColumn = Math.max(0, amountColumnIndex - 1)
   XLSX.utils.sheet_add_aoa(
     worksheet,
-    [[
-      ...Array.from({ length: grandTotalLabelColumn }, () => ''),
-      'Grand Total',
-      visibleTotalAmount.value,
-    ]],
+    [
+      [
+        ...Array.from({ length: grandTotalLabelColumn }, () => ''),
+        'Grand Total',
+        visibleTotalAmount.value,
+      ],
+    ],
     { origin: `A${grandTotalRowNumber}` },
   )
 
@@ -762,7 +777,7 @@ watch(
   () => form.monitoringStatus,
   (status) => {
     if (status === 'dueSoonOnly') {
-      if (!form.daysRemainingFrom) form.daysRemainingFrom = '1'
+      if (!form.daysRemainingFrom) form.daysRemainingFrom = '0'
       if (!form.daysRemainingTo) form.daysRemainingTo = '10'
       return
     }
@@ -917,14 +932,23 @@ onMounted(() => {
   void fetchProcedures()
 })
 
-
-function formatLegacyDentistName(dentist: { dentistname?: string | null; firstname?: string | null; middleinitial?: string | null; lastname?: string | null }) {
+function formatLegacyDentistName(dentist: {
+  dentistname?: string | null
+  firstname?: string | null
+  middleinitial?: string | null
+  lastname?: string | null
+}) {
   if (dentist.dentistname?.trim()) return dentist.dentistname.trim()
 
   const firstName = String(dentist.firstname || '').trim()
-  const middleInitial = String(dentist.middleinitial || '').trim().replace(/\.+$/, '')
+  const middleInitial = String(dentist.middleinitial || '')
+    .trim()
+    .replace(/\.+$/, '')
   const lastName = String(dentist.lastname || '').trim()
-  const rightSide = [firstName, middleInitial ? `${middleInitial}.` : ''].filter(Boolean).join(' ').trim()
+  const rightSide = [firstName, middleInitial ? `${middleInitial}.` : '']
+    .filter(Boolean)
+    .join(' ')
+    .trim()
 
   return [lastName, rightSide].filter(Boolean).join(', ').trim()
 }
@@ -1101,7 +1125,7 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
               v-model="form.monitoringStatus"
               class="w-full rounded-xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fafcff_100%)] px-4 py-3.5 text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
             >
-              <option value="">All billing rows</option>
+              <option value="">All overdue and due soon</option>
               <option value="overdueOnly">Overdue only</option>
               <option value="dueSoonOnly">Due soon only</option>
             </select>
@@ -1112,7 +1136,7 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
             label="Days Remaining From"
             type="number"
             min="0"
-            placeholder="1"
+            placeholder="0"
           />
           <AppInput
             v-if="form.monitoringStatus === 'dueSoonOnly'"
@@ -1162,7 +1186,18 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
         v-else
         :theads="
           isBillMonitoringMode
-            ? ['Billing Date', 'Due Date', 'Dentist', 'Patient', 'Bank Name', 'Account #', 'Amount Due', paymentCoveredLabel, 'Remarks']
+            ? [
+                'Billing Date',
+                'Due Date',
+                'Dentist',
+                'Group',
+                'Status',
+                'Bank Name',
+                'Account #',
+                'Amount Due',
+                paymentCoveredLabel,
+                'Remarks',
+              ]
             : [
                 'Company',
                 'Approval',
@@ -1171,7 +1206,11 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
                 'Dentist / Clinic',
                 'Procedure',
                 ...(showBillingColumns
-                  ? ['Billing Received', 'Due Date', isPaymentMonitoringMode ? 'Turnaround' : 'Days Remaining']
+                  ? [
+                      'Billing Received',
+                      'Due Date',
+                      isPaymentMonitoringMode ? 'Turnaround' : 'Days Remaining',
+                    ]
                   : []),
                 'Amount',
                 'Payment',
@@ -1185,17 +1224,21 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
         <template #trs>
           <tr v-if="!visibleRows.length">
             <td
-              :colspan="isBillMonitoringMode ? 9 : 8 + (showBillingColumns ? 3 : 0) + 2 + (showRemarksColumn ? 1 : 0)"
+              :colspan="
+                isBillMonitoringMode
+                  ? 10
+                  : 8 + (showBillingColumns ? 3 : 0) + 2 + (showRemarksColumn ? 1 : 0)
+              "
               class="py-12! text-center! text-sm text-slate"
             >
-              {{ rows.length ? 'No report rows match the current monitoring filters.' : 'No report rows generated yet.' }}
+              {{
+                rows.length
+                  ? 'No report rows match the current monitoring filters.'
+                  : 'No report rows generated yet.'
+              }}
             </td>
           </tr>
-          <tr
-            v-for="(row, index) in visibleRows"
-            v-else
-            :key="`${row.approvalNo}-${index}`"
-          >
+          <tr v-for="(row, index) in visibleRows" v-else :key="`${row.approvalNo}-${index}`">
             <template v-if="isBillMonitoringMode">
               <td>{{ formatDate(row.billingReceivedAt) }}</td>
               <td>{{ formatDate(billingDueDate(row.billingReceivedAt)) }}</td>
@@ -1203,7 +1246,17 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
                 <p class="font-semibold text-onyx">{{ row.dentistName || 'N/A' }}</p>
                 <p class="mt-1 text-xs text-slate">{{ row.clinicName || 'N/A' }}</p>
               </td>
-              <td>{{ row.memberName || 'N/A' }}</td>
+              <td>{{ billMonitoringGroupLabel(row) }}</td>
+              <td>
+                <span
+                  class="rounded-full px-3 py-1 text-xs font-semibold"
+                  :class="
+                    isPaid(row) ? 'bg-emerald-light text-emerald' : 'bg-amber-light text-amber'
+                  "
+                >
+                  {{ isPaid(row) ? 'Paid' : 'Unpaid' }}
+                </span>
+              </td>
               <td>{{ row.bankName || 'N/A' }}</td>
               <td>{{ row.accountNumber || 'N/A' }}</td>
               <td class="font-black text-onyx">{{ formatMoney(row.amount) }}</td>
@@ -1215,54 +1268,58 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
               </td>
             </template>
             <template v-else>
-            <td>{{ row.companyName || 'N/A' }}</td>
-            <td>
-              <span class="font-mono text-sm font-black text-onyx">
-                {{ row.approvalNo || 'N/A' }}
-              </span>
-            </td>
-            <td>{{ row.memberName || 'N/A' }}</td>
-            <td>{{ formatDate(row.availDate) }}</td>
-            <td>
-              <p class="font-semibold text-onyx">{{ row.dentistName || 'N/A' }}</p>
-              <p class="mt-1 text-xs text-slate">{{ row.clinicName || 'N/A' }}</p>
-            </td>
-            <td>
-              <p class="font-semibold text-onyx">{{ procedureName(row.procedures) }}</p>
-              <p class="mt-1 text-xs text-slate">Tooth {{ row.toothNo || 'N/A' }}</p>
-            </td>
-            <td v-if="showBillingColumns">{{ formatDate(row.billingReceivedAt) }}</td>
-            <td v-if="showBillingColumns">{{ formatDate(billingDueDate(row.billingReceivedAt)) }}</td>
-            <td v-if="showBillingColumns">
-              <template v-if="isPaymentMonitoringMode">
-                {{ paymentLeadTimeLabel(row.billingReceivedAt, row.paidToDentistAt) }}
-              </template>
-              <span
-                v-else
-                class="rounded-full px-3 py-1 text-xs font-semibold"
-                :class="billingStatusClass(row.billingReceivedAt, isPaid(row))"
-              >
-                {{ billingStatusLabel(row.billingReceivedAt, isPaid(row)) }}
-              </span>
-            </td>
-            <td class="font-black text-onyx">{{ formatMoney(row.amount) }}</td>
-            <td>
-              <span
-                class="rounded-full px-3 py-1 text-xs font-semibold"
-                :class="isPaid(row) ? 'bg-emerald-light text-emerald' : 'bg-amber-light text-amber'"
-              >
-                {{ isPaid(row) ? 'Paid' : 'Unpaid' }}
-              </span>
-            </td>
-            <td>
-              {{ formatDateTime(row.paidToDentistAt) }}
-            </td>
-            <td v-if="showRemarksColumn">
-              <span class="block max-w-56 whitespace-normal text-sm text-slate">
-                {{ row.remarks || 'N/A' }}
-              </span>
-            </td>
-            <td>{{ row.encodedBy || 'N/A' }}</td>
+              <td>{{ row.companyName || 'N/A' }}</td>
+              <td>
+                <span class="font-mono text-sm font-black text-onyx">
+                  {{ row.approvalNo || 'N/A' }}
+                </span>
+              </td>
+              <td>{{ row.memberName || 'N/A' }}</td>
+              <td>{{ formatDate(row.availDate) }}</td>
+              <td>
+                <p class="font-semibold text-onyx">{{ row.dentistName || 'N/A' }}</p>
+                <p class="mt-1 text-xs text-slate">{{ row.clinicName || 'N/A' }}</p>
+              </td>
+              <td>
+                <p class="font-semibold text-onyx">{{ procedureName(row.procedures) }}</p>
+                <p class="mt-1 text-xs text-slate">Tooth {{ row.toothNo || 'N/A' }}</p>
+              </td>
+              <td v-if="showBillingColumns">{{ formatDate(row.billingReceivedAt) }}</td>
+              <td v-if="showBillingColumns">
+                {{ formatDate(billingDueDate(row.billingReceivedAt)) }}
+              </td>
+              <td v-if="showBillingColumns">
+                <template v-if="isPaymentMonitoringMode">
+                  {{ paymentLeadTimeLabel(row.billingReceivedAt, row.paidToDentistAt) }}
+                </template>
+                <span
+                  v-else
+                  class="rounded-full px-3 py-1 text-xs font-semibold"
+                  :class="billingStatusClass(row.billingReceivedAt, isPaid(row))"
+                >
+                  {{ billingStatusLabel(row.billingReceivedAt, isPaid(row)) }}
+                </span>
+              </td>
+              <td class="font-black text-onyx">{{ formatMoney(row.amount) }}</td>
+              <td>
+                <span
+                  class="rounded-full px-3 py-1 text-xs font-semibold"
+                  :class="
+                    isPaid(row) ? 'bg-emerald-light text-emerald' : 'bg-amber-light text-amber'
+                  "
+                >
+                  {{ isPaid(row) ? 'Paid' : 'Unpaid' }}
+                </span>
+              </td>
+              <td>
+                {{ formatDateTime(row.paidToDentistAt) }}
+              </td>
+              <td v-if="showRemarksColumn">
+                <span class="block max-w-56 whitespace-normal text-sm text-slate">
+                  {{ row.remarks || 'N/A' }}
+                </span>
+              </td>
+              <td>{{ row.encodedBy || 'N/A' }}</td>
             </template>
           </tr>
         </template>
