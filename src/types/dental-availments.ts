@@ -43,6 +43,18 @@ export type DentalProcedureItemInput = {
   procedures: string
   amount: number
   toothNo?: string
+  bypassProcedureInterval?: boolean
+}
+
+export type DentalProcedureEligibility = {
+  eligible: boolean
+  procedureCode: string
+  procedureName?: string | null
+  monthInterval?: number | null
+  lastAvailDate?: string | null
+  nextEligibleDate?: string | null
+  daysRemaining?: number | null
+  message?: string | null
 }
 
 export type DentalMemberSearchScope =

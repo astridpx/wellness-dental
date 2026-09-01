@@ -3,6 +3,7 @@ import type {
   DentalAvailmentApproval,
   DentalAvailmentMemberOption,
   DentalAvailmentRecord,
+  DentalProcedureEligibility,
   DentalMemberSearchScope,
   DentalProcedureItemInput,
 } from '@/types'
@@ -19,6 +20,7 @@ export function useDentalAvailments() {
   const lookingUp = ref(false)
   const generatingApprovalNo = ref(false)
   const searchingMembers = ref(false)
+  const checkingProcedureEligibility = ref(false)
   const errorMessage = ref('')
   const memberSearchErrorMessage = ref('')
   const successMessage = ref('')
@@ -158,6 +160,38 @@ export function useDentalAvailments() {
     return true
   }
 
+  async function checkProcedureEligibility(procedureCode: string) {
+    const normalizedProcedureCode = procedureCode.trim()
+
+    if (!form.memberName.trim() || !form.availDate || !normalizedProcedureCode) return null
+
+    checkingProcedureEligibility.value = true
+    errorMessage.value = ''
+
+    const params = new URLSearchParams({
+      memberName: form.memberName.trim(),
+      procedureCode: normalizedProcedureCode,
+      availDate: form.availDate,
+    })
+
+    if (form.planHolderId.trim()) params.set('planHolderId', form.planHolderId.trim())
+    if (form.officeCode.trim()) params.set('officeCode', form.officeCode.trim())
+    if (form.clientCode.trim()) params.set('clientCode', form.clientCode.trim())
+
+    const result = await request<DentalProcedureEligibility>(
+      `/wellness/dentalAvailments/procedureEligibility?${params.toString()}`,
+    )
+
+    checkingProcedureEligibility.value = false
+
+    if (!result.ok) {
+      errorMessage.value = result.error || 'Unable to check procedure interval.'
+      return null
+    }
+
+    return result.data || null
+  }
+
   async function generateApprovalNo() {
     generatingApprovalNo.value = true
     errorMessage.value = ''
@@ -203,6 +237,8 @@ export function useDentalAvailments() {
   return {
     approvalLookup,
     createAvailment,
+    checkProcedureEligibility,
+    checkingProcedureEligibility,
     createdAvailment,
     creating,
     errorMessage,

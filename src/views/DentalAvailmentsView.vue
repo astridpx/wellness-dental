@@ -11,11 +11,18 @@ import {
   AppToast,
 } from '@/components/app'
 import { useClinics, useDentalAvailments, useDentists, useProcedures } from '@/composables'
-import type { DentalAvailmentMemberOption, DentalMemberSearchScope } from '@/types'
+import type {
+  DentalAvailmentMemberOption,
+  DentalMemberSearchScope,
+  DentalProcedureEligibility,
+  DentalProcedureItemInput,
+} from '@/types'
 import { formatDate, formatMoney } from '@/utils'
 
 const {
   approvalLookup,
+  checkProcedureEligibility,
+  checkingProcedureEligibility,
   createAvailment,
   createdAvailment,
   creating,
@@ -58,6 +65,11 @@ const clinicSearch = ref('')
 const retainedClinicRecord = ref<Record<string, unknown> | null>(null)
 const memberSearchSubmitted = ref(false)
 const showCreateConfirmation = ref(false)
+const showProcedureBypassConfirmation = ref(false)
+const pendingProcedureBypass = ref<{
+  item: DentalProcedureItemInput
+  eligibility: DentalProcedureEligibility
+} | null>(null)
 const toast = ref({
   show: false,
   variant: 'success',
@@ -285,13 +297,9 @@ async function submitMemberSearch() {
   await searchDentalMembers(memberSearch.value, memberSource.value)
 }
 
-function addProcedureItem() {
-  if (!form.procedures.trim() || form.amount === '') return
-
+function appendProcedureItem(item: DentalProcedureItemInput) {
   form.procedureItems.push({
-    procedures: form.procedures.trim(),
-    amount: Number(form.amount),
-    toothNo: form.toothNo.trim() || undefined,
+    ...item,
   })
 
   selectedProcedureId.value = null
@@ -299,6 +307,61 @@ function addProcedureItem() {
   form.procedures = ''
   form.amount = ''
   form.toothNo = ''
+}
+
+async function addProcedureItem() {
+  if (!form.procedures.trim() || form.amount === '') return
+
+  const item = {
+    procedures: form.procedures.trim(),
+    amount: Number(form.amount),
+    toothNo: form.toothNo.trim() || undefined,
+  }
+
+  const eligibility = await checkProcedureEligibility(item.procedures)
+
+  if (!eligibility) {
+    toast.value = {
+      show: true,
+      variant: 'error',
+      title: 'Unable to check procedure',
+      message: errorMessage.value || 'Please try checking this procedure again.',
+    }
+    return
+  }
+
+  if (!eligibility.eligible) {
+    pendingProcedureBypass.value = {
+      item,
+      eligibility,
+    }
+    showProcedureBypassConfirmation.value = true
+    toast.value = {
+      show: true,
+      variant: 'error',
+      title: 'Procedure interval warning',
+      message: eligibility.message || 'This procedure cannot be availed yet.',
+    }
+    return
+  }
+
+  appendProcedureItem(item)
+}
+
+function closeProcedureBypassConfirmation() {
+  showProcedureBypassConfirmation.value = false
+  pendingProcedureBypass.value = null
+}
+
+function confirmProcedureBypass() {
+  if (!pendingProcedureBypass.value) return
+
+  appendProcedureItem({
+    ...pendingProcedureBypass.value.item,
+    bypassProcedureInterval: true,
+  })
+  showProcedureBypassConfirmation.value = false
+  pendingProcedureBypass.value = null
 }
 
 function removeProcedureItem(index: number) {
@@ -531,6 +594,55 @@ watch(clinicSearch, (search) => {
 </script>
 
 <template>
+  <AppDialog
+    title="Bypass Procedure Interval?"
+    :show="showProcedureBypassConfirmation"
+    confirm-label="Yes, Add Procedure"
+    max-width="sm:max-w-2xl"
+    @close="closeProcedureBypassConfirmation"
+    @confirm="confirmProcedureBypass"
+  >
+    <template #dialog-content>
+      <div class="space-y-4">
+        <div class="rounded-[1.5rem] border border-ruby/15 bg-ruby-light p-5">
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-ruby">
+            Procedure interval warning
+          </p>
+          <p class="mt-2 text-sm leading-6 text-slate">
+            {{ pendingProcedureBypass?.eligibility.message || 'This procedure cannot be availed yet.' }}
+          </p>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Procedure</p>
+            <p class="mt-2 text-sm font-bold text-onyx">
+              {{ pendingProcedureBypass?.eligibility.procedureName || pendingProcedureBypass?.item.procedures || 'N/A' }}
+            </p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Days Remaining</p>
+            <p class="mt-2 text-sm font-bold text-onyx">
+              {{ pendingProcedureBypass?.eligibility.daysRemaining ?? 'N/A' }}
+            </p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Last Availment</p>
+            <p class="mt-2 text-sm font-bold text-onyx">
+              {{ formatDate(pendingProcedureBypass?.eligibility.lastAvailDate) }}
+            </p>
+          </div>
+          <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+            <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Next Eligible Date</p>
+            <p class="mt-2 text-sm font-bold text-onyx">
+              {{ formatDate(pendingProcedureBypass?.eligibility.nextEligibleDate) }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </template>
+  </AppDialog>
+
   <AppDialog
     title="Create Approval"
     :show="showCreateConfirmation"
@@ -943,11 +1055,15 @@ watch(clinicSearch, (search) => {
                   type="button"
                   btn-theme="outline"
                   class="w-full normal-case"
-                  :disabled="!form.procedures.trim() || form.amount === ''"
+                  :disabled="!form.procedures.trim() || form.amount === '' || checkingProcedureEligibility"
                   @click="addProcedureItem"
                 >
-                  <Icon icon="feather:plus-circle" class="h-4 w-4" />
-                  Add Procedure
+                  <Icon
+                    :icon="checkingProcedureEligibility ? 'feather:loader' : 'feather:plus-circle'"
+                    class="h-4 w-4"
+                    :class="{ 'animate-spin': checkingProcedureEligibility }"
+                  />
+                  {{ checkingProcedureEligibility ? 'Checking...' : 'Add Procedure' }}
                 </AppButton>
               </div>
 
