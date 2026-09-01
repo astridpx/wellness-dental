@@ -22,10 +22,10 @@ const canViewUsers = computed(() =>
   roles.value.some((role) => ['superAdmin', 'admin', 'auditor'].includes(role)),
 )
 const canViewPartnerBatches = computed(() =>
-  roles.value.some((role) => ['superAdmin', 'admin', 'auditor'].includes(role)),
+  roles.value.some((role) => ['superAdmin', 'admin', 'auditor', 'regUser'].includes(role)),
 )
 const canViewBusinessPartners = computed(() =>
-  roles.value.some((role) => ['superAdmin', 'admin'].includes(role)),
+  roles.value.some((role) => ['superAdmin', 'admin', 'regUser'].includes(role)),
 )
 
 const usersCount = ref(0)

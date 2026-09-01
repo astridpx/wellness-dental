@@ -90,6 +90,9 @@ const totalActiveOptions = computed(() => options.value.filter((option) => optio
 const isPaymentModesSelected = computed(() => selectedCategory.value === 'Payment Modes')
 const isProceduresSelected = computed(() => selectedCategory.value === 'Procedures')
 const loadingSummary = computed(() => loadingProcedures.value || loadingPaymentModes.value)
+const canDeleteSetupLibrary = computed(() =>
+  getStoredRoles().some((role) => ['superAdmin', 'admin'].includes(role)),
+)
 const canManageSetupLibrary = computed(() => getStoredRoles().length > 0)
 const tableHeaders = computed(() =>
   isProceduresSelected.value
@@ -189,7 +192,7 @@ function closeForm() {
 function confirmDelete(option: OptionItem) {
   if (
     (isProcedureOption(option) || isPaymentModeOption(option)) &&
-    !canManageSetupLibrary.value
+    !canDeleteSetupLibrary.value
   ) {
     localErrorMessage.value = 'You do not have access to delete setup library items.'
     return
@@ -636,7 +639,7 @@ function getProcedureQuantity(option: OptionItem): number {
                       </button>
                       <button
                         v-if="
-                          canManageSetupLibrary ||
+                          canDeleteSetupLibrary ||
                           (option.category !== 'Payment Modes' && option.category !== 'Procedures')
                         "
                         type="button"

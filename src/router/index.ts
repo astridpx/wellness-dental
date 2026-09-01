@@ -226,7 +226,7 @@ const router = createRouter({
           name: 'IMS',
           icon: 'feather:layers',
         },
-        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
     {
@@ -240,7 +240,7 @@ const router = createRouter({
           name: 'Partners',
           icon: 'feather:users',
         },
-        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
     {
@@ -254,7 +254,7 @@ const router = createRouter({
           name: 'Partners',
           icon: 'feather:users',
         },
-        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
     {
@@ -268,7 +268,7 @@ const router = createRouter({
           name: 'Partners',
           icon: 'feather:users',
         },
-        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor'] }],
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
     },
     {
@@ -282,7 +282,7 @@ const router = createRouter({
           name: 'Partners',
           icon: 'feather:users',
         },
-        navItem: [true, { visibleTo: ['superAdmin', 'admin'] }],
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'regUser'] }],
       },
     },
     {

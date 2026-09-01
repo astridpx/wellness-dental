@@ -10,7 +10,7 @@ import {
   AppTextArea,
   AppToast,
 } from '@/components/app'
-import { useDentistBankAccounts, useDentistForm, usePaymentModes } from '@/composables'
+import { useAuth, useDentistBankAccounts, useDentistForm, usePaymentModes } from '@/composables'
 import type { DentistBankAccount, DentistBankAccountInput } from '@/types'
 
 const {
@@ -46,6 +46,7 @@ const {
   loadingPaymentModes,
   paymentModes,
 } = usePaymentModes()
+const { getStoredRoles } = useAuth()
 
 const dentistId = computed(() => Number(route.params.id) || 0)
 const selectedPaymentModeIsListed = computed(() =>
@@ -66,6 +67,9 @@ const dentistPaymentModeLabel = computed(
 const dentistContactLabel = computed(() => dentistData.value.phone || 'Not provided')
 const activeBankAccountCount = computed(
   () => bankAccounts.value.filter((bankAccount) => bankAccount.isActive).length,
+)
+const canDeleteBankAccounts = computed(() =>
+  getStoredRoles().some((role) => ['superAdmin', 'admin'].includes(role)),
 )
 const paymentDestinationConfig = computed(() => {
   const mode = dentistData.value.modeOfPayment.trim().toLowerCase()
@@ -299,6 +303,8 @@ async function submitBankAccount() {
 }
 
 function requestBankAccountDelete(bankAccountId: number) {
+  if (!canDeleteBankAccounts.value) return
+
   clearBankAccountError()
   bankAccountFeedback.value = ''
   visibleBankAccountId.value = null
@@ -306,7 +312,7 @@ function requestBankAccountDelete(bankAccountId: number) {
 }
 
 async function confirmBankAccountDelete(bankAccount: DentistBankAccount) {
-  if (!dentistId.value) return
+  if (!dentistId.value || !canDeleteBankAccounts.value) return
 
   const deleted = await deleteBankAccount(dentistId.value, bankAccount.id)
   if (!deleted) return
@@ -1160,7 +1166,7 @@ watch(
                       </div>
                     </template>
                     <div
-                      v-else-if="pendingDeleteBankAccountId === bankAccount.id"
+                      v-else-if="canDeleteBankAccounts && pendingDeleteBankAccountId === bankAccount.id"
                       class="flex flex-col gap-4 rounded-2xl border border-ruby/15 bg-ruby-light p-4 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div class="flex items-start gap-3 text-ruby">
@@ -1206,6 +1212,7 @@ watch(
                     </div>
                     <div v-else class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                       <AppButton
+                        v-if="canDeleteBankAccounts"
                         type="button"
                         btn-theme="outline"
                         class="normal-case text-ruby"
