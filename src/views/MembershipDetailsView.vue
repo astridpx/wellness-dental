@@ -146,6 +146,9 @@ function getWellnessRemittanceCode(payment: {
                   Wellness Remittance Code
                 </th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Period</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">
+                  Date Collected
+                </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-pebble/65">
@@ -180,9 +183,12 @@ function getWellnessRemittanceCode(payment: {
                     {{ formatDateOnly(payment.paymentPeriod) }}
                   </span>
                 </td>
+                <td class="px-6 py-4 align-top text-onyx">
+                  {{ formatDateOnly(payment.dateReceived) }}
+                </td>
               </tr>
               <tr v-if="!paymentRecords.length">
-                <td colspan="7" class="w-full px-6 py-14 text-center text-onyx">
+                <td colspan="6" class="w-full px-6 py-14 text-center text-onyx">
                   <div class="flex w-full flex-col items-center">
                     <span
                       class="flex h-12 w-12 items-center justify-center rounded-2xl bg-fog text-smoke"

@@ -196,7 +196,7 @@ function formatPaymentPeriod(value?: string | null) {
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Dental Premium</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Status</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Reference</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Paid At</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Date Collected</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-onyx">Uploaded</th>
               </tr>
             </thead>
