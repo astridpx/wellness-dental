@@ -28,6 +28,9 @@ export type AvailmentReportRow = {
   paymentReceivedAt?: string | null
   remarks?: string | null
   encodedBy?: string | null
+  encodedByName?: string | null
+  dateEncoded?: string | null
+  entryTime?: string | null
 }
 
 export type ImsReportCompany = {

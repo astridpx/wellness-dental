@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx'
 import { computed, onMounted, ref, watch } from 'vue'
 import { AppButton, AppInput, AppLoadingScreen, AppSearchSelect, AppTable } from '@/components/app'
 import { useAvailmentReports, useDentists, useProcedures } from '@/composables'
-import type { AvailmentCompanyFilterBy, AvailmentReportMode } from '@/types'
+import type { AvailmentCompanyFilterBy, AvailmentReportMode, AvailmentReportRow } from '@/types'
 import {
   addWorkingDays,
   differenceInWorkingDays,
@@ -414,6 +414,9 @@ const excelColumns = computed(() => {
       ['amount', 'Amount Due'],
       ['paymentCovered', paymentCoveredLabel.value],
       ['remarks', 'Remarks'],
+      ['encodedByName', 'Encoded By'],
+      ['dateEncoded', 'Date Encoded'],
+      ['entryTime', 'Entry Time'],
     ] as const
   }
 
@@ -441,7 +444,9 @@ const excelColumns = computed(() => {
     ['paymentStatus', 'Payment Status'],
     ['paidToDentistAt', 'Paid to Dentist At'],
     ['remarks', 'Remarks'],
-    ['encodedBy', 'Encoded By'],
+    ['encodedByName', 'Encoded By'],
+    ['dateEncoded', 'Date Encoded'],
+    ['entryTime', 'Entry Time'],
   ] as const
 })
 
@@ -530,6 +535,17 @@ function paymentCoveredValue() {
   return 'N/A'
 }
 
+function encodedByValue(row: AvailmentReportRow) {
+  return row.encodedByName || row.encodedBy || 'N/A'
+}
+
+function entryTimeValue(value?: string | null) {
+  const normalized = String(value || '').trim()
+  if (!normalized) return 'N/A'
+
+  return normalized.match(/\d{2}:\d{2}(?::\d{2})?/)?.[0] || normalized
+}
+
 function paymentCoveredValueForRow(row: {
   billingReceivedAt?: string | null
   dentistName?: string | null
@@ -586,6 +602,15 @@ function exportCellValue(row: Record<string, unknown>, key: string, index: numbe
   }
   if (key === 'paidToDentistAt') {
     return formatExcelDateTimeManila(row.paidToDentistAt as string | null | undefined)
+  }
+  if (key === 'encodedByName') {
+    return encodedByValue(row as AvailmentReportRow)
+  }
+  if (key === 'dateEncoded') {
+    return formatExcelDateManila(row.dateEncoded as string | null | undefined)
+  }
+  if (key === 'entryTime') {
+    return entryTimeValue(row.entryTime as string | null | undefined)
   }
 
   return row[key] ?? ''
@@ -1197,6 +1222,9 @@ function formatLegacyDentistName(dentist: {
                 'Amount Due',
                 paymentCoveredLabel,
                 'Remarks',
+                'Encoded By',
+                'Date Encoded',
+                'Entry Time',
               ]
             : [
                 'Company',
@@ -1217,6 +1245,8 @@ function formatLegacyDentistName(dentist: {
                 'Paid to Dentist At',
                 ...(showRemarksColumn ? ['Remarks'] : []),
                 'Encoded By',
+                'Date Encoded',
+                'Entry Time',
               ]
         "
         :total-entries="visibleRows.length"
@@ -1226,8 +1256,8 @@ function formatLegacyDentistName(dentist: {
             <td
               :colspan="
                 isBillMonitoringMode
-                  ? 10
-                  : 8 + (showBillingColumns ? 3 : 0) + 2 + (showRemarksColumn ? 1 : 0)
+                  ? 13
+                  : 8 + (showBillingColumns ? 3 : 0) + 4 + (showRemarksColumn ? 1 : 0)
               "
               class="py-12! text-center! text-sm text-slate"
             >
@@ -1266,6 +1296,9 @@ function formatLegacyDentistName(dentist: {
                   {{ row.remarks || 'N/A' }}
                 </span>
               </td>
+              <td>{{ encodedByValue(row) }}</td>
+              <td>{{ formatDate(row.dateEncoded) }}</td>
+              <td>{{ entryTimeValue(row.entryTime) }}</td>
             </template>
             <template v-else>
               <td>{{ row.companyName || 'N/A' }}</td>
@@ -1319,7 +1352,9 @@ function formatLegacyDentistName(dentist: {
                   {{ row.remarks || 'N/A' }}
                 </span>
               </td>
-              <td>{{ row.encodedBy || 'N/A' }}</td>
+              <td>{{ encodedByValue(row) }}</td>
+              <td>{{ formatDate(row.dateEncoded) }}</td>
+              <td>{{ entryTimeValue(row.entryTime) }}</td>
             </template>
           </tr>
         </template>
