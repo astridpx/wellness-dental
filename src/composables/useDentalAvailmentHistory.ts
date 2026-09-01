@@ -269,6 +269,7 @@ export function useDentalAvailmentHistory() {
   async function updateAvailment(
     record: DentalAvailmentRecord,
     payload: {
+      memberName: string
       availDate: string
       procedures: string
       amount: number

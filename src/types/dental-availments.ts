@@ -16,6 +16,7 @@ export type DentalAvailmentRecord = {
   encodedby?: string | null
   encodedByName?: string | null
   dateencoded?: string | null
+  entryTime?: string | null
   planholderid?: string | null
   officecode?: string | null
   IfPaid?: number | boolean | null

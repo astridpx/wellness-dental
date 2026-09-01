@@ -71,6 +71,7 @@ const selectedClinicId = ref<string | number | null>(null)
 const clinicSearch = ref('')
 const retainedClinicRecord = ref<Record<string, unknown> | null>(null)
 const editForm = reactive({
+  memberName: '',
   availDate: '',
   procedures: '',
   amount: '',
@@ -129,6 +130,7 @@ const clinicOptions = computed(() =>
 )
 const editReady = computed(
   () =>
+    editForm.memberName.trim() &&
     editForm.availDate &&
     editForm.procedures.trim() &&
     editForm.amount !== '' &&
@@ -348,10 +350,21 @@ function normalizeDateInput(value?: string | null) {
   return String(value).slice(0, 10)
 }
 
+function formatEncodedDateTime(record: DentalAvailmentRecord) {
+  const encodedDate = normalizeDateInput(record.dateencoded)
+  if (!encodedDate) return 'N/A'
+
+  const encodedTime = String(record.entryTime || '').match(/\d{2}:\d{2}(?::\d{2})?/)?.[0]
+  if (!encodedTime) return formatDate(record.dateencoded)
+
+  return formatDateTime(`${encodedDate}T${encodedTime}`)
+}
+
 function openEditDialog(record: DentalAvailmentRecord) {
   if (!isValidAvailment(record) || updatingId.value) return
 
   editTarget.value = record
+  editForm.memberName = record.membername || ''
   editForm.availDate = normalizeDateInput(record.availdate)
   editForm.procedures = record.procedures || ''
   editForm.amount = String(record.amount ?? '')
@@ -384,6 +397,7 @@ async function confirmEdit() {
   if (!editTarget.value || !editReady.value) return
 
   const updated = await updateAvailment(editTarget.value, {
+    memberName: editForm.memberName.trim(),
     availDate: editForm.availDate,
     procedures: editForm.procedures.trim(),
     amount: Number(editForm.amount),
@@ -785,6 +799,14 @@ function formatLegacyDentistName(dentist: {
         </div>
 
         <div class="grid gap-5 md:grid-cols-2">
+          <div class="md:col-span-2">
+            <AppInput
+              v-model="editForm.memberName"
+              label="Member Name"
+              placeholder="Member full name"
+              icon="feather:user"
+            />
+          </div>
           <AppInput v-model="editForm.availDate" label="Availment Date" type="date" />
           <AppSearchSelect
             v-model="selectedProcedureId"
@@ -1056,7 +1078,7 @@ function formatLegacyDentistName(dentist: {
             <td class="text-sm text-slate">
               {{ record.encodedByName || record.encodedby || 'N/A' }}
             </td>
-            <td class="text-sm text-slate">{{ formatDate(record.dateencoded) }}</td>
+            <td class="text-sm text-slate">{{ formatEncodedDateTime(record) }}</td>
             <td>
               <span
                 class="rounded-full px-3 py-1 text-xs font-semibold"
