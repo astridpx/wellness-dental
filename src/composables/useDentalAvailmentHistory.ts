@@ -53,7 +53,7 @@ export function useDentalAvailmentHistory() {
   })
 
   const stats = computed(() => ({
-    totalVisible: totalEntries.value,
+    totalAvailments: totalEntries.value,
     totalAmount: totalAmount.value,
     hasOverallTotalAmount: hasOverallTotalAmount.value,
     validRows: records.value.filter((record) => (record.status || 'VALID') === 'VALID').length,

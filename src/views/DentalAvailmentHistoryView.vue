@@ -925,7 +925,7 @@ function formatLegacyDentistName(dentist: {
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">
             Total Availments
           </p>
-          <p class="mt-2 text-2xl font-black text-onyx">{{ stats.totalVisible }}</p>
+          <p class="mt-2 text-2xl font-black text-onyx">{{ stats.totalAvailments }}</p>
         </div>
         <div class="border-b border-pebble/80 px-6 py-4 md:border-b-0 md:border-r">
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">
