@@ -207,7 +207,7 @@ function resolveLegacyProcedureAmount() {
   const clinicAmount = ['TWLB', 'OP', 'STE', 'TF', 'AD', 'RJ', 'LC', 'PF', 'CON'].includes(rateKey)
     ? readLegacyRateValue(selectedClinic, rateKey)
     : null
-  const resolvedAmount = dentistAmount ?? clinicAmount
+  const resolvedAmount = clinicAmount ?? dentistAmount
 
   if (resolvedAmount === null) return false
 
