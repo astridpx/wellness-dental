@@ -12,7 +12,13 @@ import {
 } from '@/components/app'
 import { useClinics, useDentalAvailmentHistory, useDentists, useProcedures } from '@/composables'
 import type { DentalAvailmentRecord } from '@/types'
-import { addWorkingDays, differenceInWorkingDays, formatDate, formatDateTime, formatMoney } from '@/utils'
+import {
+  addWorkingDays,
+  differenceInWorkingDays,
+  formatDate,
+  formatDateTime,
+  formatMoney,
+} from '@/utils'
 
 const {
   cancelAvailment,
@@ -109,7 +115,10 @@ const activeProcedureOptions = computed(() =>
     })),
 )
 const procedureNameMap = computed(
-  () => new Map(procedures.value.map((procedure) => [procedure.code.trim().toUpperCase(), procedure.name])),
+  () =>
+    new Map(
+      procedures.value.map((procedure) => [procedure.code.trim().toUpperCase(), procedure.name]),
+    ),
 )
 const clinicOptions = computed(() =>
   clinics.value.map((clinic) => ({
@@ -182,11 +191,15 @@ function resolveLegacyProcedureAmount() {
   const selectedDentist =
     (dentists.value.find(
       (dentist) => String(dentist.dentistidno) === String(selectedDentistId.value),
-    ) as Record<string, unknown> | undefined) || retainedDentistRecord.value || undefined
+    ) as Record<string, unknown> | undefined) ||
+    retainedDentistRecord.value ||
+    undefined
   const selectedClinic =
     (clinics.value.find(
       (clinic) => String(clinic.clinicidno) === String(selectedClinicId.value),
-    ) as Record<string, unknown> | undefined) || retainedClinicRecord.value || undefined
+    ) as Record<string, unknown> | undefined) ||
+    retainedClinicRecord.value ||
+    undefined
 
   const dentistAmount = readLegacyRateValue(selectedDentist, rateKey)
   const clinicAmount = ['TWLB', 'OP', 'STE', 'TF', 'AD', 'RJ', 'LC', 'PF', 'CON'].includes(rateKey)
@@ -497,13 +510,23 @@ watch(clinicSearch, (search) => {
   }, 350)
 })
 
-function formatLegacyDentistName(dentist: { dentistname?: string | null; firstname?: string | null; middleinitial?: string | null; lastname?: string | null }) {
+function formatLegacyDentistName(dentist: {
+  dentistname?: string | null
+  firstname?: string | null
+  middleinitial?: string | null
+  lastname?: string | null
+}) {
   if (dentist.dentistname?.trim()) return dentist.dentistname.trim()
 
   const firstName = String(dentist.firstname || '').trim()
-  const middleInitial = String(dentist.middleinitial || '').trim().replace(/\.+$/, '')
+  const middleInitial = String(dentist.middleinitial || '')
+    .trim()
+    .replace(/\.+$/, '')
   const lastName = String(dentist.lastname || '').trim()
-  const rightSide = [firstName, middleInitial ? `${middleInitial}.` : ''].filter(Boolean).join(' ').trim()
+  const rightSide = [firstName, middleInitial ? `${middleInitial}.` : '']
+    .filter(Boolean)
+    .join(' ')
+    .trim()
 
   return [lastName, rightSide].filter(Boolean).join(', ').trim()
 }
@@ -878,7 +901,7 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
       <div class="grid border-t border-pebble/80 bg-white/72 md:grid-cols-3">
         <div class="border-b border-pebble/80 px-6 py-4 md:border-b-0 md:border-r">
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">
-            Filtered Rows
+            Total Availments
           </p>
           <p class="mt-2 text-2xl font-black text-onyx">{{ stats.totalVisible }}</p>
         </div>
@@ -894,7 +917,9 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
           </p>
         </div>
         <div class="px-6 py-4">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Paid Rows</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">
+            Total Members Availed
+          </p>
           <p class="mt-2 text-2xl font-black text-emerald">{{ paidRows }}</p>
         </div>
       </div>
@@ -941,6 +966,8 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
           'Dentist Payment',
           'Paid to Dentist At',
           'Remarks',
+          'Encoded By',
+          'Date Encoded',
           'Status',
           'Actions',
         ]"
@@ -951,7 +978,7 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
       >
         <template #trs>
           <tr v-if="!records.length">
-            <td colspan="14" class="py-10! text-center! text-sm text-slate">
+            <td colspan="16" class="py-10! text-center! text-sm text-slate">
               No availment history found.
             </td>
           </tr>
@@ -982,7 +1009,9 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
               <span class="mt-1 block text-xs text-slate">{{ record.clientcode || 'N/A' }}</span>
             </td>
             <td>
-              <span class="text-sm font-bold text-onyx">{{ procedureName(record.procedures) }}</span>
+              <span class="text-sm font-bold text-onyx">{{
+                procedureName(record.procedures)
+              }}</span>
               <span class="mt-1 block text-xs text-slate">Tooth {{ record.toothno || 'N/A' }}</span>
             </td>
             <td>
@@ -992,7 +1021,9 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
               <span class="mt-1 block text-xs text-slate">{{ record.clinicname || 'N/A' }}</span>
             </td>
             <td class="text-sm text-slate">{{ formatDate(record.billingReceivedAt) }}</td>
-            <td class="text-sm text-slate">{{ formatDate(billingDueDate(record.billingReceivedAt)) }}</td>
+            <td class="text-sm text-slate">
+              {{ formatDate(billingDueDate(record.billingReceivedAt)) }}
+            </td>
             <td>
               <span
                 class="rounded-full px-3 py-1 text-xs font-semibold"
@@ -1022,6 +1053,10 @@ function formatLegacyDentistName(dentist: { dentistname?: string | null; firstna
                 {{ record.remarks || 'N/A' }}
               </span>
             </td>
+            <td class="text-sm text-slate">
+              {{ record.encodedByName || record.encodedby || 'N/A' }}
+            </td>
+            <td class="text-sm text-slate">{{ formatDate(record.dateencoded) }}</td>
             <td>
               <span
                 class="rounded-full px-3 py-1 text-xs font-semibold"
