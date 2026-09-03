@@ -57,7 +57,8 @@ const todayLabel = computed(() =>
     month: 'long',
     day: 'numeric',
     year: 'numeric',
-  }).format(new Date('2026-07-24T09:00:00')),
+    timeZone: 'Asia/Manila',
+  }).format(new Date()),
 )
 
 function isActiveLink(href: string) {

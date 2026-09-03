@@ -5,6 +5,7 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: 'numeric',
   year: 'numeric',
+  timeZone: 'Asia/Manila',
 })
 
 const dateTimeFormatter = new Intl.DateTimeFormat('en-US', {
@@ -13,6 +14,14 @@ const dateTimeFormatter = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
   hour: 'numeric',
   minute: '2-digit',
+  timeZone: 'Asia/Manila',
+})
+
+const longDateFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+  timeZone: 'Asia/Manila',
 })
 
 const logDateTimeFormatter = new Intl.DateTimeFormat('en-US', {
@@ -21,6 +30,7 @@ const logDateTimeFormatter = new Intl.DateTimeFormat('en-US', {
   day: '2-digit',
   hour: '2-digit',
   minute: '2-digit',
+  timeZone: 'Asia/Manila',
 })
 
 const pesoFormatter = new Intl.NumberFormat('en-PH', {
@@ -33,8 +43,11 @@ const pesoFormatter = new Intl.NumberFormat('en-PH', {
 function parseDate(value: DateValue) {
   if (!value) return null
 
-  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
-    const [year = 0, month = 0, day = 0] = value.trim().split('-').map(Number)
+  if (
+    typeof value === 'string' &&
+    /^\d{4}-\d{2}-\d{2}(?:[T\s]00:00:00(?:\.000)?Z?)?$/.test(value.trim())
+  ) {
+    const [year = 0, month = 0, day = 0] = value.trim().slice(0, 10).split('-').map(Number)
     const dateOnly = new Date(year, month - 1, day)
     return Number.isNaN(dateOnly.getTime()) ? null : dateOnly
   }
@@ -50,6 +63,16 @@ function startOfDay(value: Date) {
 function isWeekend(value: Date) {
   const day = value.getDay()
   return day === 0 || day === 6
+}
+
+function formatTimeLabel(value: string) {
+  const [, hourValue = '0', minuteValue = '00'] =
+    value.match(/\b(\d{2}):(\d{2})(?::\d{2})?\b/) || []
+  const hour = Number(hourValue)
+  const suffix = hour >= 12 ? 'PM' : 'AM'
+  const displayHour = hour % 12 || 12
+
+  return `${displayHour}:${minuteValue} ${suffix}`
 }
 
 export function currentManilaDateInputValue(value: Date = new Date()) {
@@ -73,7 +96,21 @@ export function formatDate(value: DateValue, fallback = 'N/A') {
   return dateFormatter.format(date)
 }
 
+export function formatLongDate(value: DateValue, fallback = 'N/A') {
+  const date = parseDate(value)
+  if (!date) return value ? String(value) : fallback
+
+  return longDateFormatter.format(date)
+}
+
 export function formatDateTime(value: DateValue, fallback = 'N/A') {
+  if (
+    typeof value === 'string' &&
+    /^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}(?::\d{2})?$/.test(value.trim())
+  ) {
+    return `${formatDate(value.trim().slice(0, 10), fallback)}, ${formatTimeLabel(value)}`
+  }
+
   const date = parseDate(value)
   if (!date) return value ? String(value) : fallback
 

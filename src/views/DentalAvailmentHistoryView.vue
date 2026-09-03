@@ -17,7 +17,7 @@ import {
   currentManilaDateInputValue,
   differenceInWorkingDays,
   formatDate,
-  formatDateTime,
+  formatLongDate,
   formatMoney,
 } from '@/utils'
 
@@ -347,14 +347,48 @@ function normalizeDateInput(value?: string | null) {
   return String(value).slice(0, 10)
 }
 
+function formatExactDate(value?: string | null) {
+  const normalized = normalizeDateInput(value)
+  if (!normalized) return 'N/A'
+
+  const [year = '', month = '', day = ''] = normalized.split('-')
+  const monthLabel =
+    [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ][Number(month) - 1] || month
+
+  return monthLabel && day && year ? `${monthLabel} ${Number(day)}, ${year}` : normalized
+}
+
+function formatExactDateTime(value?: string | null) {
+  const normalized = String(value || '').trim()
+  if (!normalized) return 'N/A'
+
+  const dateLabel = formatExactDate(normalized)
+  const timeLabel = normalized.match(/\d{2}:\d{2}(?::\d{2})?/)?.[0]
+
+  return timeLabel ? `${dateLabel} ${timeLabel}` : dateLabel
+}
+
 function formatEncodedDateTime(record: DentalAvailmentRecord) {
   const encodedDate = normalizeDateInput(record.dateencoded)
   if (!encodedDate) return 'N/A'
 
   const encodedTime = String(record.entryTime || '').match(/\d{2}:\d{2}(?::\d{2})?/)?.[0]
-  if (!encodedTime) return formatDate(record.dateencoded)
+  if (!encodedTime) return formatExactDate(record.dateencoded)
 
-  return formatDateTime(`${encodedDate}T${encodedTime}`)
+  return `${formatExactDate(encodedDate)} ${encodedTime}`
 }
 
 function openEditDialog(record: DentalAvailmentRecord) {
@@ -749,7 +783,7 @@ function formatLegacyDentistName(dentist: {
           <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
             <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Billing Received</p>
             <p class="mt-2 text-sm font-bold text-onyx">
-              {{ formatDate(paymentTarget.record.billingReceivedAt) }}
+              {{ formatExactDate(paymentTarget.record.billingReceivedAt) }}
             </p>
           </div>
           <div class="rounded-2xl border border-pebble bg-white px-4 py-4 sm:col-span-2">
@@ -766,6 +800,15 @@ function formatLegacyDentistName(dentist: {
           label="Paid Date"
           type="date"
         />
+        <div
+          v-if="paymentTarget.paid"
+          class="rounded-2xl border border-pebble bg-white px-4 py-4"
+        >
+          <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Selected Date</p>
+          <p class="mt-2 text-sm font-bold text-onyx">
+            {{ formatLongDate(paymentTarget.paidAt) }}
+          </p>
+        </div>
         <p v-else class="rounded-xl bg-fog px-4 py-3 text-sm text-slate">
           This will clear the saved paid date for this availment row.
         </p>
@@ -1020,7 +1063,7 @@ function formatLegacyDentistName(dentist: {
             <td>
               <span class="font-mono text-sm font-black text-onyx">{{ record.approvalno }}</span>
             </td>
-            <td class="text-sm text-slate">{{ formatDate(record.availdate) }}</td>
+            <td class="text-sm text-slate">{{ formatExactDate(record.availdate) }}</td>
             <td>
               <span class="block max-w-64 whitespace-normal text-sm font-bold text-onyx">
                 {{ record.membername }}
@@ -1039,7 +1082,7 @@ function formatLegacyDentistName(dentist: {
               }}</span>
               <span class="mt-1 block text-xs text-slate">{{ record.clinicname || 'N/A' }}</span>
             </td>
-            <td class="text-sm text-slate">{{ formatDate(record.billingReceivedAt) }}</td>
+            <td class="text-sm text-slate">{{ formatExactDate(record.billingReceivedAt) }}</td>
             <td class="text-sm text-slate">
               {{ formatDate(billingDueDate(record.billingReceivedAt)) }}
             </td>
@@ -1065,7 +1108,7 @@ function formatLegacyDentistName(dentist: {
               </span>
             </td>
             <td class="text-sm text-slate">
-              {{ isDoctorPaid(record) ? formatDateTime(record.paidAt) : 'N/A' }}
+              {{ isDoctorPaid(record) ? formatExactDateTime(record.paidAt) : 'N/A' }}
             </td>
             <td>
               <span class="block max-w-56 whitespace-normal text-sm text-slate">

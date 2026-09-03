@@ -5,7 +5,13 @@ import { RouterLink } from 'vue-router'
 import { AppButton, AppDialog, AppInput, AppLoadingScreen, AppSearchSelect } from '@/components/app'
 import { useDentalAvailmentHistory, useDentists, useProcedures } from '@/composables'
 import type { DentalAvailmentRecord } from '@/types'
-import { currentManilaDateInputValue, formatDate, formatDateTime, formatMoney } from '@/utils'
+import {
+  currentManilaDateInputValue,
+  formatDate,
+  formatDateTime,
+  formatLongDate,
+  formatMoney,
+} from '@/utils'
 
 const bulkPaidTarget = ref<{
   paidAt: string
@@ -345,6 +351,12 @@ watch(billingLookupRecords, (records) => {
         </div>
 
         <AppInput v-model="bulkPaidTarget.paidAt" label="Paid Date" type="date" />
+        <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+          <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Selected Date</p>
+          <p class="mt-2 text-sm font-bold text-onyx">
+            {{ formatLongDate(bulkPaidTarget.paidAt) }}
+          </p>
+        </div>
       </div>
     </template>
   </AppDialog>

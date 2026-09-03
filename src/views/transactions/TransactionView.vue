@@ -11,6 +11,7 @@ import {
   differenceInWorkingDays,
   formatDate,
   formatDateTime,
+  formatLongDate,
   formatMoney,
 } from '@/utils'
 
@@ -452,6 +453,15 @@ function clearActiveFilters() {
           label="Paid Date"
           type="date"
         />
+        <div
+          v-if="dentistPaymentTarget.paid"
+          class="rounded-2xl border border-pebble bg-white px-4 py-4"
+        >
+          <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Selected Date</p>
+          <p class="mt-2 text-sm font-bold text-onyx">
+            {{ formatLongDate(dentistPaymentTarget.paidAt) }}
+          </p>
+        </div>
         <p v-else class="rounded-xl bg-fog px-4 py-3 text-sm text-slate">
           This will clear the saved paid date for this availment row.
         </p>

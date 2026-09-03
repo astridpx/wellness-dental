@@ -5,7 +5,13 @@ import { RouterLink } from 'vue-router'
 import { AppButton, AppDialog, AppInput, AppLoadingScreen, AppSearchSelect } from '@/components/app'
 import { useDentalAvailmentHistory, useDentists, useProcedures } from '@/composables'
 import type { DentalAvailmentRecord } from '@/types'
-import { addWorkingDays, currentManilaDateInputValue, differenceInWorkingDays, formatDate } from '@/utils'
+import {
+  addWorkingDays,
+  currentManilaDateInputValue,
+  differenceInWorkingDays,
+  formatDate,
+  formatLongDate,
+} from '@/utils'
 
 const dentistBillTarget = ref<{
   record: DentalAvailmentRecord
@@ -463,6 +469,12 @@ watch(billingLookupRecords, (records) => {
           label="Billing Received Date"
           type="date"
         />
+        <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+          <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Selected Date</p>
+          <p class="mt-2 text-sm font-bold text-onyx">
+            {{ formatLongDate(dentistBillTarget.billingReceivedAt) }}
+          </p>
+        </div>
         <div class="grid gap-3 sm:grid-cols-2">
           <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
             <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Due Date</p>
@@ -536,6 +548,12 @@ watch(billingLookupRecords, (records) => {
           label="Billing Received Date"
           type="date"
         />
+        <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
+          <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Selected Date</p>
+          <p class="mt-2 text-sm font-bold text-onyx">
+            {{ formatLongDate(bulkBillingTarget.billingReceivedAt) }}
+          </p>
+        </div>
       </div>
     </template>
   </AppDialog>
