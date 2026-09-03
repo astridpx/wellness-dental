@@ -480,12 +480,11 @@ export function useDentalAvailmentHistory() {
       missingIds?: number[]
       cancelledIds?: number[]
     }>(
-      '/wellness/dentalAvailments/payment/bulk',
+      '/wellness/dentalAvailments/payment/mark-paid/bulk',
       {
         method: 'PATCH',
         body: JSON.stringify({
           dentalIds,
-          paid: true,
           paidAt: paidAt || null,
         }),
       },
