@@ -373,6 +373,28 @@ const visibleRows = computed(() => {
 const visibleTotalAmount = computed(() =>
   visibleRows.value.reduce((sum, row) => sum + Number(row.amount || 0), 0),
 )
+const visibleTotalMembersAvailed = computed(() => {
+  const memberKeys = new Set<string>()
+
+  for (const row of visibleRows.value) {
+    const memberName = String(row.memberName || '')
+      .trim()
+      .toUpperCase()
+    const companyName = String(row.companyName || '')
+      .trim()
+      .toUpperCase()
+
+    if (memberName) {
+      memberKeys.add(`${companyName}|${memberName}`)
+      continue
+    }
+
+    const approvalNo = String(row.approvalNo || '').trim()
+    if (approvalNo) memberKeys.add(`APPROVAL|${approvalNo}`)
+  }
+
+  return memberKeys.size
+})
 const paymentCoveredByGroup = computed(() => {
   const ranges = new Map<string, { earliest: string; latest: string }>()
 
@@ -413,10 +435,9 @@ const excelColumns = computed(() => {
       ['accountNumber', 'Account #'],
       ['amount', 'Amount Due'],
       ['paymentCovered', paymentCoveredLabel.value],
-      ['remarks', 'Remarks'],
       ['encodedByName', 'Encoded By'],
-      ['dateEncoded', 'Date Encoded'],
-      ['entryTime', 'Entry Time'],
+      ['encodedAt', 'Date Encoded'],
+      ['remarks', 'Remarks'],
     ] as const
   }
 
@@ -443,10 +464,9 @@ const excelColumns = computed(() => {
     ['amount', 'Amount'],
     ['paymentStatus', 'Payment Status'],
     ['paidToDentistAt', 'Paid to Dentist At'],
-    ['remarks', 'Remarks'],
     ['encodedByName', 'Encoded By'],
-    ['dateEncoded', 'Date Encoded'],
-    ['entryTime', 'Entry Time'],
+    ['encodedAt', 'Date Encoded'],
+    ['remarks', 'Remarks'],
   ] as const
 })
 
@@ -546,6 +566,14 @@ function entryTimeValue(value?: string | null) {
   return normalized.match(/\d{2}:\d{2}(?::\d{2})?/)?.[0] || normalized
 }
 
+function encodedAtValue(row: AvailmentReportRow, formatter = formatDate) {
+  const dateLabel = formatter(row.dateEncoded)
+  const timeLabel = entryTimeValue(row.entryTime)
+
+  if (dateLabel === 'N/A') return timeLabel === 'N/A' ? 'N/A' : timeLabel
+  return timeLabel === 'N/A' ? dateLabel : `${dateLabel} ${timeLabel}`
+}
+
 function paymentCoveredValueForRow(row: {
   billingReceivedAt?: string | null
   dentistName?: string | null
@@ -606,11 +634,8 @@ function exportCellValue(row: Record<string, unknown>, key: string, index: numbe
   if (key === 'encodedByName') {
     return encodedByValue(row as AvailmentReportRow)
   }
-  if (key === 'dateEncoded') {
-    return formatExcelDateManila(row.dateEncoded as string | null | undefined)
-  }
-  if (key === 'entryTime') {
-    return entryTimeValue(row.entryTime as string | null | undefined)
+  if (key === 'encodedAt') {
+    return encodedAtValue(row as AvailmentReportRow, formatExcelDateManila)
   }
 
   return row[key] ?? ''
@@ -716,6 +741,7 @@ function exportReport() {
     [],
     ['SUMMARY'],
     ['Total Rows', totalRows],
+    ['Total Members Availed', visibleTotalMembersAvailed.value],
     ['Total Amount', visibleTotalAmount.value],
     [],
     ['AVAILMENT DATA'],
@@ -745,11 +771,7 @@ function exportReport() {
     : null
 
   if (amountColumnLetter) {
-    for (
-      let rowNumber = dataFirstRow;
-      rowNumber <= dataLastRow;
-      rowNumber += 1
-    ) {
+    for (let rowNumber = dataFirstRow; rowNumber <= dataLastRow; rowNumber += 1) {
       applyCurrencyFormat(worksheet, `${amountColumnLetter}${rowNumber}`)
     }
   }
@@ -1035,10 +1057,16 @@ function formatLegacyDentistName(dentist: {
         </div>
       </div>
 
-      <div class="grid border-t border-pebble/80 bg-white/72 md:grid-cols-3">
+      <div class="grid border-t border-pebble/80 bg-white/72 md:grid-cols-4">
         <div class="border-b border-pebble/80 px-6 py-4 md:border-b-0 md:border-r">
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Rows</p>
           <p class="mt-2 text-2xl font-black text-onyx">{{ visibleRows.length }}</p>
+        </div>
+        <div class="border-b border-pebble/80 px-6 py-4 md:border-b-0 md:border-r">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">
+            Total Members Availed
+          </p>
+          <p class="mt-2 text-2xl font-black text-onyx">{{ visibleTotalMembersAvailed }}</p>
         </div>
         <div class="border-b border-pebble/80 px-6 py-4 md:border-b-0 md:border-r">
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Report Mode</p>
@@ -1237,6 +1265,27 @@ function formatLegacyDentistName(dentist: {
         </AppButton>
       </div>
 
+      <div
+        class="mb-5 grid overflow-hidden rounded-2xl border border-pebble bg-fog/60 sm:grid-cols-3"
+      >
+        <div class="border-b border-pebble px-4 py-3 sm:border-b-0 sm:border-r">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-smoke">Rows</p>
+          <p class="mt-1 text-lg font-black text-onyx">{{ visibleRows.length }}</p>
+        </div>
+        <div class="border-b border-pebble px-4 py-3 sm:border-b-0 sm:border-r">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-smoke">
+            Total Members Availed
+          </p>
+          <p class="mt-1 text-lg font-black text-onyx">{{ visibleTotalMembersAvailed }}</p>
+        </div>
+        <div class="px-4 py-3">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-smoke">
+            Total Amount
+          </p>
+          <p class="mt-1 text-lg font-black text-emerald">{{ formatMoney(visibleTotalAmount) }}</p>
+        </div>
+      </div>
+
       <AppLoadingScreen
         v-if="loading"
         title="Generating report"
@@ -1256,10 +1305,9 @@ function formatLegacyDentistName(dentist: {
                 'Account #',
                 'Amount Due',
                 paymentCoveredLabel,
-                'Remarks',
                 'Encoded By',
                 'Date Encoded',
-                'Entry Time',
+                'Remarks',
               ]
             : [
                 'Company',
@@ -1278,10 +1326,9 @@ function formatLegacyDentistName(dentist: {
                 'Amount',
                 'Payment',
                 'Paid to Dentist At',
-                ...(showRemarksColumn ? ['Remarks'] : []),
                 'Encoded By',
                 'Date Encoded',
-                'Entry Time',
+                ...(showRemarksColumn ? ['Remarks'] : []),
               ]
         "
         :total-entries="visibleRows.length"
@@ -1291,8 +1338,8 @@ function formatLegacyDentistName(dentist: {
             <td
               :colspan="
                 isBillMonitoringMode
-                  ? 13
-                  : 8 + (showBillingColumns ? 3 : 0) + 4 + (showRemarksColumn ? 1 : 0)
+                  ? 12
+                  : 8 + (showBillingColumns ? 3 : 0) + 3 + (showRemarksColumn ? 1 : 0)
               "
               class="py-12! text-center! text-sm text-slate"
             >
@@ -1326,14 +1373,13 @@ function formatLegacyDentistName(dentist: {
               <td>{{ row.accountNumber || 'N/A' }}</td>
               <td class="font-black text-onyx">{{ formatMoney(row.amount) }}</td>
               <td>{{ paymentCoveredValueForRow(row) }}</td>
+              <td>{{ encodedByValue(row) }}</td>
+              <td>{{ encodedAtValue(row) }}</td>
               <td>
                 <span class="block max-w-56 whitespace-normal text-sm text-slate">
                   {{ row.remarks || 'N/A' }}
                 </span>
               </td>
-              <td>{{ encodedByValue(row) }}</td>
-              <td>{{ formatDate(row.dateEncoded) }}</td>
-              <td>{{ entryTimeValue(row.entryTime) }}</td>
             </template>
             <template v-else>
               <td>{{ row.companyName || 'N/A' }}</td>
@@ -1382,14 +1428,13 @@ function formatLegacyDentistName(dentist: {
               <td>
                 {{ formatDateTime(row.paidToDentistAt) }}
               </td>
+              <td>{{ encodedByValue(row) }}</td>
+              <td>{{ encodedAtValue(row) }}</td>
               <td v-if="showRemarksColumn">
                 <span class="block max-w-56 whitespace-normal text-sm text-slate">
                   {{ row.remarks || 'N/A' }}
                 </span>
               </td>
-              <td>{{ encodedByValue(row) }}</td>
-              <td>{{ formatDate(row.dateEncoded) }}</td>
-              <td>{{ entryTimeValue(row.entryTime) }}</td>
             </template>
           </tr>
         </template>
