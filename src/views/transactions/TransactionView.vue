@@ -7,6 +7,7 @@ import { useBusinessPartnerUploads, useDentalAvailmentHistory, useProcedures } f
 import type { DentalAvailmentRecord, PartnerMemberRecord } from '@/types'
 import {
   addWorkingDays,
+  currentManilaDateInputValue,
   differenceInWorkingDays,
   formatDate,
   formatDateTime,
@@ -171,10 +172,6 @@ function normalizeDateInput(value?: string | null) {
   return String(value).slice(0, 10)
 }
 
-function currentDateInputValue() {
-  return '2026-08-27'
-}
-
 function dentistBillingDueDate(value?: string | null) {
   return addWorkingDays(value, 10)
 }
@@ -234,7 +231,7 @@ function openDentistPaymentDialog(record: DentalAvailmentRecord, paid: boolean) 
   dentistPaymentTarget.value = {
     record,
     paid,
-    paidAt: paid ? normalizeDateInput(record.paidAt) || currentDateInputValue() : '',
+    paidAt: paid ? normalizeDateInput(record.paidAt) || currentManilaDateInputValue() : '',
   }
 }
 

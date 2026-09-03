@@ -52,6 +52,20 @@ function isWeekend(value: Date) {
   return day === 0 || day === 6
 }
 
+export function currentManilaDateInputValue(value: Date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(value)
+  const year = parts.find((part) => part.type === 'year')?.value
+  const month = parts.find((part) => part.type === 'month')?.value
+  const day = parts.find((part) => part.type === 'day')?.value
+
+  return year && month && day ? `${year}-${month}-${day}` : ''
+}
+
 export function formatDate(value: DateValue, fallback = 'N/A') {
   const date = parseDate(value)
   if (!date) return value ? String(value) : fallback

@@ -14,6 +14,7 @@ import { useClinics, useDentalAvailmentHistory, useDentists, useProcedures } fro
 import type { DentalAvailmentRecord } from '@/types'
 import {
   addWorkingDays,
+  currentManilaDateInputValue,
   differenceInWorkingDays,
   formatDate,
   formatDateTime,
@@ -315,16 +316,12 @@ function billingCountdown(record?: DentalAvailmentRecord | null) {
   }
 }
 
-function currentDateInputValue() {
-  return '2026-08-27'
-}
-
 function openPaymentDialog(record: DentalAvailmentRecord, paid: boolean) {
   if (updatingPaymentId.value) return
   paymentTarget.value = {
     record,
     paid,
-    paidAt: paid ? normalizeDateInput(record.paidAt) || currentDateInputValue() : '',
+    paidAt: paid ? normalizeDateInput(record.paidAt) || currentManilaDateInputValue() : '',
   }
 }
 
