@@ -5,6 +5,7 @@ import DashboardView from '@/views/DashboardView.vue'
 import DentalAvailmentsView from '@/views/DentalAvailmentsView.vue'
 import DentalAvailmentHistoryView from '@/views/DentalAvailmentHistoryView.vue'
 import BillMarkingView from '@/views/BillMarkingView.vue'
+import DentistPaymentMarkingView from '@/views/DentistPaymentMarkingView.vue'
 import LoginView from '@/views/LoginView.vue'
 import ReportsView from '@/views/ReportsView.vue'
 import SystemLogsView from '@/views/SystemLogsView.vue'
@@ -104,6 +105,20 @@ const router = createRouter({
       meta: {
         title: 'Bill Marking',
         icon: 'feather:file-plus',
+        navGroup: {
+          name: 'Availments',
+          icon: 'feather:file-text',
+        },
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
+      },
+    },
+    {
+      path: '/payment-marking',
+      name: 'paymentMarking',
+      component: DentistPaymentMarkingView,
+      meta: {
+        title: 'Payment Marking',
+        icon: 'feather:dollar-sign',
         navGroup: {
           name: 'Availments',
           icon: 'feather:file-text',

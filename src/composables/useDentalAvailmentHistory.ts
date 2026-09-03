@@ -453,6 +453,63 @@ export function useDentalAvailmentHistory() {
     return true
   }
 
+  async function updateDoctorPaymentStatusBulk(
+    recordsToUpdate: DentalAvailmentRecord[],
+    paidAt?: string,
+  ) {
+    const dentalIds = Array.from(
+      new Set(
+        recordsToUpdate
+          .map((record) => Number(record.dentalid))
+          .filter((dentalId) => Number.isInteger(dentalId) && dentalId > 0),
+      ),
+    )
+
+    if (!dentalIds.length) {
+      errorMessage.value = 'No dental availments were selected for bulk payment update.'
+      return false
+    }
+
+    updatingPaymentId.value = dentalIds[0] || -1
+    errorMessage.value = ''
+    successMessage.value = ''
+
+    const result = await request<{
+      updatedCount: number
+      updatedIds: number[]
+      missingIds?: number[]
+      cancelledIds?: number[]
+    }>(
+      '/wellness/dentalAvailments/payment/bulk',
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          dentalIds,
+          paid: true,
+          paidAt: paidAt || null,
+        }),
+      },
+      { includeContentType: true },
+    )
+
+    updatingPaymentId.value = null
+
+    if (!result.ok) {
+      errorMessage.value = result.error || 'Unable to mark selected dentist payments as paid.'
+      return false
+    }
+
+    const updatedCount = Number(result.data?.updatedCount || dentalIds.length)
+    successMessage.value = `Dentist payment was marked paid for ${updatedCount} availment${
+      updatedCount === 1 ? '' : 's'
+    }.`
+    await fetchHistory()
+    if (lastBillingLookupParams.value) {
+      await fetchBillingLookup(lastBillingLookupParams.value, { remember: false })
+    }
+    return true
+  }
+
   function closeApprovalDetails() {
     selectedApproval.value = null
     lookupErrorMessage.value = ''
@@ -500,6 +557,7 @@ export function useDentalAvailmentHistory() {
     updateAvailment,
     updateDoctorBillingReceivedAt,
     updateDoctorBillingReceivedAtBulk,
+    updateDoctorPaymentStatusBulk,
     updateDoctorPaymentStatus,
     updatingPaymentId,
     updatingId,

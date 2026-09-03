@@ -5,7 +5,7 @@ import { RouterLink } from 'vue-router'
 import { AppButton, AppDialog, AppInput, AppLoadingScreen, AppSearchSelect } from '@/components/app'
 import { useDentalAvailmentHistory, useDentists, useProcedures } from '@/composables'
 import type { DentalAvailmentRecord } from '@/types'
-import { addWorkingDays, differenceInWorkingDays, formatDate } from '@/utils'
+import { addWorkingDays, currentManilaDateInputValue, differenceInWorkingDays, formatDate } from '@/utils'
 
 const dentistBillTarget = ref<{
   record: DentalAvailmentRecord
@@ -150,10 +150,6 @@ function normalizeDateInput(value?: string | null) {
   return String(value).slice(0, 10)
 }
 
-function currentDateInputValue() {
-  return '2026-08-27'
-}
-
 function dentistBillingDueDate(value?: string | null) {
   return addWorkingDays(value, 10)
 }
@@ -241,7 +237,7 @@ function openBulkBillingDialog() {
       : ''
 
   bulkBillingTarget.value = {
-    billingReceivedAt: existingDate || currentDateInputValue(),
+    billingReceivedAt: existingDate || currentManilaDateInputValue(),
   }
 }
 
