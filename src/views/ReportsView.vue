@@ -624,6 +624,21 @@ function applyCurrencyFormat(worksheet: XLSX.WorkSheet, cellAddress: string) {
   cell.z = '#,##0.00'
 }
 
+function setCurrencyFormulaCell(
+  worksheet: XLSX.WorkSheet,
+  cellAddress: string,
+  formula: string,
+  value: number,
+) {
+  worksheet[cellAddress] = {
+    ...(worksheet[cellAddress] || {}),
+    t: 'n',
+    f: formula,
+    v: value,
+    z: '#,##0.00',
+  }
+}
+
 function applyHeaderStyle(worksheet: XLSX.WorkSheet, cellAddress: string) {
   const cell = worksheet[cellAddress]
   if (!cell) return
@@ -723,10 +738,16 @@ function exportReport() {
   const amountColumnLetter =
     amountColumnIndex >= 0 ? XLSX.utils.encode_col(amountColumnIndex) : null
 
+  const dataFirstRow = dataStartRow + 1
+  const dataLastRow = dataStartRow + exportRows.length
+  const totalAmountFormula = amountColumnLetter
+    ? `SUM(${amountColumnLetter}${dataFirstRow}:${amountColumnLetter}${dataLastRow})`
+    : null
+
   if (amountColumnLetter) {
     for (
-      let rowNumber = dataStartRow + 1;
-      rowNumber <= dataStartRow + exportRows.length;
+      let rowNumber = dataFirstRow;
+      rowNumber <= dataLastRow;
       rowNumber += 1
     ) {
       applyCurrencyFormat(worksheet, `${amountColumnLetter}${rowNumber}`)
@@ -747,8 +768,13 @@ function exportReport() {
     { origin: `A${grandTotalRowNumber}` },
   )
 
-  if (amountColumnLetter) {
-    applyCurrencyFormat(worksheet, `${amountColumnLetter}${grandTotalRowNumber}`)
+  if (amountColumnLetter && totalAmountFormula) {
+    setCurrencyFormulaCell(
+      worksheet,
+      `${amountColumnLetter}${grandTotalRowNumber}`,
+      totalAmountFormula,
+      visibleTotalAmount.value,
+    )
   }
 
   const lastColumnIndex = Math.max(0, excelColumns.value.length - 1)
@@ -759,7 +785,16 @@ function exportReport() {
   applyCenteredTitleStyle(worksheet, 'A1')
   applyCenteredTitleStyle(worksheet, 'A2')
   if (summaryTotalAmountRowNumber > 0) {
-    applyCurrencyFormat(worksheet, `B${summaryTotalAmountRowNumber}`)
+    if (totalAmountFormula) {
+      setCurrencyFormulaCell(
+        worksheet,
+        `B${summaryTotalAmountRowNumber}`,
+        totalAmountFormula,
+        visibleTotalAmount.value,
+      )
+    } else {
+      applyCurrencyFormat(worksheet, `B${summaryTotalAmountRowNumber}`)
+    }
   }
   worksheet['!autofilter'] = {
     ref: `A${dataStartRow}:${XLSX.utils.encode_col(lastColumnIndex)}${dataStartRow + exportRows.length}`,
