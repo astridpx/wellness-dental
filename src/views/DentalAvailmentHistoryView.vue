@@ -70,6 +70,8 @@ const retainedDentist = ref<{ value: number; label: string; description: string 
 const retainedDentistRecord = ref<Record<string, unknown> | null>(null)
 const selectedClinicId = ref<string | number | null>(null)
 const clinicSearch = ref('')
+const clinicOptions = ref<Array<{ value: string; label: string; description: string }>>([])
+const retainedClinic = ref<{ value: string; label: string; description: string } | null>(null)
 const retainedClinicRecord = ref<Record<string, unknown> | null>(null)
 const editForm = reactive({
   memberName: '',
@@ -121,13 +123,6 @@ const procedureNameMap = computed(
     new Map(
       procedures.value.map((procedure) => [procedure.code.trim().toUpperCase(), procedure.name]),
     ),
-)
-const clinicOptions = computed(() =>
-  clinics.value.map((clinic) => ({
-    value: clinic.clinicidno,
-    label: clinic.clinicname,
-    description: [clinic.cliniccode, clinic.city, clinic.province].filter(Boolean).join(' | '),
-  })),
 )
 const editReady = computed(
   () =>
@@ -353,20 +348,9 @@ function formatExactDate(value?: string | null) {
 
   const [year = '', month = '', day = ''] = normalized.split('-')
   const monthLabel =
-    [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ][Number(month) - 1] || month
+    ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][
+      Number(month) - 1
+    ] || month
 
   return monthLabel && day && year ? `${monthLabel} ${Number(day)}, ${year}` : normalized
 }
@@ -410,6 +394,19 @@ function openEditDialog(record: DentalAvailmentRecord) {
     procedures.value.find((procedure) => procedure.code === record.procedures)?.id || null
   selectedDentistId.value = record.dentistid || null
   selectedClinicId.value = record.clinicid || null
+  retainedClinic.value = record.clinicid
+    ? {
+        value: String(record.clinicid),
+        label: record.clinicname || 'Selected clinic',
+        description: 'Currently selected clinic',
+      }
+    : null
+  retainedClinicRecord.value = record.clinicid
+    ? ({
+        clinicidno: record.clinicid,
+        clinicname: record.clinicname || '',
+      } as Record<string, unknown>)
+    : null
   procedureSearch.value = ''
   dentistSearch.value = ''
   clinicSearch.value = ''
@@ -529,19 +526,40 @@ watch(selectedClinicId, (value) => {
 watch(
   [clinics, selectedClinicId],
   ([availableClinics, selectedId]) => {
+    const options = availableClinics.map((clinic) => ({
+      value: String(clinic.clinicidno),
+      label: clinic.clinicname,
+      description: [clinic.cliniccode, clinic.city, clinic.province].filter(Boolean).join(' | '),
+    }))
     const normalizedSelectedId = selectedId == null ? null : Number(selectedId)
+    const matchedClinic = options.find((option) => Number(option.value) === normalizedSelectedId)
 
     if (normalizedSelectedId == null) {
+      retainedClinic.value = null
       retainedClinicRecord.value = null
-      return
+    } else if (matchedClinic) {
+      retainedClinic.value = matchedClinic
+      retainedClinicRecord.value =
+        (availableClinics.find((clinic) => Number(clinic.clinicidno) === normalizedSelectedId) as
+          | Record<string, unknown>
+          | undefined) || retainedClinicRecord.value
+    } else if (retainedClinic.value?.value !== String(selectedId)) {
+      retainedClinic.value = {
+        value: String(selectedId),
+        label: editForm.clinicName || 'Selected clinic',
+        description: 'Currently selected clinic',
+      }
     }
 
-    const matchedClinic = availableClinics.find(
-      (clinic) => String(clinic.clinicidno) === String(normalizedSelectedId),
-    )
-    if (matchedClinic) {
-      retainedClinicRecord.value = matchedClinic as Record<string, unknown>
+    if (
+      normalizedSelectedId != null &&
+      !options.some((option) => Number(option.value) === normalizedSelectedId) &&
+      retainedClinic.value
+    ) {
+      options.unshift(retainedClinic.value)
     }
+
+    clinicOptions.value = options
   },
   { immediate: true },
 )
@@ -800,10 +818,7 @@ function formatLegacyDentistName(dentist: {
           label="Paid Date"
           type="date"
         />
-        <div
-          v-if="paymentTarget.paid"
-          class="rounded-2xl border border-pebble bg-white px-4 py-4"
-        >
+        <div v-if="paymentTarget.paid" class="rounded-2xl border border-pebble bg-white px-4 py-4">
           <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Selected Date</p>
           <p class="mt-2 text-sm font-bold text-onyx">
             {{ formatLongDate(paymentTarget.paidAt) }}
