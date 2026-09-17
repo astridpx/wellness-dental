@@ -3,7 +3,12 @@ import { Icon } from '@iconify/vue'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { AppButton, AppInput } from '@/components/app'
 import { useApprovalNumberGenerator, useUsersList } from '@/composables'
-import { currentManilaDateInputValue } from '@/utils'
+import {
+  amountToWords,
+  currentManilaDateInputValue,
+  formatPlainAmount,
+  parsePlainAmount,
+} from '@/utils'
 
 type VoucherRow = {
   id: number
@@ -52,9 +57,11 @@ const referenceNoError = ref('')
 const { generateApprovalNumber } = useApprovalNumberGenerator()
 const { users, loading: loadingUsers } = useUsersList()
 
-const amount = computed(() => rows.value.reduce((total, row) => total + toAmount(row.debit), 0))
+const amount = computed(() =>
+  rows.value.reduce((total, row) => total + parsePlainAmount(row.debit), 0),
+)
 const creditTotal = computed(() =>
-  rows.value.reduce((total, row) => total + toAmount(row.credit), 0),
+  rows.value.reduce((total, row) => total + parsePlainAmount(row.credit), 0),
 )
 const amountWords = computed(() => amountToWords(amount.value))
 const formattedAmount = computed(() => formatPlainAmount(amount.value))
@@ -75,88 +82,12 @@ const preparedByOptions = computed(() =>
   ),
 )
 
-function toAmount(value: string | number) {
-  const amountValue = Number(String(value || '').replace(/,/g, ''))
-  return Number.isFinite(amountValue) ? amountValue : 0
-}
-
-function formatPlainAmount(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
-}
-
 function formatVoucherDate(value: string) {
   if (!value) return ''
   const [year, month, day] = value.split('-').map(Number)
   if (!year || !month || !day) return value
 
   return `${month}/${day}/${year}`
-}
-
-function integerToWords(value: number): string {
-  const ones = [
-    '',
-    'One',
-    'Two',
-    'Three',
-    'Four',
-    'Five',
-    'Six',
-    'Seven',
-    'Eight',
-    'Nine',
-    'Ten',
-    'Eleven',
-    'Twelve',
-    'Thirteen',
-    'Fourteen',
-    'Fifteen',
-    'Sixteen',
-    'Seventeen',
-    'Eighteen',
-    'Nineteen',
-  ]
-  const tens = [
-    '',
-    '',
-    'Twenty',
-    'Thirty',
-    'Forty',
-    'Fifty',
-    'Sixty',
-    'Seventy',
-    'Eighty',
-    'Ninety',
-  ]
-
-  if (value < 20) return ones[value] || ''
-  if (value < 100) {
-    return `${tens[Math.floor(value / 10)] || ''}${value % 10 ? ` ${ones[value % 10] || ''}` : ''}`
-  }
-  if (value < 1000) {
-    return `${ones[Math.floor(value / 100)] || ''} Hundred${
-      value % 100 ? ` ${integerToWords(value % 100)}` : ''
-    }`
-  }
-  if (value < 1000000) {
-    return `${integerToWords(Math.floor(value / 1000))} Thousand${
-      value % 1000 ? ` ${integerToWords(value % 1000)}` : ''
-    }`
-  }
-
-  return `${integerToWords(Math.floor(value / 1000000))} Million${
-    value % 1000000 ? ` ${integerToWords(value % 1000000)}` : ''
-  }`
-}
-
-function amountToWords(value: number) {
-  if (!value) return 'Zero & 00/100'
-
-  const whole = Math.floor(value)
-  const cents = Math.round((value - whole) * 100)
-  return `${integerToWords(whole)} & ${String(cents).padStart(2, '0')}/100`
 }
 
 function addRow() {
@@ -259,7 +190,7 @@ onMounted(() => {
                 />
                 <button
                   type="button"
-                  class="inline-flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl border border-pebble bg-white text-onyx shadow-sm transition hover:border-tangerine hover:text-tangerine disabled:cursor-not-allowed disabled:opacity-50"
+                  class="inline-flex h-13 w-13 shrink-0 items-center justify-center rounded-xl border border-pebble bg-white text-onyx shadow-sm transition hover:border-tangerine hover:text-tangerine disabled:cursor-not-allowed disabled:opacity-50"
                   :disabled="generatingReferenceNo"
                   aria-label="Generate reference number"
                   title="Generate reference number"
@@ -443,10 +374,10 @@ onMounted(() => {
                 <td>{{ row.costCenter }}</td>
                 <td>{{ row.accountTitle }}</td>
                 <td class="text-right">
-                  {{ row.debit ? formatPlainAmount(toAmount(row.debit)) : '' }}
+                  {{ row.debit ? formatPlainAmount(parsePlainAmount(row.debit)) : '' }}
                 </td>
                 <td class="text-right">
-                  {{ row.credit ? formatPlainAmount(toAmount(row.credit)) : '' }}
+                  {{ row.credit ? formatPlainAmount(parsePlainAmount(row.credit)) : '' }}
                 </td>
                 <td>
                   <span v-if="row.details">{{ row.details }}</span>
