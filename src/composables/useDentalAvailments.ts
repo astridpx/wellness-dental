@@ -8,13 +8,11 @@ import type {
   DentalProcedureItemInput,
 } from '@/types'
 import { useWellnessApi } from './useWellnessApi'
-
-type GeneratedApprovalNoResponse = {
-  approvalNo: string
-}
+import { useApprovalNumberGenerator } from './useApprovalNumberGenerator'
 
 export function useDentalAvailments() {
   const { request } = useWellnessApi()
+  const { generateApprovalNumber } = useApprovalNumberGenerator()
 
   const creating = ref(false)
   const lookingUp = ref(false)
@@ -196,18 +194,16 @@ export function useDentalAvailments() {
     generatingApprovalNo.value = true
     errorMessage.value = ''
 
-    const result = await request<GeneratedApprovalNoResponse>(
-      '/wellness/dentalAvailments/generateApprovalNo',
-    )
+    const result = await generateApprovalNumber()
 
     generatingApprovalNo.value = false
 
-    if (!result.ok || !result.data?.approvalNo) {
-      errorMessage.value = result.error || 'Unable to generate approval number.'
+    if (!result.approvalNo) {
+      errorMessage.value = result.error
       return false
     }
 
-    form.approvalNo = result.data.approvalNo
+    form.approvalNo = result.approvalNo
     return true
   }
 

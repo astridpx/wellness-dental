@@ -25,6 +25,7 @@ import PaymentExtractionView from '@/views/PaymentExtractionView.vue'
 import PlansView from '@/views/PlansView.vue'
 import MembershipDetailsView from '@/views/MembershipDetailsView.vue'
 import SingleClinicView from '@/views/clinics/SingleClinicView.vue'
+import CheckVoucherView from '@/views/CheckVoucherView.vue'
 
 type RouteNavItem = [boolean, { visibleTo: string[] }]
 
@@ -122,6 +123,20 @@ const router = createRouter({
         navGroup: {
           name: 'Availments',
           icon: 'feather:file-text',
+        },
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
+      },
+    },
+    {
+      path: '/check-vouchers',
+      name: 'checkVouchers',
+      component: CheckVoucherView,
+      meta: {
+        title: 'Check Vouchers',
+        icon: 'feather:printer',
+        navGroup: {
+          name: 'Cheque',
+          icon: 'feather:credit-card',
         },
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
       },
