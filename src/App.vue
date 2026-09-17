@@ -19,6 +19,7 @@ const { logout, getStoredRoles, getStoredUser } = useAuth()
 const isMaintenanceMode = import.meta.env.VITE_APP_MAINTENANCE_MODE === 'true'
 
 const sidebarOpen = ref(false)
+const sidebarHidden = ref(false)
 const appVer = inject('appVer') as string
 const appTitle = import.meta.env.VITE_APP_TITLE
 const authStateVersion = ref(0)
@@ -78,6 +79,10 @@ function toggleNavGroup(name: string) {
   openNavGroups.value = openNavGroups.value.includes(name)
     ? openNavGroups.value.filter((item) => item !== name)
     : [...openNavGroups.value, name]
+}
+
+function toggleDesktopSidebar() {
+  sidebarHidden.value = !sidebarHidden.value
 }
 
 watch(
@@ -254,7 +259,7 @@ watch(
         :class="isForcedPasswordResetFlow ? 'max-w-5xl' : ''"
       >
         <aside
-          v-if="!isForcedPasswordResetFlow"
+          v-if="!isForcedPasswordResetFlow && !sidebarHidden"
           class="hidden min-h-0 h-full xl:flex xl:w-86 xl:shrink-0 xl:flex-col xl:border-r xl:border-[#223746] xl:bg-[linear-gradient(180deg,#10232f_0%,#173544_48%,#1d4454_100%)]"
         >
           <div class="scrollbar flex h-full flex-col overflow-y-auto p-5 text-white">
@@ -281,6 +286,17 @@ watch(
                 A dental control room for provider setup, treatment flow, billing, and team
                 operations.
               </p>
+
+              <button
+                type="button"
+                class="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/8 px-4 py-3 text-sm font-semibold text-white/80 transition hover:bg-white/12 hover:text-white"
+                aria-label="Hide sidebar"
+                title="Hide sidebar"
+                @click="toggleDesktopSidebar"
+              >
+                <Icon icon="feather:sidebar" class="h-4 w-4" />
+                Hide Sidebar
+              </button>
             </div>
 
             <nav class="mt-6 flex-1 space-y-2">
@@ -394,6 +410,19 @@ watch(
                     @click="sidebarOpen = true"
                   >
                     <Icon icon="solar:hamburger-menu-linear" class="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    class="hidden items-center justify-center rounded-2xl border border-[#d8d0c3] bg-[linear-gradient(180deg,#f7efe5_0%,#ece7de_100%)] p-3 text-[#203746] shadow-[0_10px_22px_rgba(89,78,63,0.08)] transition hover:border-[#c8b79d] hover:bg-[linear-gradient(180deg,#fbf5ee_0%,#f1ebe2_100%)] xl:inline-flex"
+                    :aria-label="sidebarHidden ? 'Show sidebar' : 'Hide sidebar'"
+                    :title="sidebarHidden ? 'Show sidebar' : 'Hide sidebar'"
+                    @click="toggleDesktopSidebar"
+                  >
+                    <Icon
+                      icon="feather:sidebar"
+                      class="h-5 w-5 transition"
+                      :class="sidebarHidden ? '' : 'rotate-180'"
+                    />
                   </button>
                   <div class="hidden xl:block">
                     <p class="text-[11px] font-semibold uppercase tracking-[0.28em] text-smoke">
