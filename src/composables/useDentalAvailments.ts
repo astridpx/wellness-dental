@@ -3,6 +3,7 @@ import type {
   DentalAvailmentApproval,
   DentalAvailmentMemberOption,
   DentalAvailmentRecord,
+  DentalProcedureAmountSource,
   DentalProcedureEligibility,
   DentalMemberSearchScope,
   DentalProcedureItemInput,
@@ -32,6 +33,7 @@ export function useDentalAvailments() {
     availDate: new Date().toISOString().slice(0, 10),
     procedures: '',
     amount: '',
+    amountSource: 'clinic' as DentalProcedureAmountSource,
     dentistId: '',
     dentistName: '',
     clinicId: '',
@@ -60,6 +62,7 @@ export function useDentalAvailments() {
     form.availDate = new Date().toISOString().slice(0, 10)
     form.procedures = ''
     form.amount = ''
+    form.amountSource = 'clinic'
     form.dentistId = ''
     form.dentistName = ''
     form.clinicId = ''

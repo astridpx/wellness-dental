@@ -14,6 +14,7 @@ import { useClinics, useDentalAvailments, useDentists, useProcedures } from '@/c
 import type {
   DentalAvailmentMemberOption,
   DentalMemberSearchScope,
+  DentalProcedureAmountSource,
   DentalProcedureEligibility,
   DentalProcedureItemInput,
 } from '@/types'
@@ -94,8 +95,12 @@ const legacyRateAliases: Record<string, string> = {
   CAN: 'CAN',
 }
 
-const activeProcedureOptions = computed(() =>
-  procedures.value
+const activeProcedureOptions = computed(() => {
+  console.log('Clinic: ', clinicOptions)
+  console.log('Dentist: ', dentistOptions)
+  console.log('rates: ', activeProcedureOptions)
+
+  return procedures.value
     .filter((procedure) => procedure.active)
     .map((procedure) => ({
       value: procedure.id,
@@ -103,11 +108,14 @@ const activeProcedureOptions = computed(() =>
       description: [procedure.code, procedure.price ? `PHP ${procedure.price}` : 'No default price']
         .filter(Boolean)
         .join(' · '),
-    })),
-)
+    }))
+})
 
 const procedureNameMap = computed(
-  () => new Map(procedures.value.map((procedure) => [procedure.code.trim().toUpperCase(), procedure.name])),
+  () =>
+    new Map(
+      procedures.value.map((procedure) => [procedure.code.trim().toUpperCase(), procedure.name]),
+    ),
 )
 
 const createReady = computed(
@@ -149,19 +157,26 @@ const memberSourceOptions: Array<{
 let dentistSearchTimer: number | undefined
 let clinicSearchTimer: number | undefined
 
-const formatLegacyDentistName = (dentist: { dentistname?: string | null; firstname?: string | null; middleinitial?: string | null; lastname?: string | null }) => {
+const formatLegacyDentistName = (dentist: {
+  dentistname?: string | null
+  firstname?: string | null
+  middleinitial?: string | null
+  lastname?: string | null
+}) => {
   if (dentist.dentistname?.trim()) return dentist.dentistname.trim()
 
   const firstName = String(dentist.firstname || '').trim()
-  const middleInitial = String(dentist.middleinitial || '').trim().replace(/\.+$/, '')
+  const middleInitial = String(dentist.middleinitial || '')
+    .trim()
+    .replace(/\.+$/, '')
   const lastName = String(dentist.lastname || '').trim()
-  const rightSide = [firstName, middleInitial ? `${middleInitial}.` : ''].filter(Boolean).join(' ').trim()
+  const rightSide = [firstName, middleInitial ? `${middleInitial}.` : '']
+    .filter(Boolean)
+    .join(' ')
+    .trim()
 
   return [lastName, rightSide].filter(Boolean).join(', ').trim()
 }
-
-
-
 
 const clinicOptions = computed(() =>
   clinics.value.map((clinic) => ({
@@ -182,6 +197,8 @@ function normalizeLegacyRateKey(value: string) {
 }
 
 function toLegacyRateNumber(value: unknown) {
+  if (value === null || value === undefined || String(value).trim() === '') return null
+
   const parsed = Number(value)
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
 }
@@ -207,27 +224,105 @@ function readLegacyRateValue(source: Record<string, unknown> | undefined, rateKe
 
 function resolveLegacyProcedureAmount() {
   const rateKey = normalizeLegacyRateKey(form.procedures.trim())
-  if (!rateKey) return false
+  if (!rateKey) {
+    form.amount = ''
+    return false
+  }
 
   const selectedDentist =
     (dentists.value.find(
       (dentist) => String(dentist.dentistidno) === String(selectedDentistId.value),
-    ) as Record<string, unknown> | undefined) || retainedDentistRecord.value || undefined
+    ) as Record<string, unknown> | undefined) ||
+    retainedDentistRecord.value ||
+    undefined
   const selectedClinic =
     (clinics.value.find(
       (clinic) => String(clinic.clinicidno) === String(selectedClinicId.value),
-    ) as Record<string, unknown> | undefined) || retainedClinicRecord.value || undefined
+    ) as Record<string, unknown> | undefined) ||
+    retainedClinicRecord.value ||
+    undefined
 
   const dentistAmount = readLegacyRateValue(selectedDentist, rateKey)
   const clinicAmount = ['TWLB', 'OP', 'STE', 'TF', 'AD', 'RJ', 'LC', 'PF', 'CON'].includes(rateKey)
     ? readLegacyRateValue(selectedClinic, rateKey)
     : null
-  const resolvedAmount = clinicAmount ?? dentistAmount
+  let resolvedAmount = form.amountSource === 'dentist' ? dentistAmount : clinicAmount
 
-  if (resolvedAmount === null) return false
+  if (resolvedAmount === null) {
+    const fallbackSource: DentalProcedureAmountSource =
+      form.amountSource === 'dentist' ? 'clinic' : 'dentist'
+    const fallbackAmount = fallbackSource === 'dentist' ? dentistAmount : clinicAmount
+
+    if (fallbackAmount !== null) {
+      form.amountSource = fallbackSource
+      resolvedAmount = fallbackAmount
+    }
+  }
+
+  if (resolvedAmount === null) {
+    form.amount = ''
+    return false
+  }
 
   form.amount = String(resolvedAmount)
   return true
+}
+
+const dentistProcedureAmount = computed(() => {
+  const rateKey = normalizeLegacyRateKey(form.procedures.trim())
+  if (!rateKey) return null
+
+  const selectedDentist =
+    (dentists.value.find(
+      (dentist) => String(dentist.dentistidno) === String(selectedDentistId.value),
+    ) as Record<string, unknown> | undefined) ||
+    retainedDentistRecord.value ||
+    undefined
+
+  return readLegacyRateValue(selectedDentist, rateKey)
+})
+
+const clinicProcedureAmount = computed(() => {
+  const rateKey = normalizeLegacyRateKey(form.procedures.trim())
+  if (!rateKey || !['TWLB', 'OP', 'STE', 'TF', 'AD', 'RJ', 'LC', 'PF', 'CON'].includes(rateKey)) {
+    return null
+  }
+
+  const selectedClinic =
+    (clinics.value.find(
+      (clinic) => String(clinic.clinicidno) === String(selectedClinicId.value),
+    ) as Record<string, unknown> | undefined) ||
+    retainedClinicRecord.value ||
+    undefined
+
+  return readLegacyRateValue(selectedClinic, rateKey)
+})
+
+const procedureAmountSources = computed<
+  Array<{
+    value: DentalProcedureAmountSource
+    label: string
+    providerName: string
+    amount: number | null
+  }>
+>(() => [
+  {
+    value: 'dentist',
+    label: 'Dentist amount',
+    providerName: form.dentistName || 'Select a dentist',
+    amount: dentistProcedureAmount.value,
+  },
+  {
+    value: 'clinic',
+    label: 'Clinic amount',
+    providerName: form.clinicName || 'Select a clinic',
+    amount: clinicProcedureAmount.value,
+  },
+])
+
+function selectProcedureAmountSource(source: DentalProcedureAmountSource) {
+  form.amountSource = source
+  resolveLegacyProcedureAmount()
 }
 
 function closeToast() {
@@ -315,6 +410,9 @@ async function addProcedureItem() {
   const item = {
     procedures: form.procedures.trim(),
     amount: Number(form.amount),
+    amountSource: form.amountSource,
+    dentistAmount: dentistProcedureAmount.value ?? undefined,
+    clinicAmount: clinicProcedureAmount.value ?? undefined,
     toothNo: form.toothNo.trim() || undefined,
   }
 
@@ -371,6 +469,10 @@ function removeProcedureItem(index: number) {
 function procedureLabel(code: string) {
   const procedure = procedures.value.find((item) => item.code === code)
   return procedure ? `${procedure.code} | ${procedure.name}` : code
+}
+
+function procedureAmountSourceLabel(source: DentalProcedureAmountSource) {
+  return source === 'dentist' ? 'Dentist rate' : 'Clinic rate'
 }
 
 function procedureName(value?: string | null) {
@@ -477,9 +579,7 @@ watch(selectedProcedureId, (value) => {
   if (!selected) return
 
   form.procedures = selected.code
-  if (!resolveLegacyProcedureAmount() && selected.price !== undefined) {
-    form.amount = String(selected.price)
-  }
+  resolveLegacyProcedureAmount()
 })
 
 watch(selectedDentistId, (value) => {
@@ -590,7 +690,9 @@ watch(clinicSearch, (search) => {
   }, 350)
 })
 
-
+console.log('Clinic: ', clinicOptions)
+console.log('Dentist: ', dentistOptions)
+console.log('rates: ', activeProcedureOptions)
 </script>
 
 <template>
@@ -609,7 +711,9 @@ watch(clinicSearch, (search) => {
             Procedure interval warning
           </p>
           <p class="mt-2 text-sm leading-6 text-slate">
-            {{ pendingProcedureBypass?.eligibility.message || 'This procedure cannot be availed yet.' }}
+            {{
+              pendingProcedureBypass?.eligibility.message || 'This procedure cannot be availed yet.'
+            }}
           </p>
         </div>
 
@@ -617,7 +721,11 @@ watch(clinicSearch, (search) => {
           <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
             <p class="text-[11px] uppercase tracking-[0.2em] text-smoke">Procedure</p>
             <p class="mt-2 text-sm font-bold text-onyx">
-              {{ pendingProcedureBypass?.eligibility.procedureName || pendingProcedureBypass?.item.procedures || 'N/A' }}
+              {{
+                pendingProcedureBypass?.eligibility.procedureName ||
+                pendingProcedureBypass?.item.procedures ||
+                'N/A'
+              }}
             </p>
           </div>
           <div class="rounded-2xl border border-pebble bg-white px-4 py-4">
@@ -838,8 +946,8 @@ watch(clinicSearch, (search) => {
                     Manual availment mode
                   </p>
                   <p class="mt-1 text-sm leading-6 text-slate">
-                    Search is skipped in this mode. Encode the member name directly below and continue
-                    with the usual availment details.
+                    Search is skipped in this mode. Encode the member name directly below and
+                    continue with the usual availment details.
                   </p>
                 </div>
               </div>
@@ -991,7 +1099,6 @@ watch(clinicSearch, (search) => {
                   </AppButton>
                 </div>
               </div>
-
               <AppSearchSelect
                 v-model="selectedDentistId"
                 v-model:search="dentistSearch"
@@ -1021,12 +1128,84 @@ watch(clinicSearch, (search) => {
                 placeholder="Search procedure"
                 empty-text="No active procedures found."
               />
+
+              <div class="md:col-span-2">
+                <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <label class="block text-sm font-medium text-onyx">Procedure Amount Source</label>
+                  <span class="text-xs text-slate">Choose the rate to use for this row.</span>
+                </div>
+                <div
+                  class="grid gap-3 sm:grid-cols-2"
+                  role="radiogroup"
+                  aria-label="Procedure amount source"
+                >
+                  <button
+                    v-for="source in procedureAmountSources"
+                    :key="source.value"
+                    type="button"
+                    role="radio"
+                    class="rounded-xl border px-4 py-4 text-left transition disabled:cursor-not-allowed disabled:opacity-55"
+                    :class="
+                      form.amountSource === source.value
+                        ? 'border-tangerine bg-tangerine-light shadow-sm'
+                        : 'border-pebble bg-white hover:border-tangerine/50 hover:bg-cloud'
+                    "
+                    :aria-checked="form.amountSource === source.value"
+                    :disabled="source.amount === null"
+                    @click="selectProcedureAmountSource(source.value)"
+                  >
+                    <span class="flex items-start justify-between gap-3">
+                      <span class="min-w-0">
+                        <span
+                          class="block text-xs font-semibold uppercase tracking-[0.16em] text-slate"
+                        >
+                          {{ source.label }}
+                        </span>
+                        <span class="mt-1 block truncate text-sm font-bold text-onyx">
+                          {{ source.providerName }}
+                        </span>
+                      </span>
+                      <span
+                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border"
+                        :class="
+                          form.amountSource === source.value
+                            ? 'border-tangerine bg-tangerine'
+                            : 'border-smoke/40 bg-white'
+                        "
+                      >
+                        <span
+                          v-if="form.amountSource === source.value"
+                          class="h-2 w-2 rounded-full bg-white"
+                        />
+                      </span>
+                    </span>
+                    <span
+                      class="mt-3 block text-lg font-black"
+                      :class="source.amount === null ? 'text-smoke' : 'text-onyx'"
+                    >
+                      {{ source.amount === null ? 'Not configured' : formatMoney(source.amount) }}
+                    </span>
+                  </button>
+                </div>
+                <p
+                  v-if="
+                    form.procedures &&
+                    dentistProcedureAmount === null &&
+                    clinicProcedureAmount === null
+                  "
+                  class="mt-2 rounded-lg bg-ruby-light px-3 py-2 text-xs text-ruby"
+                >
+                  No dentist or clinic amount is configured for this procedure.
+                </p>
+              </div>
+
               <AppInput
                 v-model="form.amount"
-                label="Amount"
+                label="Amount to Use"
                 type="number"
                 placeholder="0.00"
                 icon="feather:hash"
+                readonly
               />
               <div>
                 <label class="mb-2 block text-sm font-medium text-onyx">Tooth No.</label>
@@ -1050,12 +1229,14 @@ watch(clinicSearch, (search) => {
                   <option v-for="option in toothNumberOptions" :key="option" :value="option" />
                 </datalist>
               </div>
-              <div class="flex items-end">
+              <div class="flex items-end md:col-span-2">
                 <AppButton
                   type="button"
                   btn-theme="outline"
                   class="w-full normal-case"
-                  :disabled="!form.procedures.trim() || form.amount === '' || checkingProcedureEligibility"
+                  :disabled="
+                    !form.procedures.trim() || form.amount === '' || checkingProcedureEligibility
+                  "
                   @click="addProcedureItem"
                 >
                   <Icon
@@ -1093,7 +1274,8 @@ watch(clinicSearch, (search) => {
                           {{ procedureLabel(item.procedures) }}
                         </p>
                         <p class="mt-1 text-xs text-slate">
-                          Tooth {{ item.toothNo || 'N/A' }} | {{ formatMoney(item.amount) }}
+                          Tooth {{ item.toothNo || 'N/A' }} | {{ formatMoney(item.amount) }} |
+                          {{ procedureAmountSourceLabel(item.amountSource) }}
                         </p>
                       </div>
                       <button
@@ -1223,13 +1405,15 @@ watch(clinicSearch, (search) => {
           </div>
         </div>
 
-        <div class="mt-4 rounded-[1.4rem] border border-[#e2d7c2] bg-[linear-gradient(135deg,#fffaf1_0%,#f8f6ef_100%)] px-4 py-4">
+        <div
+          class="mt-4 rounded-[1.4rem] border border-[#e2d7c2] bg-[linear-gradient(135deg,#fffaf1_0%,#f8f6ef_100%)] px-4 py-4"
+        >
           <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-tangerine">
             Quick check
           </p>
           <p class="mt-2 text-sm leading-6 text-slate">
-            Use this panel to verify an existing approval number or quickly review the current
-            draft before creating a new availment.
+            Use this panel to verify an existing approval number or quickly review the current draft
+            before creating a new availment.
           </p>
         </div>
 

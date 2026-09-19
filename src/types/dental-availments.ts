@@ -39,9 +39,14 @@ export type DentalAvailmentApproval = {
   rows: DentalAvailmentRecord[]
 }
 
+export type DentalProcedureAmountSource = 'dentist' | 'clinic'
+
 export type DentalProcedureItemInput = {
   procedures: string
   amount: number
+  amountSource: DentalProcedureAmountSource
+  dentistAmount?: number
+  clinicAmount?: number
   toothNo?: string
   bypassProcedureInterval?: boolean
 }
