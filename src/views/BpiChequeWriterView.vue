@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { AppButton, AppInput } from '@/components/app'
 import { amountToChequeWords, currentManilaDateInputValue, formatPlainAmount } from '@/utils'
 
@@ -17,52 +17,62 @@ type ChequeTemplateField = {
   align?: 'left' | 'center' | 'right'
 }
 
-const bpiTemplate = {
+type SavedChequeTemplate = {
+  width: number
+  height: number
+  fields: ChequeTemplateField[]
+}
+
+const BPI_TEMPLATE_STORAGE_KEY = 'wellness:bpi-cheque-template'
+
+const defaultBpiFields: ChequeTemplateField[] = [
+  {
+    key: 'payee',
+    label: 'Payee',
+    x: 20,
+    y: 25,
+    width: 106,
+    height: 8,
+    fontSize: 15,
+  },
+  {
+    key: 'amountWords',
+    label: 'Amount in words',
+    x: 15,
+    y: 35,
+    width: 140,
+    height: 8,
+    fontSize: 14,
+  },
+  {
+    key: 'amount',
+    label: 'Amount',
+    x: 160,
+    y: 25,
+    width: 31,
+    height: 8,
+    fontSize: 15,
+    align: 'left',
+  },
+  {
+    key: 'date',
+    label: 'Date',
+    x: 158,
+    y: 12,
+    width: 31,
+    height: 8,
+    fontSize: 12,
+    align: 'center',
+  },
+]
+
+const bpiTemplate = reactive({
   name: 'BPI Cheque',
   bankName: 'Bank of the Philippine Islands',
   width: 203.2,
   height: 76.2,
-  fields: [
-    {
-      key: 'payee',
-      label: 'Payee',
-      x: 20,
-      y: 25,
-      width: 106,
-      height: 8,
-      fontSize: 15,
-    },
-    {
-      key: 'amountWords',
-      label: 'Amount in words',
-      x: 15,
-      y: 35,
-      width: 140,
-      height: 8,
-      fontSize: 14,
-    },
-    {
-      key: 'amount',
-      label: 'Amount',
-      x: 160,
-      y: 25,
-      width: 31,
-      height: 8,
-      fontSize: 15,
-      align: 'left',
-    },
-    {
-      key: 'date',
-      label: 'Date',
-      x: 158,
-      y: 12,
-      width: 31,
-      height: 8,
-      fontSize: 12,
-      align: 'center',
-    },
-  ] satisfies ChequeTemplateField[],
-}
+  fields: defaultBpiFields.map((field) => ({ ...field })),
+})
 
 const cheque = reactive({
   template: bpiTemplate.name,
@@ -76,11 +86,16 @@ const cheque = reactive({
   amountWords: '',
 })
 const showGuides = ref(true)
+const saveMessage = ref('')
 
 const formattedAmount = computed(() => formatPlainAmount(cheque.amount))
 const generatedAmountWords = computed(() => amountToChequeWords(cheque.amount).toUpperCase())
 const chequeAmountWords = computed(() => cheque.amountWords.trim() || generatedAmountWords.value)
 const templateFields = computed(() => bpiTemplate.fields)
+const chequeSheetStyle = computed(() => ({
+  width: `${bpiTemplate.width}mm`,
+  height: `${bpiTemplate.height}mm`,
+}))
 
 function fieldStyle(field: ChequeTemplateField) {
   return {
@@ -98,6 +113,76 @@ function fieldValue(field: ChequeTemplateField) {
   if (field.key === 'amountWords') return chequeAmountWords.value
   if (field.key === 'amount') return formattedAmount.value
   return ''
+}
+
+function updateTemplateNumber(key: 'width' | 'height', event: Event, minimum = 1) {
+  const value = Number((event.target as HTMLInputElement).value)
+  if (Number.isFinite(value) && value >= minimum) bpiTemplate[key] = value
+}
+
+function updateFieldNumber(
+  field: ChequeTemplateField,
+  key: 'x' | 'y' | 'width' | 'height' | 'fontSize',
+  event: Event,
+  minimum = 0,
+) {
+  const value = Number((event.target as HTMLInputElement).value)
+  if (Number.isFinite(value) && value >= minimum) field[key] = value
+}
+
+function updateFieldAlign(field: ChequeTemplateField, event: Event) {
+  const value = (event.target as HTMLSelectElement).value
+  if (['left', 'center', 'right'].includes(value)) {
+    field.align = value as ChequeTemplateField['align']
+  }
+}
+
+function applyTemplate(template: SavedChequeTemplate) {
+  if (Number.isFinite(template.width) && template.width > 0) bpiTemplate.width = template.width
+  if (Number.isFinite(template.height) && template.height > 0) bpiTemplate.height = template.height
+
+  const mergedFields = defaultBpiFields.map((defaultField) => {
+    const savedField = template.fields.find((field) => field.key === defaultField.key)
+    return savedField ? { ...defaultField, ...savedField } : { ...defaultField }
+  })
+
+  bpiTemplate.fields.splice(0, bpiTemplate.fields.length, ...mergedFields)
+}
+
+function loadSavedCalibration() {
+  const savedTemplate = window.localStorage.getItem(BPI_TEMPLATE_STORAGE_KEY)
+  if (!savedTemplate) return
+
+  try {
+    const parsedTemplate = JSON.parse(savedTemplate) as SavedChequeTemplate
+    if (!Array.isArray(parsedTemplate.fields)) return
+    applyTemplate(parsedTemplate)
+  } catch {
+    window.localStorage.removeItem(BPI_TEMPLATE_STORAGE_KEY)
+  }
+}
+
+function saveCalibration() {
+  const templateToSave: SavedChequeTemplate = {
+    width: bpiTemplate.width,
+    height: bpiTemplate.height,
+    fields: bpiTemplate.fields.map((field) => ({ ...field })),
+  }
+
+  window.localStorage.setItem(BPI_TEMPLATE_STORAGE_KEY, JSON.stringify(templateToSave))
+  saveMessage.value = 'Calibration saved.'
+}
+
+function resetCalibration() {
+  bpiTemplate.width = 203.2
+  bpiTemplate.height = 76.2
+  bpiTemplate.fields.splice(
+    0,
+    bpiTemplate.fields.length,
+    ...defaultBpiFields.map((field) => ({ ...field })),
+  )
+  window.localStorage.removeItem(BPI_TEMPLATE_STORAGE_KEY)
+  saveMessage.value = 'Default calibration restored.'
 }
 
 function formatChequeDate(value: string) {
@@ -147,14 +232,14 @@ function printCheque() {
       <head>
         <style>
           @page {
-            size: 203.2mm 76.2mm;
+            size: ${bpiTemplate.width}mm ${bpiTemplate.height}mm;
             margin: 0;
           }
 
           html,
           body {
-            width: 203.2mm;
-            height: 76.2mm;
+            width: ${bpiTemplate.width}mm;
+            height: ${bpiTemplate.height}mm;
             margin: 0;
             overflow: hidden;
             background: #fff;
@@ -162,8 +247,8 @@ function printCheque() {
 
           .cheque-sheet {
             position: relative;
-            width: 203.2mm;
-            height: 76.2mm;
+            width: ${bpiTemplate.width}mm;
+            height: ${bpiTemplate.height}mm;
             overflow: hidden;
             background: transparent;
             font-family: Arial, Helvetica, sans-serif;
@@ -210,6 +295,10 @@ function printCheque() {
     window.setTimeout(() => printFrame.remove(), 1000)
   }
 }
+
+onMounted(() => {
+  loadSavedCalibration()
+})
 </script>
 
 <template>
@@ -259,6 +348,142 @@ function printCheque() {
               Default layout follows the public 203.2mm x 76.2mm Philippine cheque format guidance.
               Use test prints to fine tune printer offsets.
             </p>
+          </div>
+        </section>
+
+        <section class="space-y-4">
+          <div class="flex items-center justify-between gap-3">
+            <div
+              class="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-slate"
+            >
+              <Icon icon="feather:move" class="h-4 w-4" />
+              Calibration
+            </div>
+            <div class="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-xl border border-pebble bg-white px-3 py-2 text-sm font-semibold text-onyx shadow-sm transition hover:border-tangerine hover:text-tangerine"
+                @click="saveCalibration"
+              >
+                <Icon icon="feather:save" class="h-4 w-4" />
+                Save
+              </button>
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-xl border border-pebble bg-white px-3 py-2 text-sm font-semibold text-onyx shadow-sm transition hover:border-tangerine hover:text-tangerine"
+                @click="resetCalibration"
+              >
+                <Icon icon="feather:rotate-ccw" class="h-4 w-4" />
+                Reset
+              </button>
+            </div>
+          </div>
+          <p v-if="saveMessage" class="text-sm font-semibold text-emerald">
+            {{ saveMessage }}
+          </p>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="block text-sm font-medium text-onyx">
+              Cheque width (mm)
+              <input
+                :value="bpiTemplate.width"
+                type="number"
+                min="1"
+                step="0.1"
+                class="mt-2 w-full rounded-xl border border-pebble bg-white px-4 py-3 text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+                @input="updateTemplateNumber('width', $event)"
+              />
+            </label>
+            <label class="block text-sm font-medium text-onyx">
+              Cheque height (mm)
+              <input
+                :value="bpiTemplate.height"
+                type="number"
+                min="1"
+                step="0.1"
+                class="mt-2 w-full rounded-xl border border-pebble bg-white px-4 py-3 text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+                @input="updateTemplateNumber('height', $event)"
+              />
+            </label>
+          </div>
+
+          <div class="space-y-4">
+            <div
+              v-for="field in templateFields"
+              :key="`calibration-${field.key}`"
+              class="rounded-2xl border border-[#ded7cc] bg-white/72 p-4"
+            >
+              <div class="mb-4 flex items-center justify-between gap-3">
+                <p class="text-sm font-black text-onyx">{{ field.label }}</p>
+                <select
+                  :value="field.align || 'left'"
+                  class="w-auto rounded-xl border border-pebble bg-white px-3 py-2 text-sm font-semibold text-onyx"
+                  @change="updateFieldAlign(field, $event)"
+                >
+                  <option value="left">Left</option>
+                  <option value="center">Center</option>
+                  <option value="right">Right</option>
+                </select>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                <label class="text-xs font-semibold uppercase tracking-[0.12em] text-slate">
+                  X
+                  <input
+                    :value="field.x"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    class="mt-2 w-full rounded-xl border border-pebble bg-white px-3 py-2 text-sm text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+                    @input="updateFieldNumber(field, 'x', $event)"
+                  />
+                </label>
+                <label class="text-xs font-semibold uppercase tracking-[0.12em] text-slate">
+                  Y
+                  <input
+                    :value="field.y"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    class="mt-2 w-full rounded-xl border border-pebble bg-white px-3 py-2 text-sm text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+                    @input="updateFieldNumber(field, 'y', $event)"
+                  />
+                </label>
+                <label class="text-xs font-semibold uppercase tracking-[0.12em] text-slate">
+                  W
+                  <input
+                    :value="field.width"
+                    type="number"
+                    min="1"
+                    step="0.5"
+                    class="mt-2 w-full rounded-xl border border-pebble bg-white px-3 py-2 text-sm text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+                    @input="updateFieldNumber(field, 'width', $event, 1)"
+                  />
+                </label>
+                <label class="text-xs font-semibold uppercase tracking-[0.12em] text-slate">
+                  H
+                  <input
+                    :value="field.height"
+                    type="number"
+                    min="1"
+                    step="0.5"
+                    class="mt-2 w-full rounded-xl border border-pebble bg-white px-3 py-2 text-sm text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+                    @input="updateFieldNumber(field, 'height', $event, 1)"
+                  />
+                </label>
+                <label class="text-xs font-semibold uppercase tracking-[0.12em] text-slate">
+                  Font
+                  <input
+                    :value="field.fontSize"
+                    type="number"
+                    min="1"
+                    step="1"
+                    class="mt-2 w-full rounded-xl border border-pebble bg-white px-3 py-2 text-sm text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+                    @input="updateFieldNumber(field, 'fontSize', $event, 1)"
+                  />
+                </label>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -315,6 +540,7 @@ function printCheque() {
           <div
             class="cheque-sheet mx-auto text-[#111]"
             :class="{ 'cheque-sheet-guides-hidden': !showGuides }"
+            :style="chequeSheetStyle"
           >
             <div
               v-for="field in templateFields"
