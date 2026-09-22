@@ -147,7 +147,7 @@ const router = createRouter({
       name: 'bpiChequeWriter',
       component: BpiChequeWriterView,
       meta: {
-        title: 'BPI Cheque Writer',
+        title: 'Cheque Writer',
         icon: 'feather:edit-3',
         navGroup: {
           name: 'Cheque',

@@ -1,29 +1,18 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, reactive, ref } from 'vue'
-import { AppButton, AppInput } from '@/components/app'
+import { AppButton, AppInput, AppModal } from '@/components/app'
+import {
+  DEFAULT_CHEQUE_BANK_NAME,
+  createDefaultChequeTemplate,
+  normalizeChequeBankKey,
+  useChequeTemplates,
+  type ChequeTemplateField,
+  type SavedChequeTemplate,
+} from '@/composables'
 import { amountToChequeWords, currentManilaDateInputValue, formatPlainAmount } from '@/utils'
 
-type ChequeFieldKey = 'payee' | 'amountWords' | 'amount' | 'date'
-
-type ChequeTemplateField = {
-  key: ChequeFieldKey
-  label: string
-  x: number
-  y: number
-  width: number
-  height: number
-  fontSize: number
-  align?: 'left' | 'center' | 'right'
-}
-
-type SavedChequeTemplate = {
-  width: number
-  height: number
-  fields: ChequeTemplateField[]
-}
-
-const BPI_TEMPLATE_STORAGE_KEY = 'wellness:bpi-cheque-template'
+type CalibrationAction = 'insert' | 'update' | 'delete' | 'reset'
 
 const defaultBpiFields: ChequeTemplateField[] = [
   {
@@ -67,8 +56,8 @@ const defaultBpiFields: ChequeTemplateField[] = [
 ]
 
 const bpiTemplate = reactive({
-  name: 'BPI Cheque',
-  bankName: 'Bank of the Philippine Islands',
+  name: 'Cheque',
+  bankName: DEFAULT_CHEQUE_BANK_NAME,
   width: 203.2,
   height: 76.2,
   fields: defaultBpiFields.map((field) => ({ ...field })),
@@ -79,7 +68,6 @@ const cheque = reactive({
   accountName:
     import.meta.env.VITE_APP_VOUCHER_COMPANY_NAME ||
     'IWC Wellness and Preventive Consultancy, Inc.',
-  accountNo: '4981-0121-22',
   payee: '',
   date: currentManilaDateInputValue(),
   amount: '',
@@ -87,11 +75,65 @@ const cheque = reactive({
 })
 const showGuides = ref(true)
 const saveMessage = ref('')
+const pendingCalibrationAction = ref<CalibrationAction | null>(null)
+const selectedBankKey = ref(normalizeChequeBankKey(DEFAULT_CHEQUE_BANK_NAME))
+const bankNameDraft = ref(DEFAULT_CHEQUE_BANK_NAME)
+const {
+  rows: bankTemplateRows,
+  saving: savingCalibration,
+  templates: savedBankTemplates,
+  loadTemplates,
+  insertTemplate,
+  updateTemplate,
+  deleteTemplate,
+} = useChequeTemplates(defaultBpiFields)
 
+const currentBankName = computed(() => bpiTemplate.bankName.trim() || DEFAULT_CHEQUE_BANK_NAME)
+const calibrationConfirmationTitle = computed(() =>
+  pendingCalibrationAction.value === 'insert'
+    ? 'Insert Bank Row?'
+    : pendingCalibrationAction.value === 'delete'
+      ? 'Delete Bank Row?'
+      : pendingCalibrationAction.value === 'reset'
+        ? 'Reset Calibration?'
+        : 'Update Bank Row?',
+)
+const calibrationConfirmationMessage = computed(() =>
+  pendingCalibrationAction.value === 'insert'
+    ? `Add ${bankNameDraft.value.trim() || currentBankName.value} as a new bank row using the current cheque positioning.`
+    : pendingCalibrationAction.value === 'delete'
+      ? `Delete the saved cheque calibration row for ${currentBankName.value}.`
+      : pendingCalibrationAction.value === 'reset'
+        ? `Restore the default cheque positioning for ${currentBankName.value} and save it for all devices.`
+        : `Update the saved cheque calibration row for ${currentBankName.value} so all devices use this positioning.`,
+)
+const calibrationConfirmationBankName = computed(() =>
+  pendingCalibrationAction.value === 'insert'
+    ? bankNameDraft.value.trim() || currentBankName.value
+    : currentBankName.value,
+)
+const calibrationConfirmationLabel = computed(() =>
+  pendingCalibrationAction.value === 'insert'
+    ? 'Insert Row'
+    : pendingCalibrationAction.value === 'delete'
+      ? 'Delete Row'
+      : pendingCalibrationAction.value === 'reset'
+        ? 'Reset Calibration'
+        : 'Update Row',
+)
 const formattedAmount = computed(() => formatPlainAmount(cheque.amount))
 const generatedAmountWords = computed(() => amountToChequeWords(cheque.amount).toUpperCase())
 const chequeAmountWords = computed(() => cheque.amountWords.trim() || generatedAmountWords.value)
 const templateFields = computed(() => bpiTemplate.fields)
+const selectedBankExists = computed(() => Boolean(savedBankTemplates.value[selectedBankKey.value]))
+const canInsertBankRow = computed(() => {
+  const bankName = bankNameDraft.value.trim()
+  if (!bankName) return false
+  return !savedBankTemplates.value[normalizeChequeBankKey(bankName)]
+})
+const canDeleteBankRow = computed(
+  () => bankTemplateRows.value.length > 1 && selectedBankExists.value,
+)
 const chequeSheetStyle = computed(() => ({
   width: `${bpiTemplate.width}mm`,
   height: `${bpiTemplate.height}mm`,
@@ -138,6 +180,8 @@ function updateFieldAlign(field: ChequeTemplateField, event: Event) {
 }
 
 function applyTemplate(template: SavedChequeTemplate) {
+  if (template.bankName) bpiTemplate.bankName = template.bankName
+  if (template.name) bpiTemplate.name = template.name
   if (Number.isFinite(template.width) && template.width > 0) bpiTemplate.width = template.width
   if (Number.isFinite(template.height) && template.height > 0) bpiTemplate.height = template.height
 
@@ -147,42 +191,121 @@ function applyTemplate(template: SavedChequeTemplate) {
   })
 
   bpiTemplate.fields.splice(0, bpiTemplate.fields.length, ...mergedFields)
+  bankNameDraft.value = template.bankName || currentBankName.value
 }
 
-function loadSavedCalibration() {
-  const savedTemplate = window.localStorage.getItem(BPI_TEMPLATE_STORAGE_KEY)
-  if (!savedTemplate) return
-
-  try {
-    const parsedTemplate = JSON.parse(savedTemplate) as SavedChequeTemplate
-    if (!Array.isArray(parsedTemplate.fields)) return
-    applyTemplate(parsedTemplate)
-  } catch {
-    window.localStorage.removeItem(BPI_TEMPLATE_STORAGE_KEY)
-  }
+function applyDefaultTemplate() {
+  const defaultTemplate = createDefaultChequeTemplate(currentBankName.value, defaultBpiFields)
+  bpiTemplate.width = defaultTemplate.width
+  bpiTemplate.height = defaultTemplate.height
+  bpiTemplate.fields.splice(
+    0,
+    bpiTemplate.fields.length,
+    ...defaultTemplate.fields.map((field) => ({ ...field })),
+  )
 }
 
-function saveCalibration() {
-  const templateToSave: SavedChequeTemplate = {
+function buildTemplateToSave(): SavedChequeTemplate {
+  const bankName = currentBankName.value
+
+  return {
+    name: `${bankName} Cheque`,
+    bankName,
     width: bpiTemplate.width,
     height: bpiTemplate.height,
     fields: bpiTemplate.fields.map((field) => ({ ...field })),
   }
-
-  window.localStorage.setItem(BPI_TEMPLATE_STORAGE_KEY, JSON.stringify(templateToSave))
-  saveMessage.value = 'Calibration saved.'
 }
 
-function resetCalibration() {
-  bpiTemplate.width = 203.2
-  bpiTemplate.height = 76.2
-  bpiTemplate.fields.splice(
-    0,
-    bpiTemplate.fields.length,
-    ...defaultBpiFields.map((field) => ({ ...field })),
-  )
-  window.localStorage.removeItem(BPI_TEMPLATE_STORAGE_KEY)
-  saveMessage.value = 'Default calibration restored.'
+function selectBankTemplate(bankKey: string) {
+  const savedTemplate = savedBankTemplates.value[bankKey]
+
+  if (savedTemplate) {
+    selectedBankKey.value = bankKey
+    applyTemplate(savedTemplate)
+    return
+  }
+
+  applyDefaultTemplate()
+}
+
+function applySelectedBankTemplate() {
+  selectBankTemplate(selectedBankKey.value)
+  saveMessage.value = ''
+}
+
+async function loadSavedCalibration() {
+  await loadTemplates()
+  selectedBankKey.value = savedBankTemplates.value[selectedBankKey.value]
+    ? selectedBankKey.value
+    : bankTemplateRows.value[0]?.key || normalizeChequeBankKey(DEFAULT_CHEQUE_BANK_NAME)
+  applySelectedBankTemplate()
+}
+
+async function insertBankRow() {
+  const bankName = bankNameDraft.value.trim()
+  if (!bankName) {
+    saveMessage.value = 'Enter a bank name before inserting a row.'
+    return
+  }
+
+  bpiTemplate.bankName = bankName
+  const result = await insertTemplate(buildTemplateToSave())
+  saveMessage.value = result.ok ? `Bank row inserted for ${bankName}.` : result.error
+  if (!result.ok || !result.bankKey) return
+
+  selectedBankKey.value = result.bankKey
+  selectBankTemplate(result.bankKey)
+}
+
+async function updateBankRow() {
+  const bankKey = selectedBankKey.value
+  const result = await updateTemplate(bankKey, buildTemplateToSave())
+  saveMessage.value = result.ok ? `Bank row updated for ${currentBankName.value}.` : result.error
+}
+
+async function deleteBankRow() {
+  const bankName = currentBankName.value
+  const result = await deleteTemplate(selectedBankKey.value)
+  saveMessage.value = result.ok ? `Bank row deleted for ${bankName}.` : result.error
+  if (!result.ok || !result.nextBankKey) return
+
+  selectedBankKey.value = result.nextBankKey
+  selectBankTemplate(result.nextBankKey)
+}
+
+async function resetCalibration() {
+  applyDefaultTemplate()
+  const result = await updateTemplate(selectedBankKey.value, buildTemplateToSave())
+  saveMessage.value = result.ok
+    ? `Default calibration restored for ${currentBankName.value}.`
+    : result.error
+}
+
+function requestCalibrationConfirmation(action: CalibrationAction) {
+  pendingCalibrationAction.value = action
+}
+
+function closeCalibrationConfirmation() {
+  if (savingCalibration.value) return
+  pendingCalibrationAction.value = null
+}
+
+async function confirmCalibrationAction() {
+  const action = pendingCalibrationAction.value
+  if (!action) return
+
+  if (action === 'update') {
+    await updateBankRow()
+  } else if (action === 'insert') {
+    await insertBankRow()
+  } else if (action === 'delete') {
+    await deleteBankRow()
+  } else {
+    await resetCalibration()
+  }
+
+  if (!savingCalibration.value) pendingCalibrationAction.value = null
 }
 
 function formatChequeDate(value: string) {
@@ -282,6 +405,10 @@ function printCheque() {
             gap: 0;
             text-align: center;
           }
+
+          .cheque-date-digits span:nth-child(5) {
+            margin-left: 4px;
+          }
         </style>
       </head>
       <body>${chequeSheet.outerHTML}</body>
@@ -297,12 +424,54 @@ function printCheque() {
 }
 
 onMounted(() => {
-  loadSavedCalibration()
+  void loadSavedCalibration()
 })
 </script>
 
 <template>
   <div class="space-y-6">
+    <AppModal
+      :show="Boolean(pendingCalibrationAction)"
+      :title="calibrationConfirmationTitle"
+      subtitle="Cheque Calibration"
+      max-width="sm:max-w-lg"
+      @close="closeCalibrationConfirmation"
+    >
+      <div class="space-y-4 px-6 py-5">
+        <p class="text-sm leading-6 text-slate">
+          {{ calibrationConfirmationMessage }}
+        </p>
+        <div class="rounded-2xl border border-[#ded7cc] bg-[#fbf7ef] p-4">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-smoke">Bank</p>
+          <p class="mt-1 text-sm font-black text-onyx">{{ calibrationConfirmationBankName }}</p>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <AppButton
+            btn-theme="outline"
+            type="button"
+            class="w-full justify-center"
+            :disabled="savingCalibration"
+            @click="closeCalibrationConfirmation"
+          >
+            Cancel
+          </AppButton>
+          <AppButton
+            btn-theme="primary"
+            type="button"
+            class="w-full justify-center"
+            :disabled="savingCalibration"
+            @click="confirmCalibrationAction"
+          >
+            <Icon icon="feather:save" class="h-4 w-4" />
+            {{ savingCalibration ? 'Saving' : calibrationConfirmationLabel }}
+          </AppButton>
+        </div>
+      </template>
+    </AppModal>
+
     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div>
         <p class="text-[11px] font-semibold uppercase tracking-[0.28em] text-smoke">Cheque</p>
@@ -339,8 +508,66 @@ onMounted(() => {
           </div>
 
           <div class="rounded-2xl border border-[#ded7cc] bg-white/72 p-4">
-            <p class="text-sm font-black text-onyx">{{ bpiTemplate.name }}</p>
-            <p class="mt-1 text-sm text-slate">{{ bpiTemplate.bankName }}</p>
+            <div class="grid gap-4">
+              <label class="block text-sm font-medium text-onyx">
+                Saved bank row
+                <select
+                  v-model="selectedBankKey"
+                  class="mt-2 w-full rounded-xl border border-pebble bg-white px-4 py-3 text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+                  @change="applySelectedBankTemplate"
+                >
+                  <option v-for="bank in bankTemplateRows" :key="bank.key" :value="bank.key">
+                    {{ bank.bankName }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="block text-sm font-medium text-onyx">
+                Bank name for insert
+                <input
+                  v-model="bankNameDraft"
+                  type="text"
+                  class="mt-2 w-full rounded-xl border border-pebble bg-white px-4 py-3 text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+                  placeholder="Banco De Oro"
+                />
+              </label>
+
+              <div class="grid gap-2 sm:grid-cols-3">
+                <button
+                  type="button"
+                  class="inline-flex items-center justify-center gap-2 rounded-xl border border-pebble bg-white px-3 py-2 text-sm font-semibold text-onyx shadow-sm transition hover:border-tangerine hover:text-tangerine disabled:cursor-not-allowed disabled:bg-fog disabled:text-smoke"
+                  :disabled="savingCalibration || !canInsertBankRow"
+                  @click="requestCalibrationConfirmation('insert')"
+                >
+                  <Icon icon="feather:plus" class="h-4 w-4" />
+                  Insert Row
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex items-center justify-center gap-2 rounded-xl border border-pebble bg-white px-3 py-2 text-sm font-semibold text-onyx shadow-sm transition hover:border-tangerine hover:text-tangerine disabled:cursor-not-allowed disabled:bg-fog disabled:text-smoke"
+                  :disabled="savingCalibration || !selectedBankExists"
+                  @click="requestCalibrationConfirmation('update')"
+                >
+                  <Icon icon="feather:edit-3" class="h-4 w-4" />
+                  Update Row
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex items-center justify-center gap-2 rounded-xl border border-ruby bg-white px-3 py-2 text-sm font-semibold text-ruby shadow-sm transition hover:bg-ruby hover:text-white disabled:cursor-not-allowed disabled:border-pebble disabled:bg-fog disabled:text-smoke"
+                  :disabled="savingCalibration || !canDeleteBankRow"
+                  @click="requestCalibrationConfirmation('delete')"
+                >
+                  <Icon icon="feather:trash-2" class="h-4 w-4" />
+                  Delete Row
+                </button>
+              </div>
+            </div>
+            <p class="mt-4 text-sm font-black text-onyx">{{ currentBankName }} Cheque</p>
+            <p class="mt-1 text-sm text-slate">
+              {{ bankTemplateRows.length }} saved bank row{{
+                bankTemplateRows.length === 1 ? '' : 's'
+              }}
+            </p>
             <p class="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-smoke">
               {{ bpiTemplate.width }}mm x {{ bpiTemplate.height }}mm
             </p>
@@ -363,7 +590,8 @@ onMounted(() => {
               <button
                 type="button"
                 class="inline-flex items-center gap-2 rounded-xl border border-pebble bg-white px-3 py-2 text-sm font-semibold text-onyx shadow-sm transition hover:border-tangerine hover:text-tangerine"
-                @click="saveCalibration"
+                :disabled="savingCalibration"
+                @click="requestCalibrationConfirmation('update')"
               >
                 <Icon icon="feather:save" class="h-4 w-4" />
                 Save
@@ -371,7 +599,8 @@ onMounted(() => {
               <button
                 type="button"
                 class="inline-flex items-center gap-2 rounded-xl border border-pebble bg-white px-3 py-2 text-sm font-semibold text-onyx shadow-sm transition hover:border-tangerine hover:text-tangerine"
-                @click="resetCalibration"
+                :disabled="savingCalibration"
+                @click="requestCalibrationConfirmation('reset')"
               >
                 <Icon icon="feather:rotate-ccw" class="h-4 w-4" />
                 Reset
@@ -497,7 +726,6 @@ onMounted(() => {
 
           <div class="grid gap-4 sm:grid-cols-2">
             <AppInput v-model="cheque.accountName" label="Account name" />
-            <AppInput v-model="cheque.accountNo" label="Account no." />
             <AppInput v-model="cheque.date" type="date" label="Date" />
             <AppInput v-model="cheque.payee" label="Pay to the order of" />
             <AppInput
@@ -525,11 +753,13 @@ onMounted(() => {
       >
         <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p class="text-sm font-black text-onyx">{{ bpiTemplate.name }} Preview</p>
+            <p class="text-sm font-black text-onyx">{{ currentBankName }} Cheque Preview</p>
             <p class="mt-1 text-xs text-slate">Only black field text prints on the real cheque.</p>
           </div>
           <div class="flex gap-2 text-xs font-semibold text-slate">
-            <span class="rounded-full bg-sapphire-light px-3 py-1 text-sapphire">BPI</span>
+            <span class="rounded-full bg-sapphire-light px-3 py-1 text-sapphire">{{
+              currentBankName
+            }}</span>
             <span class="rounded-full bg-emerald-light px-3 py-1 text-emerald"
               >Pre-printed cheque</span
             >
@@ -639,6 +869,10 @@ onMounted(() => {
   grid-template-columns: repeat(8, 0.52fr);
   gap: 0;
   text-align: center;
+}
+
+.cheque-date-digits span:nth-child(5) {
+  margin-left: 4px;
 }
 
 .cheque-sheet-guides-hidden {
