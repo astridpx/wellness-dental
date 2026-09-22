@@ -86,7 +86,14 @@ export function amountToChequeWords(value: MoneyValue) {
   const amount = toAmount(value)
   if (!amount) return 'Zero Pesos'
 
-  return `${integerToWords(Math.floor(amount))} Pesos`
+  const totalCentavos = Math.round(amount * 100)
+  const whole = Math.floor(totalCentavos / 100)
+  const centavos = totalCentavos % 100
+  const pesoLabel = whole === 1 ? 'Peso' : 'Pesos'
+
+  if (!centavos) return `${integerToWords(whole)} ${pesoLabel} Only`
+
+  return `${integerToWords(whole) || 'Zero'} ${pesoLabel} And ${String(centavos).padStart(2, '0')}/100 Only`
 }
 
 export function parsePlainAmount(value: MoneyValue) {
