@@ -14,12 +14,17 @@ export type ChequeTemplateField = {
   align?: 'left' | 'center' | 'right'
 }
 
+export type ChequeDatePartKey = 'mm' | 'dd' | 'yyyy'
+
+export type ChequeDatePartOffsets = Record<ChequeDatePartKey, number>
+
 export type SavedChequeTemplate = {
   bankName?: string
   name?: string
   width: number
   height: number
   fields: ChequeTemplateField[]
+  datePartOffsets?: ChequeDatePartOffsets
 }
 
 type SavedChequeTemplatesSetting = {
@@ -29,6 +34,11 @@ type SavedChequeTemplatesSetting = {
 const CHEQUE_TEMPLATES_SETTING_KEY = 'chequeTemplates'
 const LEGACY_BPI_TEMPLATE_SETTING_KEY = 'bpiChequeTemplate'
 export const DEFAULT_CHEQUE_BANK_NAME = 'Bank of the Philippine Islands'
+export const DEFAULT_CHEQUE_DATE_PART_OFFSETS: ChequeDatePartOffsets = {
+  mm: 0,
+  dd: 0,
+  yyyy: 4,
+}
 
 export function normalizeChequeBankKey(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, '-')
@@ -44,6 +54,7 @@ export function createDefaultChequeTemplate(
     width: 203.2,
     height: 76.2,
     fields: fields.map((field) => ({ ...field })),
+    datePartOffsets: { ...DEFAULT_CHEQUE_DATE_PART_OFFSETS },
   }
 }
 
@@ -74,6 +85,10 @@ export function useChequeTemplates(defaultFields: ChequeTemplateField[]) {
           ...template,
           bankName,
           name: template.name || `${bankName} Cheque`,
+          datePartOffsets: {
+            ...DEFAULT_CHEQUE_DATE_PART_OFFSETS,
+            ...(template.datePartOffsets || {}),
+          },
         }
         return result
       },

@@ -3,10 +3,12 @@ import { Icon } from '@iconify/vue'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { AppButton, AppInput, AppModal } from '@/components/app'
 import {
+  DEFAULT_CHEQUE_DATE_PART_OFFSETS,
   DEFAULT_CHEQUE_BANK_NAME,
   createDefaultChequeTemplate,
   normalizeChequeBankKey,
   useChequeTemplates,
+  type ChequeDatePartKey,
   type ChequeTemplateField,
   type SavedChequeTemplate,
 } from '@/composables'
@@ -61,6 +63,7 @@ const bpiTemplate = reactive({
   width: 203.2,
   height: 76.2,
   fields: defaultBpiFields.map((field) => ({ ...field })),
+  datePartOffsets: { ...DEFAULT_CHEQUE_DATE_PART_OFFSETS },
 })
 
 const cheque = reactive({
@@ -179,6 +182,11 @@ function updateFieldAlign(field: ChequeTemplateField, event: Event) {
   }
 }
 
+function updateDatePartOffset(key: ChequeDatePartKey, event: Event) {
+  const value = Number((event.target as HTMLInputElement).value)
+  if (Number.isFinite(value)) bpiTemplate.datePartOffsets[key] = value
+}
+
 function applyTemplate(template: SavedChequeTemplate) {
   if (template.bankName) bpiTemplate.bankName = template.bankName
   if (template.name) bpiTemplate.name = template.name
@@ -191,6 +199,10 @@ function applyTemplate(template: SavedChequeTemplate) {
   })
 
   bpiTemplate.fields.splice(0, bpiTemplate.fields.length, ...mergedFields)
+  bpiTemplate.datePartOffsets = {
+    ...DEFAULT_CHEQUE_DATE_PART_OFFSETS,
+    ...(template.datePartOffsets || {}),
+  }
   bankNameDraft.value = template.bankName || currentBankName.value
 }
 
@@ -203,6 +215,9 @@ function applyDefaultTemplate() {
     bpiTemplate.fields.length,
     ...defaultTemplate.fields.map((field) => ({ ...field })),
   )
+  bpiTemplate.datePartOffsets = {
+    ...(defaultTemplate.datePartOffsets || DEFAULT_CHEQUE_DATE_PART_OFFSETS),
+  }
 }
 
 function buildTemplateToSave(): SavedChequeTemplate {
@@ -214,6 +229,7 @@ function buildTemplateToSave(): SavedChequeTemplate {
     width: bpiTemplate.width,
     height: bpiTemplate.height,
     fields: bpiTemplate.fields.map((field) => ({ ...field })),
+    datePartOffsets: { ...bpiTemplate.datePartOffsets },
   }
 }
 
@@ -309,19 +325,20 @@ async function confirmCalibrationAction() {
 }
 
 function formatChequeDate(value: string) {
-  if (!value) return ['', '', '', '', '', '', '', '']
+  if (!value) return { mm: ['', ''], dd: ['', ''], yyyy: ['', '', '', ''] }
 
   const [year = '', month = '', day = ''] = value.split('-')
-  return [
-    month[0] || '',
-    month[1] || '',
-    day[0] || '',
-    day[1] || '',
-    year[0] || '',
-    year[1] || '',
-    year[2] || '',
-    year[3] || '',
-  ]
+  return {
+    mm: [month[0] || '', month[1] || ''],
+    dd: [day[0] || '', day[1] || ''],
+    yyyy: [year[0] || '', year[1] || '', year[2] || '', year[3] || ''],
+  }
+}
+
+function datePartStyle(key: ChequeDatePartKey) {
+  return {
+    transform: `translateX(${bpiTemplate.datePartOffsets[key]}px)`,
+  }
 }
 
 function printCheque() {
@@ -401,13 +418,15 @@ function printCheque() {
 
           .cheque-date-digits {
             display: grid;
-            grid-template-columns: repeat(8, 0.52fr);
+            grid-template-columns: 1fr 1fr 2fr;
             gap: 0;
             text-align: center;
           }
 
-          .cheque-date-digits span:nth-child(5) {
-            margin-left: 4px;
+          .cheque-date-part {
+            display: grid;
+            grid-auto-flow: column;
+            grid-auto-columns: minmax(0, 1fr);
           }
         </style>
       </head>
@@ -712,6 +731,42 @@ onMounted(() => {
                   />
                 </label>
               </div>
+
+              <div
+                v-if="field.key === 'date'"
+                class="mt-4 grid grid-cols-3 gap-3 border-t border-[#ded7cc] pt-4"
+              >
+                <label class="text-xs font-semibold uppercase tracking-[0.12em] text-slate">
+                  MM X
+                  <input
+                    :value="bpiTemplate.datePartOffsets.mm"
+                    type="number"
+                    step="1"
+                    class="mt-2 w-full rounded-xl border border-pebble bg-white px-3 py-2 text-sm text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+                    @input="updateDatePartOffset('mm', $event)"
+                  />
+                </label>
+                <label class="text-xs font-semibold uppercase tracking-[0.12em] text-slate">
+                  DD X
+                  <input
+                    :value="bpiTemplate.datePartOffsets.dd"
+                    type="number"
+                    step="1"
+                    class="mt-2 w-full rounded-xl border border-pebble bg-white px-3 py-2 text-sm text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+                    @input="updateDatePartOffset('dd', $event)"
+                  />
+                </label>
+                <label class="text-xs font-semibold uppercase tracking-[0.12em] text-slate">
+                  YYYY X
+                  <input
+                    :value="bpiTemplate.datePartOffsets.yyyy"
+                    type="number"
+                    step="1"
+                    class="mt-2 w-full rounded-xl border border-pebble bg-white px-3 py-2 text-sm text-onyx outline-none transition focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+                    @input="updateDatePartOffset('yyyy', $event)"
+                  />
+                </label>
+              </div>
             </div>
           </div>
         </section>
@@ -789,8 +844,15 @@ onMounted(() => {
               :style="fieldStyle(field)"
             >
               <span v-if="field.key === 'date'" class="cheque-date-digits">
-                <span v-for="(part, index) in formatChequeDate(cheque.date)" :key="index">
-                  {{ part }}
+                <span
+                  v-for="(digits, partKey) in formatChequeDate(cheque.date)"
+                  :key="partKey"
+                  class="cheque-date-part"
+                  :style="datePartStyle(partKey)"
+                >
+                  <span v-for="(digit, digitIndex) in digits" :key="digitIndex">
+                    {{ digit }}
+                  </span>
                 </span>
               </span>
               <span v-else>{{ fieldValue(field) }}</span>
@@ -866,13 +928,15 @@ onMounted(() => {
 
 .cheque-date-digits {
   display: grid;
-  grid-template-columns: repeat(8, 0.52fr);
+  grid-template-columns: 1fr 1fr 2fr;
   gap: 0;
   text-align: center;
 }
 
-.cheque-date-digits span:nth-child(5) {
-  margin-left: 4px;
+.cheque-date-part {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
 }
 
 .cheque-sheet-guides-hidden {
