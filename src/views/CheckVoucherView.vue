@@ -4,7 +4,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { AppButton, AppInput } from '@/components/app'
 import { useApprovalNumberGenerator, useUsersList } from '@/composables'
 import {
-  amountToChequeWords,
+  amountToVoucherWords,
   currentManilaDateInputValue,
   formatPlainAmount,
   parsePlainAmount,
@@ -63,7 +63,7 @@ const amount = computed(() =>
 const creditTotal = computed(() =>
   rows.value.reduce((total, row) => total + parsePlainAmount(row.credit), 0),
 )
-const amountWords = computed(() => amountToChequeWords(amount.value))
+const amountWords = computed(() => amountToVoucherWords(amount.value))
 const formattedAmount = computed(() => formatPlainAmount(amount.value))
 const formattedCreditTotal = computed(() => formatPlainAmount(creditTotal.value))
 const periodLabel = computed(() => {

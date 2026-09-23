@@ -82,6 +82,12 @@ export function amountToWords(value: MoneyValue) {
   return `${integerToWords(whole)} & ${String(cents).padStart(2, '0')}/100`
 }
 
+function integerToChequeCentavoWords(value: number) {
+  const words = integerToWords(value)
+  if (value > 20 && value < 100 && value % 10) return words.replace(' ', '-')
+  return words
+}
+
 export function amountToChequeWords(value: MoneyValue) {
   const amount = toAmount(value)
   if (!amount) return 'Zero Pesos'
@@ -91,9 +97,39 @@ export function amountToChequeWords(value: MoneyValue) {
   const centavos = totalCentavos % 100
   const pesoLabel = whole === 1 ? 'Peso' : 'Pesos'
 
-  if (!centavos) return `${integerToWords(whole)} ${pesoLabel} Only`
+  if (!centavos) return integerToWords(whole) + ' ' + pesoLabel
 
-  return `${integerToWords(whole) || 'Zero'} ${pesoLabel} And ${String(centavos).padStart(2, '0')}/100 Only`
+  const centavoLabel = centavos === 1 ? 'Centavo' : 'Centavos'
+  return (
+    (integerToWords(whole) || 'Zero') +
+    ' ' +
+    pesoLabel +
+    ' And ' +
+    integerToChequeCentavoWords(centavos) +
+    ' ' +
+    centavoLabel
+  )
+}
+
+export function amountToVoucherWords(value: MoneyValue) {
+  const amount = toAmount(value)
+  if (!amount) return 'Zero Pesos'
+
+  const totalCentavos = Math.round(amount * 100)
+  const whole = Math.floor(totalCentavos / 100)
+  const centavos = totalCentavos % 100
+  const pesoLabel = whole === 1 ? 'Peso' : 'Pesos'
+
+  if (!centavos) return integerToWords(whole) + ' ' + pesoLabel + ' Only'
+
+  return (
+    (integerToWords(whole) || 'Zero') +
+    ' ' +
+    pesoLabel +
+    ' And ' +
+    String(centavos).padStart(2, '0') +
+    '/100 Only'
+  )
 }
 
 export function parsePlainAmount(value: MoneyValue) {
