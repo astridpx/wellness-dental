@@ -320,14 +320,14 @@ onMounted(() => {
         class="printable-voucher overflow-auto rounded-3xl border border-[#d8d1c5] bg-[#f7f2e8] p-4 shadow-md"
       >
         <div class="voucher-sheet mx-auto bg-[#f3eddf] text-[#222] shadow-sm">
-          <div class="grid grid-cols-[1fr_190px] gap-10">
+          <div class="grid grid-cols-[1fr_165px] gap-6">
             <div class="min-w-0">
               <div class="voucher-title-block">
                 <p class="text-[13px] font-bold">{{ voucher.companyName }}</p>
                 <p class="mt-1 text-[13px] font-bold">{{ voucher.title }}</p>
               </div>
 
-              <div class="mt-8 grid grid-cols-[95px_1fr] gap-x-4 gap-y-1 text-[13px]">
+              <div class="mt-5 grid grid-cols-[90px_1fr] gap-x-3 gap-y-1 text-[12px]">
                 <p class="font-semibold">Paid To:</p>
                 <p class="font-bold uppercase">{{ voucher.paidTo || '&nbsp;' }}</p>
                 <p class="font-semibold">Particulars:</p>
@@ -337,14 +337,14 @@ onMounted(() => {
                 </p>
               </div>
 
-              <div class="mt-8 grid grid-cols-[95px_1fr] gap-x-4 text-[14px]">
+              <div class="mt-5 grid grid-cols-[90px_1fr] gap-x-3 text-[13px]">
                 <p class="font-semibold">Amount:</p>
                 <p class="font-bold">{{ amountWords }}</p>
               </div>
             </div>
 
-            <div class="pt-24 text-[14px]">
-              <div class="grid grid-cols-[72px_1fr] gap-y-1">
+            <div class="pt-16 text-[13px]">
+              <div class="grid grid-cols-[62px_1fr] gap-y-1">
                 <span class="font-semibold">Ref. #:</span>
                 <span class="font-bold">{{ voucher.referenceNo }}</span>
                 <span class="font-semibold">Date:</span>
@@ -357,7 +357,7 @@ onMounted(() => {
             </div>
           </div>
 
-          <table class="voucher-table mt-8 w-full text-[11px]">
+          <table class="voucher-table mt-5 w-full text-[10px]">
             <thead>
               <tr>
                 <th>Account<br />Codes</th>
@@ -395,7 +395,7 @@ onMounted(() => {
             </tbody>
           </table>
 
-          <table class="voucher-total-table mt-16 w-full text-[14px] font-semibold">
+          <table class="voucher-total-table mt-8 w-full text-[13px] font-semibold">
             <tbody>
               <tr>
                 <td class="w-[32%]"></td>
@@ -411,7 +411,7 @@ onMounted(() => {
             </tbody>
           </table>
 
-          <div class="mt-20 grid grid-cols-4 gap-8 text-[14px]">
+          <div class="mt-10 grid grid-cols-4 gap-4 text-[12px]">
             <div>
               <div class="signature-line">{{ voucher.preparedBy }}</div>
               <p class="mt-2 font-semibold">Prepared by:</p>
@@ -438,9 +438,10 @@ onMounted(() => {
 
 <style scoped>
 .voucher-sheet {
-  width: 11in;
-  min-height: 8.5in;
-  padding: 0.52in 0.62in;
+  box-sizing: border-box;
+  width: 8.5in;
+  min-height: 6.5in;
+  padding: 0.38in 0.45in;
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -459,7 +460,7 @@ onMounted(() => {
 .voucher-table th {
   border-block: 1px solid #222;
   font-weight: 700;
-  padding: 5px 8px;
+  padding: 4px 6px;
   text-align: center;
 }
 
@@ -491,8 +492,8 @@ onMounted(() => {
 }
 
 .voucher-table td {
-  height: 30px;
-  padding: 5px 8px;
+  height: 24px;
+  padding: 4px 6px;
   vertical-align: top;
 }
 
@@ -503,11 +504,11 @@ onMounted(() => {
 
 .voucher-total-table td {
   border-block: 1px solid #222;
-  padding: 4px 8px;
+  padding: 3px 6px;
 }
 
 .signature-line {
-  min-height: 32px;
+  min-height: 24px;
   border-bottom: 1px solid #222;
   font-weight: 700;
   text-align: center;
@@ -515,7 +516,7 @@ onMounted(() => {
 
 @media print {
   @page {
-    size: landscape;
+    size: 8.5in 6.5in;
     margin: 0;
   }
 
@@ -544,8 +545,9 @@ onMounted(() => {
   }
 
   .voucher-sheet {
-    width: 11in;
-    min-height: 8.5in;
+    width: 8.5in;
+    height: 6.5in;
+    min-height: 0;
     box-shadow: none !important;
   }
 }
