@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, reactive, ref } from 'vue'
-import { AppButton, AppInput } from '@/components/app'
-import { useApprovalNumberGenerator, useUsersList } from '@/composables'
+import { AppButton, AppInput, AppSearchSelect } from '@/components/app'
+import { useApprovalNumberGenerator, useUsersList, useVoucherAccountLibraries } from '@/composables'
 import {
   amountToVoucherWords,
   currentManilaDateInputValue,
@@ -56,6 +56,13 @@ const generatingReferenceNo = ref(false)
 const referenceNoError = ref('')
 const { generateApprovalNumber } = useApprovalNumberGenerator()
 const { users, loading: loadingUsers } = useUsersList()
+const {
+  accountCodes,
+  accountCodeOptions,
+  costCenterOptions,
+  loadLibraries,
+  loading: loadingAccountLibraries,
+} = useVoucherAccountLibraries()
 
 const amount = computed(() =>
   rows.value.reduce((total, row) => total + parsePlainAmount(row.debit), 0),
@@ -115,6 +122,17 @@ function copyDebitToCredit() {
   }))
 }
 
+function selectAccountCode(row: VoucherRow, value: string | number | null) {
+  row.accountCode = value == null ? '' : String(value)
+
+  const matchedAccount = accountCodes.value.find((account) => account.code === row.accountCode)
+  if (matchedAccount) row.accountTitle = matchedAccount.title
+}
+
+function selectCostCenter(row: VoucherRow, value: string | number | null) {
+  row.costCenter = value == null ? '' : String(value)
+}
+
 async function generateReferenceNo() {
   generatingReferenceNo.value = true
   referenceNoError.value = ''
@@ -137,6 +155,8 @@ function printVoucher() {
 }
 
 onMounted(() => {
+  void loadLibraries()
+
   if (!voucher.referenceNo.trim()) {
     void generateReferenceNo()
   }
@@ -258,9 +278,25 @@ onMounted(() => {
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
-              <AppInput v-model="row.accountCode" label="Account code" />
-              <AppInput v-model="row.costCenter" label="Cost center" />
-              <AppInput v-model="row.accountTitle" label="Account title" />
+              <AppSearchSelect
+                v-model="row.accountCode"
+                :options="accountCodeOptions"
+                label="Account code"
+                placeholder="Select account code"
+                empty-text="No account codes found."
+                :loading="loadingAccountLibraries"
+                @update:model-value="selectAccountCode(row, $event)"
+              />
+              <AppSearchSelect
+                v-model="row.costCenter"
+                :options="costCenterOptions"
+                label="Cost center"
+                placeholder="Select cost center"
+                empty-text="No cost centers found."
+                :loading="loadingAccountLibraries"
+                @update:model-value="selectCostCenter(row, $event)"
+              />
+              <AppInput v-model="row.accountTitle" label="Account title" readonly />
               <AppInput v-model="row.details" label="Details" />
               <AppInput
                 v-model="row.debit"

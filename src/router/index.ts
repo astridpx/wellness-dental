@@ -27,6 +27,7 @@ import MembershipDetailsView from '@/views/MembershipDetailsView.vue'
 import SingleClinicView from '@/views/clinics/SingleClinicView.vue'
 import CheckVoucherView from '@/views/CheckVoucherView.vue'
 import BpiChequeWriterView from '@/views/BpiChequeWriterView.vue'
+import VoucherAccountLibrariesView from '@/views/VoucherAccountLibrariesView.vue'
 
 type RouteNavItem = [boolean, { visibleTo: string[] }]
 
@@ -149,6 +150,20 @@ const router = createRouter({
       meta: {
         title: 'Cheque Writer',
         icon: 'feather:edit-3',
+        navGroup: {
+          name: 'Cheque',
+          icon: 'feather:credit-card',
+        },
+        navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
+      },
+    },
+    {
+      path: '/cheques/account-libraries',
+      name: 'voucherAccountLibraries',
+      component: VoucherAccountLibrariesView,
+      meta: {
+        title: 'Account Libraries',
+        icon: 'feather:list',
         navGroup: {
           name: 'Cheque',
           icon: 'feather:credit-card',
