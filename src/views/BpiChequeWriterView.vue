@@ -7,6 +7,7 @@ import {
   DEFAULT_CHEQUE_BANK_NAME,
   createDefaultChequeTemplate,
   normalizeChequeBankKey,
+  useChequeSummaryReports,
   useChequeTemplates,
   type ChequeDatePartKey,
   type ChequeTemplateField,
@@ -90,6 +91,7 @@ const {
   updateTemplate,
   deleteTemplate,
 } = useChequeTemplates(defaultBpiFields)
+const { recordChequeSummaryEvent } = useChequeSummaryReports()
 
 const currentBankName = computed(() => bpiTemplate.bankName.trim() || DEFAULT_CHEQUE_BANK_NAME)
 const calibrationConfirmationTitle = computed(() =>
@@ -342,6 +344,16 @@ function datePartStyle(key: ChequeDatePartKey) {
 }
 
 function printCheque() {
+  recordChequeSummaryEvent({
+    kind: 'cheque',
+    title: `${currentBankName.value} Cheque`,
+    documentDate: cheque.date,
+    payee: cheque.payee,
+    amount: cheque.amount,
+    bankName: currentBankName.value,
+    accountName: cheque.accountName,
+  })
+
   const chequeSheet = document.querySelector('.cheque-sheet')
   if (!chequeSheet) {
     window.print()

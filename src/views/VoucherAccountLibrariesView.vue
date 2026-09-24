@@ -57,7 +57,7 @@ const activeLabels = computed(() =>
 const isEditing = computed(() => Boolean(activeDraft.value.id))
 const formCode = computed({
   get() {
-    if (activeKind.value === 'accountCode' && !isEditing.value) return ''
+    if (!isEditing.value) return ''
     return activeDraft.value.code
   },
   set(value: string) {
@@ -65,7 +65,9 @@ const formCode = computed({
   },
 })
 const formCodeLabel = computed(() =>
-  activeKind.value === 'accountCode' ? 'Account code (assigned on save)' : activeLabels.value.code,
+  activeKind.value === 'accountCode'
+    ? 'Account code (assigned on save)'
+    : 'Cost center (assigned on save)',
 )
 
 function resetFeedback() {
@@ -176,9 +178,8 @@ onMounted(async () => {
           <AppInput
             v-model="formCode"
             :label="formCodeLabel"
-            :placeholder="activeKind === 'accountCode' ? 'Auto assigned on save' : undefined"
-            :readonly="activeKind === 'accountCode'"
-            :required="activeKind !== 'accountCode'"
+            placeholder="Auto assigned on save"
+            readonly
           />
           <AppInput v-model="activeDraft.title" :label="activeLabels.title" required />
 

@@ -187,17 +187,19 @@ export function useVoucherAccountLibraries() {
     }
   }
 
-  async function saveCostCenter(item: { id?: string; code: string; title: string }) {
+  async function saveCostCenter(item: { id?: string; code?: string; title: string }) {
     saving.value = true
+    const body: { costCenter?: string; costCenterTitle: string } = {
+      costCenterTitle: item.title,
+    }
+
+    if (item.code) body.costCenter = item.code
 
     const result = await request(
       item.id ? `/wellness/chequeCostCenters/${item.id}` : '/wellness/chequeCostCenters',
       {
         method: item.id ? 'PUT' : 'POST',
-        body: JSON.stringify({
-          costCenter: item.code,
-          costCenterTitle: item.title,
-        }),
+        body: JSON.stringify(body),
       },
       { includeContentType: true },
     )
@@ -216,10 +218,14 @@ export function useVoucherAccountLibraries() {
     item: { id?: string; code: string; title: string },
   ) {
     const code =
-      kind === 'accountCode' ? item.id || nextNumericCode(accountCodes.value) : normalizeText(item.code)
+      kind === 'accountCode'
+        ? item.id || nextNumericCode(accountCodes.value)
+        : item.id
+          ? normalizeText(item.code)
+          : nextNumericCode(costCenters.value)
     const title = normalizeText(item.title)
 
-    if ((kind === 'costCenter' && !code) || !title) {
+    if (!title) {
       return { ok: false, error: 'Enter both code and title.' }
     }
 
@@ -234,7 +240,7 @@ export function useVoucherAccountLibraries() {
       return { ok: false, error: 'A row with this code already exists.' }
     }
 
-    return saveCostCenter({ id: item.id, code, title })
+    return saveCostCenter({ id: item.id, code: item.id ? code : undefined, title })
   }
 
   async function deleteItem(kind: VoucherAccountLibraryKind, id: string) {

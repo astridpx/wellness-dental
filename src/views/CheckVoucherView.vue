@@ -2,7 +2,12 @@
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { AppButton, AppInput, AppSearchSelect } from '@/components/app'
-import { useApprovalNumberGenerator, useUsersList, useVoucherAccountLibraries } from '@/composables'
+import {
+  useApprovalNumberGenerator,
+  useChequeSummaryReports,
+  useUsersList,
+  useVoucherAccountLibraries,
+} from '@/composables'
 import {
   amountToVoucherWords,
   currentManilaDateInputValue,
@@ -14,7 +19,9 @@ type VoucherRow = {
   id: number
   accountCode: string
   costCenter: string
+  accountTitleName: string
   accountTitle: string
+  costCenterTitle: string
   debit: string
   credit: string
   details: string
@@ -45,7 +52,9 @@ const rows = ref<VoucherRow[]>([
     id: 1,
     accountCode: '',
     costCenter: '',
-    accountTitle: 'Dentist Fee [Admin-Direct]',
+    accountTitleName: '',
+    accountTitle: '',
+    costCenterTitle: '',
     debit: '',
     credit: '',
     details: '',
@@ -55,11 +64,11 @@ const nextRowId = ref(2)
 const generatingReferenceNo = ref(false)
 const referenceNoError = ref('')
 const { generateApprovalNumber } = useApprovalNumberGenerator()
+const { recordChequeSummaryEvent } = useChequeSummaryReports()
 const { users, loading: loadingUsers } = useUsersList()
 const {
   accountCodes,
-  accountCodeOptions,
-  costCenterOptions,
+  costCenters,
   loadLibraries,
   loading: loadingAccountLibraries,
 } = useVoucherAccountLibraries()
@@ -88,6 +97,20 @@ const preparedByOptions = computed(() =>
     ),
   ),
 )
+const accountTitleOptions = computed(() =>
+  accountCodes.value.map((account) => ({
+    value: account.code,
+    label: account.title,
+    description: `Code: ${account.code}`,
+  })),
+)
+const costCenterNameOptions = computed(() =>
+  costCenters.value.map((costCenter) => ({
+    value: costCenter.code,
+    label: costCenter.title,
+    description: `Code: ${costCenter.code}`,
+  })),
+)
 
 function formatVoucherDate(value: string) {
   if (!value) return ''
@@ -102,7 +125,9 @@ function addRow() {
     id: nextRowId.value,
     accountCode: '',
     costCenter: '',
+    accountTitleName: '',
     accountTitle: '',
+    costCenterTitle: '',
     debit: '',
     credit: '',
     details: '',
@@ -122,15 +147,35 @@ function copyDebitToCredit() {
   }))
 }
 
+function buildAccountTitle(row: VoucherRow) {
+  if (row.accountTitleName && row.costCenterTitle) {
+    return `${row.accountTitleName} [${row.costCenterTitle}]`
+  }
+  if (row.accountTitleName) return row.accountTitleName
+  if (row.costCenterTitle) return `[${row.costCenterTitle}]`
+  return ''
+}
+
+function refreshAccountTitle(row: VoucherRow) {
+  row.accountTitle = buildAccountTitle(row)
+}
+
 function selectAccountCode(row: VoucherRow, value: string | number | null) {
   row.accountCode = value == null ? '' : String(value)
 
   const matchedAccount = accountCodes.value.find((account) => account.code === row.accountCode)
-  if (matchedAccount) row.accountTitle = matchedAccount.title
+  row.accountTitleName = matchedAccount?.title || ''
+  refreshAccountTitle(row)
 }
 
 function selectCostCenter(row: VoucherRow, value: string | number | null) {
   row.costCenter = value == null ? '' : String(value)
+
+  const matchedCostCenter = costCenters.value.find(
+    (costCenter) => costCenter.code === row.costCenter,
+  )
+  row.costCenterTitle = matchedCostCenter?.title || ''
+  refreshAccountTitle(row)
 }
 
 async function generateReferenceNo() {
@@ -151,6 +196,17 @@ async function generateReferenceNo() {
 }
 
 function printVoucher() {
+  recordChequeSummaryEvent({
+    kind: 'voucher',
+    title: voucher.title,
+    documentDate: voucher.date,
+    referenceNo: voucher.referenceNo,
+    checkNo: voucher.checkNo,
+    payee: voucher.paidTo,
+    amount: amount.value,
+    preparedBy: voucher.preparedBy,
+    accountName: voucher.companyName,
+  })
   window.print()
 }
 
@@ -280,24 +336,28 @@ onMounted(() => {
             <div class="grid gap-4 sm:grid-cols-2">
               <AppSearchSelect
                 v-model="row.accountCode"
-                :options="accountCodeOptions"
-                label="Account code"
-                placeholder="Select account code"
+                :options="accountTitleOptions"
+                label="Account title"
+                placeholder="Select account title"
                 empty-text="No account codes found."
                 :loading="loadingAccountLibraries"
                 @update:model-value="selectAccountCode(row, $event)"
               />
               <AppSearchSelect
                 v-model="row.costCenter"
-                :options="costCenterOptions"
-                label="Cost center"
-                placeholder="Select cost center"
+                :options="costCenterNameOptions"
+                label="Cost center name"
+                placeholder="Select cost center name"
                 empty-text="No cost centers found."
                 :loading="loadingAccountLibraries"
                 @update:model-value="selectCostCenter(row, $event)"
               />
-              <AppInput v-model="row.accountTitle" label="Account title" readonly />
-              <AppInput v-model="row.details" label="Details" />
+              <AppInput
+                v-model="row.details"
+                class="sm:col-span-2"
+                label="Details"
+                placeholder="Optional details"
+              />
               <AppInput
                 v-model="row.debit"
                 decimal-only
