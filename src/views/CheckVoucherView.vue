@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, reactive, ref } from 'vue'
-import { AppButton, AppInput, AppSearchSelect } from '@/components/app'
+import { AppButton, AppInput, AppModal, AppSearchSelect } from '@/components/app'
 import {
   useApprovalNumberGenerator,
   useChequeSummaryReports,
@@ -62,9 +62,11 @@ const rows = ref<VoucherRow[]>([
 ])
 const nextRowId = ref(2)
 const generatingReferenceNo = ref(false)
+const showPrintConfirmation = ref(false)
+const printError = ref('')
 const referenceNoError = ref('')
 const { generateApprovalNumber } = useApprovalNumberGenerator()
-const { recordChequeSummaryEvent } = useChequeSummaryReports()
+const { recordChequeSummaryEvent, saving: savingSummaryRecord } = useChequeSummaryReports()
 const { users, loading: loadingUsers } = useUsersList()
 const {
   accountCodes,
@@ -196,7 +198,14 @@ async function generateReferenceNo() {
 }
 
 function printVoucher() {
-  recordChequeSummaryEvent({
+  printError.value = ''
+  showPrintConfirmation.value = true
+}
+
+async function confirmPrintVoucher() {
+  printError.value = ''
+
+  const result = await recordChequeSummaryEvent({
     kind: 'voucher',
     title: voucher.title,
     documentDate: voucher.date,
@@ -207,6 +216,13 @@ function printVoucher() {
     preparedBy: voucher.preparedBy,
     accountName: voucher.companyName,
   })
+
+  if (!result.ok) {
+    printError.value = result.error
+    return
+  }
+
+  showPrintConfirmation.value = false
   window.print()
 }
 
@@ -221,6 +237,65 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
+    <AppModal
+      :show="showPrintConfirmation"
+      title="Print Voucher?"
+      subtitle="Cheque Summary"
+      max-width="sm:max-w-lg"
+      @close="showPrintConfirmation = false"
+    >
+      <div class="space-y-4 px-6 py-5">
+        <p class="text-sm leading-6 text-slate">
+          This will save this voucher in the cheque summary, then open the print dialog.
+        </p>
+        <div class="grid gap-3 rounded-2xl border border-[#ded7cc] bg-[#fbf7ef] p-4 text-sm">
+          <div class="flex justify-between gap-4">
+            <span class="font-semibold text-slate">Reference</span>
+            <span class="font-bold text-onyx">{{ voucher.referenceNo || 'N/A' }}</span>
+          </div>
+          <div class="flex justify-between gap-4">
+            <span class="font-semibold text-slate">Paid to</span>
+            <span class="font-bold text-onyx">{{ voucher.paidTo || 'N/A' }}</span>
+          </div>
+          <div class="flex justify-between gap-4">
+            <span class="font-semibold text-slate">Amount</span>
+            <span class="font-bold text-onyx">{{ formattedAmount }}</span>
+          </div>
+        </div>
+        <p v-if="printError" class="rounded-xl border border-ruby bg-ruby-light px-4 py-3 text-sm font-semibold text-ruby">
+          {{ printError }}
+        </p>
+      </div>
+
+      <template #footer>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <AppButton
+            btn-theme="outline"
+            type="button"
+            class="w-full justify-center"
+            :disabled="savingSummaryRecord"
+            @click="showPrintConfirmation = false"
+          >
+            Cancel
+          </AppButton>
+          <AppButton
+            btn-theme="primary"
+            type="button"
+            class="w-full justify-center"
+            :disabled="savingSummaryRecord"
+            @click="confirmPrintVoucher"
+          >
+            <Icon
+              :icon="savingSummaryRecord ? 'feather:loader' : 'feather:printer'"
+              class="h-4 w-4"
+              :class="{ 'animate-spin': savingSummaryRecord }"
+            />
+            {{ savingSummaryRecord ? 'Saving' : 'Save & Print' }}
+          </AppButton>
+        </div>
+      </template>
+    </AppModal>
+
     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div>
         <p class="text-[11px] font-semibold uppercase tracking-[0.28em] text-smoke">Payables</p>

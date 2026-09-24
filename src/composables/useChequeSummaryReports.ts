@@ -153,6 +153,25 @@ export function useChequeSummaryReports(options: { autoLoad?: boolean } = {}) {
     return { ok: true, error: '', data: result.data ? mapApiRecord(result.data) : null }
   }
 
+  async function deleteRecord(id: number) {
+    saving.value = true
+    errorMessage.value = ''
+
+    const result = await request(`/wellness/chequeSummaryRecords/${id}`, {
+      method: 'DELETE',
+    })
+
+    saving.value = false
+
+    if (!result.ok) {
+      errorMessage.value = result.error || 'Unable to delete cheque summary record.'
+      return false
+    }
+
+    await loadRecords()
+    return true
+  }
+
   function resetFilters() {
     filters.kind = 'all'
     filters.dateFrom = ''
@@ -164,6 +183,7 @@ export function useChequeSummaryReports(options: { autoLoad?: boolean } = {}) {
   if (options.autoLoad) void loadRecords()
 
   return {
+    deleteRecord,
     errorMessage,
     filteredRecords,
     filters,

@@ -1,12 +1,22 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed } from 'vue'
-import { AppButton, AppInput } from '@/components/app'
+import { computed, ref } from 'vue'
+import { AppButton, AppInput, AppModal } from '@/components/app'
 import { useChequeSummaryReports, type ChequeSummaryRecord } from '@/composables'
-import { formatDate, formatDateTime, formatMoney } from '@/utils'
+import { formatDateTime, formatMoney } from '@/utils'
 
-const { errorMessage, filteredRecords, filters, loadRecords, loading, resetFilters, summary } =
-  useChequeSummaryReports({ autoLoad: true })
+const {
+  deleteRecord,
+  errorMessage,
+  filteredRecords,
+  filters,
+  loadRecords,
+  loading,
+  resetFilters,
+  saving,
+  summary,
+} = useChequeSummaryReports({ autoLoad: true })
+const recordToDelete = ref<ChequeSummaryRecord | null>(null)
 
 const typeOptions = [
   { value: 'all', label: 'All documents' },
@@ -41,18 +51,77 @@ function documentLabel(record: ChequeSummaryRecord) {
   return record.kind === 'voucher' ? 'Voucher' : 'Cheque'
 }
 
-function primaryNumber(record: ChequeSummaryRecord) {
-  return record.referenceNo || record.checkNo || 'N/A'
-}
-
 function secondaryDetail(record: ChequeSummaryRecord) {
   if (record.kind === 'voucher') return record.preparedBy || record.accountName || 'N/A'
   return record.bankName || record.accountName || 'N/A'
+}
+
+async function confirmDeleteRecord() {
+  if (!recordToDelete.value) return
+
+  const deleted = await deleteRecord(recordToDelete.value.id)
+  if (deleted) recordToDelete.value = null
 }
 </script>
 
 <template>
   <div class="space-y-6">
+    <AppModal
+      :show="Boolean(recordToDelete)"
+      title="Delete Record?"
+      subtitle="Cheque Summary"
+      max-width="sm:max-w-lg"
+      @close="recordToDelete = null"
+    >
+      <div class="space-y-4 px-6 py-5">
+        <p class="text-sm leading-6 text-slate">
+          This will remove the selected voucher or cheque summary record.
+        </p>
+        <div v-if="recordToDelete" class="grid gap-3 rounded-2xl border border-[#ded7cc] bg-[#fbf7ef] p-4 text-sm">
+          <div class="flex justify-between gap-4">
+            <span class="font-semibold text-slate">Type</span>
+            <span class="font-bold text-onyx">{{ documentLabel(recordToDelete) }}</span>
+          </div>
+          <div class="flex justify-between gap-4">
+            <span class="font-semibold text-slate">Cheque no.</span>
+            <span class="font-bold text-onyx">{{ recordToDelete.checkNo || 'N/A' }}</span>
+          </div>
+          <div class="flex justify-between gap-4">
+            <span class="font-semibold text-slate">Payee</span>
+            <span class="font-bold text-onyx">{{ recordToDelete.payee || 'N/A' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <AppButton
+            btn-theme="outline"
+            type="button"
+            class="w-full justify-center"
+            :disabled="saving"
+            @click="recordToDelete = null"
+          >
+            Cancel
+          </AppButton>
+          <AppButton
+            btn-theme="danger"
+            type="button"
+            class="w-full justify-center"
+            :disabled="saving"
+            @click="confirmDeleteRecord"
+          >
+            <Icon
+              :icon="saving ? 'feather:loader' : 'feather:trash-2'"
+              class="h-4 w-4"
+              :class="{ 'animate-spin': saving }"
+            />
+            {{ saving ? 'Deleting' : 'Delete' }}
+          </AppButton>
+        </div>
+      </template>
+    </AppModal>
+
     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div>
         <p class="text-[11px] font-semibold uppercase tracking-[0.28em] text-smoke">Cheque</p>
@@ -114,7 +183,7 @@ function secondaryDetail(record: ChequeSummaryRecord) {
           </select>
         </label>
 
-        <AppInput v-model="filters.search" label="Search" placeholder="Payee, ref no., bank" />
+        <AppInput v-model="filters.search" label="Search" placeholder="Payee, ref no., cheque no., bank" />
         <AppInput v-model="filters.dateFrom" type="date" label="Printed from" />
         <AppInput v-model="filters.dateTo" type="date" label="Printed to" />
       </div>
@@ -132,16 +201,17 @@ function secondaryDetail(record: ChequeSummaryRecord) {
       </div>
 
       <div v-else class="overflow-auto">
-        <table class="w-full min-w-[900px] text-left text-sm">
+        <table class="w-full min-w-[980px] text-left text-sm">
           <thead class="bg-[#fbf8f1] text-xs uppercase tracking-[0.16em] text-slate">
             <tr>
               <th class="px-5 py-3">Printed</th>
               <th class="px-5 py-3">Type</th>
-              <th class="px-5 py-3">No.</th>
+              <th class="px-5 py-3">Reference No.</th>
+              <th class="px-5 py-3">Cheque No.</th>
               <th class="px-5 py-3">Payee</th>
-              <th class="px-5 py-3">Document Date</th>
               <th class="px-5 py-3 text-right">Amount</th>
               <th class="px-5 py-3">Detail</th>
+              <th class="px-5 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-pebble">
@@ -167,13 +237,26 @@ function secondaryDetail(record: ChequeSummaryRecord) {
                   {{ documentLabel(record) }}
                 </span>
               </td>
-              <td class="px-5 py-4 font-bold text-onyx">{{ primaryNumber(record) }}</td>
+              <td class="px-5 py-4 font-bold text-onyx">{{ record.referenceNo || 'N/A' }}</td>
+              <td class="px-5 py-4 font-bold text-onyx">{{ record.checkNo || 'N/A' }}</td>
               <td class="px-5 py-4 text-onyx">{{ record.payee || 'N/A' }}</td>
-              <td class="px-5 py-4 text-slate">{{ formatDate(record.documentDate) }}</td>
               <td class="px-5 py-4 text-right font-bold text-onyx">
                 {{ formatMoney(record.amount) }}
               </td>
               <td class="px-5 py-4 text-slate">{{ secondaryDetail(record) }}</td>
+              <td class="px-5 py-4">
+                <div class="flex justify-end">
+                  <button
+                    type="button"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-pebble bg-white text-slate transition hover:border-ruby hover:text-ruby"
+                    aria-label="Delete summary record"
+                    title="Delete summary record"
+                    @click="recordToDelete = record"
+                  >
+                    <Icon icon="feather:trash-2" class="h-4 w-4" />
+                  </button>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>

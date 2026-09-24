@@ -79,6 +79,8 @@ const cheque = reactive({
 })
 const showGuides = ref(true)
 const saveMessage = ref('')
+const showPrintConfirmation = ref(false)
+const printError = ref('')
 const pendingCalibrationAction = ref<CalibrationAction | null>(null)
 const selectedBankKey = ref(normalizeChequeBankKey(DEFAULT_CHEQUE_BANK_NAME))
 const bankNameDraft = ref(DEFAULT_CHEQUE_BANK_NAME)
@@ -91,7 +93,7 @@ const {
   updateTemplate,
   deleteTemplate,
 } = useChequeTemplates(defaultBpiFields)
-const { recordChequeSummaryEvent } = useChequeSummaryReports()
+const { recordChequeSummaryEvent, saving: savingSummaryRecord } = useChequeSummaryReports()
 
 const currentBankName = computed(() => bpiTemplate.bankName.trim() || DEFAULT_CHEQUE_BANK_NAME)
 const calibrationConfirmationTitle = computed(() =>
@@ -344,7 +346,14 @@ function datePartStyle(key: ChequeDatePartKey) {
 }
 
 function printCheque() {
-  recordChequeSummaryEvent({
+  printError.value = ''
+  showPrintConfirmation.value = true
+}
+
+async function confirmPrintCheque() {
+  printError.value = ''
+
+  const result = await recordChequeSummaryEvent({
     kind: 'cheque',
     title: `${currentBankName.value} Cheque`,
     documentDate: cheque.date,
@@ -354,6 +363,16 @@ function printCheque() {
     accountName: cheque.accountName,
   })
 
+  if (!result.ok) {
+    printError.value = result.error
+    return
+  }
+
+  showPrintConfirmation.value = false
+  executePrintCheque()
+}
+
+function executePrintCheque() {
   const chequeSheet = document.querySelector('.cheque-sheet')
   if (!chequeSheet) {
     window.print()
@@ -498,6 +517,68 @@ onMounted(() => {
           >
             <Icon icon="feather:save" class="h-4 w-4" />
             {{ savingCalibration ? 'Saving' : calibrationConfirmationLabel }}
+          </AppButton>
+        </div>
+      </template>
+    </AppModal>
+
+    <AppModal
+      :show="showPrintConfirmation"
+      title="Print Cheque?"
+      subtitle="Cheque Summary"
+      max-width="sm:max-w-lg"
+      @close="showPrintConfirmation = false"
+    >
+      <div class="space-y-4 px-6 py-5">
+        <p class="text-sm leading-6 text-slate">
+          This will save this cheque in the cheque summary, then open the print dialog.
+        </p>
+        <div class="grid gap-3 rounded-2xl border border-[#ded7cc] bg-[#fbf7ef] p-4 text-sm">
+          <div class="flex justify-between gap-4">
+            <span class="font-semibold text-slate">Bank</span>
+            <span class="font-bold text-onyx">{{ currentBankName }}</span>
+          </div>
+          <div class="flex justify-between gap-4">
+            <span class="font-semibold text-slate">Payee</span>
+            <span class="font-bold text-onyx">{{ cheque.payee || 'N/A' }}</span>
+          </div>
+          <div class="flex justify-between gap-4">
+            <span class="font-semibold text-slate">Amount</span>
+            <span class="font-bold text-onyx">{{ formattedAmount }}</span>
+          </div>
+        </div>
+        <p
+          v-if="printError"
+          class="rounded-xl border border-ruby bg-ruby-light px-4 py-3 text-sm font-semibold text-ruby"
+        >
+          {{ printError }}
+        </p>
+      </div>
+
+      <template #footer>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <AppButton
+            btn-theme="outline"
+            type="button"
+            class="w-full justify-center"
+            :disabled="savingSummaryRecord"
+            @click="showPrintConfirmation = false"
+          >
+            Cancel
+          </AppButton>
+          <AppButton
+            btn-theme="primary"
+            type="button"
+            class="w-full justify-center"
+            :disabled="savingSummaryRecord"
+            @click="confirmPrintCheque"
+          >
+            <Icon
+              :icon="savingSummaryRecord ? 'feather:loader' : 'feather:printer'"
+              class="h-4 w-4"
+              :class="{ 'animate-spin': savingSummaryRecord }"
+            />
+            {{ savingSummaryRecord ? 'Saving' : 'Save & Print' }}
           </AppButton>
         </div>
       </template>
