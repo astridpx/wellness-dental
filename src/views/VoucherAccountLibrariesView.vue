@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, onMounted, reactive, ref } from 'vue'
-import { AppButton, AppInput } from '@/components/app'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { AppButton, AppInput, AppPagination } from '@/components/app'
 import {
   useVoucherAccountLibraries,
   type VoucherAccountCode,
@@ -15,6 +15,8 @@ type LibraryDraft = {
   code: string
   title: string
 }
+
+const PAGE_SIZE = 5
 
 const { accountCodes, costCenters, deleteItem, loadLibraries, loading, saveItem, saving } =
   useVoucherAccountLibraries()
@@ -34,11 +36,26 @@ const drafts = reactive<Record<LibraryKind, LibraryDraft>>({
     title: '',
   },
 })
+const currentPages = reactive<Record<LibraryKind, number>>({
+  accountCode: 1,
+  costCenter: 1,
+})
 
 const activeDraft = computed(() => drafts[activeKind.value])
 const activeRows = computed(() =>
   activeKind.value === 'accountCode' ? accountCodes.value : costCenters.value,
 )
+const activePage = computed({
+  get: () => currentPages[activeKind.value],
+  set: (page: number) => {
+    currentPages[activeKind.value] = page
+  },
+})
+const totalPages = computed(() => Math.ceil(activeRows.value.length / PAGE_SIZE))
+const paginatedRows = computed(() => {
+  const start = (activePage.value - 1) * PAGE_SIZE
+  return activeRows.value.slice(start, start + PAGE_SIZE)
+})
 const activeLabels = computed(() =>
   activeKind.value === 'accountCode'
     ? {
@@ -68,6 +85,20 @@ const formCodeLabel = computed(() =>
   activeKind.value === 'accountCode'
     ? 'Account code (assigned on save)'
     : 'Cost center (assigned on save)',
+)
+
+watch(
+  [() => accountCodes.value.length, () => costCenters.value.length],
+  ([accountCodeCount, costCenterCount]) => {
+    currentPages.accountCode = Math.min(
+      currentPages.accountCode,
+      Math.max(1, Math.ceil(accountCodeCount / PAGE_SIZE)),
+    )
+    currentPages.costCenter = Math.min(
+      currentPages.costCenter,
+      Math.max(1, Math.ceil(costCenterCount / PAGE_SIZE)),
+    )
+  },
 )
 
 function resetFeedback() {
@@ -122,6 +153,7 @@ async function removeRow(row: VoucherAccountCode | VoucherCostCenter) {
 
 onMounted(async () => {
   const result = await loadLibraries()
+  console.log(result)
   if (!result.ok) error.value = result.error
 })
 </script>
@@ -247,7 +279,7 @@ onMounted(async () => {
               </tr>
             </thead>
             <tbody class="divide-y divide-pebble">
-              <tr v-for="row in activeRows" :key="row.id" class="transition hover:bg-[#fffaf0]">
+              <tr v-for="row in paginatedRows" :key="row.id" class="transition hover:bg-[#fffaf0]">
                 <td class="px-5 py-4 font-bold text-onyx">{{ row.code }}</td>
                 <td class="px-5 py-4 text-onyx">{{ row.title }}</td>
                 <td class="px-5 py-4 text-slate">{{ formatDate(row.date) }}</td>
@@ -276,6 +308,16 @@ onMounted(async () => {
               </tr>
             </tbody>
           </table>
+
+          <div v-if="totalPages > 1" class="border-t border-pebble px-5 py-4">
+            <AppPagination
+              :total-entries="activeRows.length"
+              :total-pages="totalPages"
+              :current-page="activePage"
+              :per-page="PAGE_SIZE"
+              @update-pg-num="activePage = $event"
+            />
+          </div>
         </div>
       </section>
     </div>
