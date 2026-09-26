@@ -18,7 +18,7 @@ type LibraryDraft = {
 
 const PAGE_SIZE = 5
 
-const { accountCodes, costCenters, deleteItem, loadLibraries, loading, saveItem, saving } =
+const { accountCodes, costCenters, deleteItem, filters, loadLibraries, loading, saveItem, saving } =
   useVoucherAccountLibraries()
 
 const activeKind = ref<LibraryKind>('accountCode')
@@ -45,6 +45,23 @@ const activeDraft = computed(() => drafts[activeKind.value])
 const activeRows = computed(() =>
   activeKind.value === 'accountCode' ? accountCodes.value : costCenters.value,
 )
+const activeSearchCode = computed({
+  get: () => (activeKind.value === 'accountCode' ? filters.accountCode : filters.costCenter),
+  set: (value: string) => {
+    if (activeKind.value === 'accountCode') filters.accountCode = value
+    else filters.costCenter = value
+  },
+})
+const activeSearchTitle = computed({
+  get: () => (activeKind.value === 'accountCode' ? filters.accountTitle : filters.costCenterTitle),
+  set: (value: string) => {
+    if (activeKind.value === 'accountCode') filters.accountTitle = value
+    else filters.costCenterTitle = value
+  },
+})
+const hasActiveSearch = computed(() =>
+  Boolean(activeSearchCode.value.trim() || activeSearchTitle.value.trim()),
+)
 const activePage = computed({
   get: () => currentPages[activeKind.value],
   set: (page: number) => {
@@ -63,12 +80,14 @@ const activeLabels = computed(() =>
         code: 'Account code',
         title: 'Account title',
         empty: 'No account codes yet.',
+        emptySearch: 'No matching account codes found.',
       }
     : {
         eyebrow: 'Cost Centers',
         code: 'Cost center',
         title: 'Cost center title',
         empty: 'No cost centers yet.',
+        emptySearch: 'No matching cost centers found.',
       },
 )
 const isEditing = computed(() => Boolean(activeDraft.value.id))
@@ -100,6 +119,20 @@ watch(
     )
   },
 )
+
+async function applySearch() {
+  resetFeedback()
+  currentPages[activeKind.value] = 1
+
+  const result = await loadLibraries()
+  if (!result.ok) error.value = result.error
+}
+
+async function clearSearch() {
+  activeSearchCode.value = ''
+  activeSearchTitle.value = ''
+  await applySearch()
+}
 
 function resetFeedback() {
   message.value = ''
@@ -252,9 +285,49 @@ onMounted(async () => {
             <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate">
               {{ activeLabels.eyebrow }}
             </p>
-            <p class="mt-1 text-sm text-smoke">{{ activeRows.length }} saved rows</p>
+            <p class="mt-1 text-sm text-smoke">
+              {{ activeRows.length }} {{ hasActiveSearch ? 'matching' : 'saved' }} rows
+            </p>
           </div>
         </div>
+
+        <form
+          class="grid gap-3 border-b border-pebble bg-white px-5 py-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end"
+          @submit.prevent="applySearch"
+        >
+          <AppInput
+            v-model="activeSearchCode"
+            :label="activeLabels.code"
+            :placeholder="`Search ${activeLabels.code.toLowerCase()}`"
+            icon="feather:search"
+            type="search"
+            :disabled="loading"
+          />
+          <AppInput
+            v-model="activeSearchTitle"
+            :label="activeLabels.title"
+            :placeholder="`Search ${activeLabels.title.toLowerCase()}`"
+            icon="feather:search"
+            type="search"
+            :disabled="loading"
+          />
+          <div class="flex flex-wrap gap-2">
+            <AppButton btn-theme="primary" type="submit" :disabled="loading">
+              <Icon icon="feather:search" class="h-4 w-4" />
+              Search
+            </AppButton>
+            <AppButton
+              v-if="hasActiveSearch"
+              btn-theme="outline"
+              type="button"
+              :disabled="loading"
+              @click="clearSearch"
+            >
+              <Icon icon="feather:x" class="h-4 w-4" />
+              Clear
+            </AppButton>
+          </div>
+        </form>
 
         <div
           v-if="loading"
@@ -265,7 +338,7 @@ onMounted(async () => {
         </div>
 
         <div v-else-if="!activeRows.length" class="p-10 text-center text-sm text-slate">
-          {{ activeLabels.empty }}
+          {{ hasActiveSearch ? activeLabels.emptySearch : activeLabels.empty }}
         </div>
 
         <div v-else class="overflow-auto">

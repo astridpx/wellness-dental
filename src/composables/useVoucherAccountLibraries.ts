@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { currentManilaDateInputValue } from '@/utils'
 import { useWellnessApi } from './useWellnessApi'
 
@@ -105,12 +105,30 @@ function mapCostCenter(row: ChequeCostCenterResponse): VoucherCostCenter {
   }
 }
 
+function buildLibraryPath(path: string, query: Record<string, string>) {
+  const params = new URLSearchParams()
+
+  Object.entries(query).forEach(([key, value]) => {
+    const normalizedValue = normalizeText(value)
+    if (normalizedValue) params.set(key, normalizedValue)
+  })
+
+  const queryString = params.toString()
+  return queryString ? `${path}?${queryString}` : path
+}
+
 export function useVoucherAccountLibraries() {
   const { request } = useWellnessApi()
   const loading = ref(false)
   const saving = ref(false)
   const accountCodes = ref<VoucherAccountCode[]>([])
   const costCenters = ref<VoucherCostCenter[]>([])
+  const filters = reactive({
+    accountCode: '',
+    accountTitle: '',
+    costCenter: '',
+    costCenterTitle: '',
+  })
 
   const accountCodeOptions = computed(() =>
     accountCodes.value.map((item) => ({
@@ -138,8 +156,18 @@ export function useVoucherAccountLibraries() {
     loading.value = true
 
     const [accountCodesResult, costCentersResult] = await Promise.all([
-      request<ChequeAccountCodeResponse[]>('/wellness/chequeAccountCodes'),
-      request<ChequeCostCenterResponse[]>('/wellness/chequeCostCenters'),
+      request<ChequeAccountCodeResponse[]>(
+        buildLibraryPath('/wellness/chequeAccountCodes', {
+          accountCode: filters.accountCode,
+          accountTitle: filters.accountTitle,
+        }),
+      ),
+      request<ChequeCostCenterResponse[]>(
+        buildLibraryPath('/wellness/chequeCostCenters', {
+          costCenter: filters.costCenter,
+          costCenterTitle: filters.costCenterTitle,
+        }),
+      ),
     ])
 
     loading.value = false
@@ -267,6 +295,7 @@ export function useVoucherAccountLibraries() {
     accountCodeOptions,
     costCenters,
     costCenterOptions,
+    filters,
     loading,
     nextAccountCode,
     saving,
