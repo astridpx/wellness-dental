@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { AppButton, AppInput, AppPagination } from '@/components/app'
+import { AppButton, AppDialog, AppInput, AppPagination } from '@/components/app'
 import {
   useVoucherAccountLibraries,
   type VoucherAccountCode,
@@ -11,6 +11,10 @@ import { formatDate } from '@/utils'
 
 type LibraryKind = 'accountCode' | 'costCenter'
 type LibraryDraft = {
+  title: string
+}
+type LibraryActionTarget = {
+  kind: LibraryKind
   id: string
   code: string
   title: string
@@ -24,15 +28,19 @@ const { accountCodes, costCenters, deleteItem, filters, loadLibraries, loading, 
 const activeKind = ref<LibraryKind>('accountCode')
 const message = ref('')
 const error = ref('')
+const editTarget = ref<LibraryActionTarget | null>(null)
+const deleteTarget = ref<LibraryActionTarget | null>(null)
+const editError = ref('')
+const deleteError = ref('')
+const editDraft = reactive({
+  code: '',
+  title: '',
+})
 const drafts = reactive<Record<LibraryKind, LibraryDraft>>({
   accountCode: {
-    id: '',
-    code: '',
     title: '',
   },
   costCenter: {
-    id: '',
-    code: '',
     title: '',
   },
 })
@@ -90,20 +98,18 @@ const activeLabels = computed(() =>
         emptySearch: 'No matching cost centers found.',
       },
 )
-const isEditing = computed(() => Boolean(activeDraft.value.id))
-const formCode = computed({
-  get() {
-    if (!isEditing.value) return ''
-    return activeDraft.value.code
-  },
-  set(value: string) {
-    activeDraft.value.code = value
-  },
-})
-const formCodeLabel = computed(() =>
-  activeKind.value === 'accountCode'
-    ? 'Account code (assigned on save)'
-    : 'Cost center (assigned on save)',
+const editLabels = computed(() =>
+  editTarget.value?.kind === 'costCenter'
+    ? {
+        dialogTitle: 'Edit Cost Center',
+        code: 'Cost center',
+        title: 'Cost center title',
+      }
+    : {
+        dialogTitle: 'Edit Account Code',
+        code: 'Account code',
+        title: 'Account title',
+      },
 )
 
 watch(
@@ -140,24 +146,57 @@ function resetFeedback() {
 }
 
 function resetDraft(kind: LibraryKind = activeKind.value) {
-  drafts[kind].id = ''
-  drafts[kind].code = ''
   drafts[kind].title = ''
 }
 
-function editRow(row: VoucherAccountCode | VoucherCostCenter) {
+function createActionTarget(row: VoucherAccountCode | VoucherCostCenter): LibraryActionTarget {
+  return {
+    kind: activeKind.value,
+    id: row.id,
+    code: row.code,
+    title: row.title,
+  }
+}
+
+function openEditModal(row: VoucherAccountCode | VoucherCostCenter) {
   resetFeedback()
-  activeDraft.value.id = row.id
-  activeDraft.value.code = row.code
-  activeDraft.value.title = row.title
+  editError.value = ''
+  editTarget.value = createActionTarget(row)
+  editDraft.code = row.code
+  editDraft.title = row.title
+}
+
+function closeEditModal() {
+  if (saving.value) return
+  editTarget.value = null
+  editError.value = ''
+}
+
+async function confirmEdit() {
+  const target = editTarget.value
+  if (!target) return
+
+  editError.value = ''
+  const result = await saveItem(target.kind, {
+    id: target.id,
+    code: editDraft.code,
+    title: editDraft.title,
+  })
+
+  if (!result.ok) {
+    editError.value = result.error
+    return
+  }
+
+  editTarget.value = null
+  message.value = 'Row updated.'
 }
 
 async function submitForm() {
   resetFeedback()
 
   const result = await saveItem(activeKind.value, {
-    id: activeDraft.value.id || undefined,
-    code: formCode.value,
+    code: '',
     title: activeDraft.value.title,
   })
 
@@ -166,21 +205,35 @@ async function submitForm() {
     return
   }
 
-  message.value = isEditing.value ? 'Row updated.' : 'Row added.'
+  message.value = 'Row added.'
   resetDraft()
 }
 
-async function removeRow(row: VoucherAccountCode | VoucherCostCenter) {
+function openDeleteModal(row: VoucherAccountCode | VoucherCostCenter) {
   resetFeedback()
+  deleteError.value = ''
+  deleteTarget.value = createActionTarget(row)
+}
 
-  const result = await deleteItem(activeKind.value, row.id)
+function closeDeleteModal() {
+  if (saving.value) return
+  deleteTarget.value = null
+  deleteError.value = ''
+}
+
+async function confirmDelete() {
+  const target = deleteTarget.value
+  if (!target) return
+
+  deleteError.value = ''
+  const result = await deleteItem(target.kind, target.id)
 
   if (!result.ok) {
-    error.value = result.error
+    deleteError.value = result.error
     return
   }
 
-  if (activeDraft.value.id === row.id) resetDraft()
+  deleteTarget.value = null
   message.value = 'Row deleted.'
 }
 
@@ -192,6 +245,86 @@ onMounted(async () => {
 </script>
 
 <template>
+  <AppDialog
+    :title="editLabels.dialogTitle"
+    :show="Boolean(editTarget)"
+    eyebrow="Library Update"
+    icon="✎"
+    :disabled="saving"
+    :confirm-label="saving ? 'Saving changes...' : 'Save Changes'"
+    @close="closeEditModal"
+    @confirm="confirmEdit"
+  >
+    <template #dialog-content>
+      <div class="space-y-5">
+        <div
+          class="rounded-[1.5rem] border border-tangerine/15 bg-[linear-gradient(135deg,#fff8ef_0%,#ffffff_100%)] p-5"
+        >
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-tangerine">
+            Edit library row
+          </p>
+          <p class="mt-2 text-sm leading-6 text-slate">
+            Update the title for this {{ editLabels.code.toLowerCase() }}. The assigned code cannot
+            be changed.
+          </p>
+        </div>
+
+        <div
+          v-if="editError"
+          class="rounded-2xl border border-ruby bg-ruby-light px-4 py-3 text-sm font-semibold text-ruby"
+        >
+          {{ editError }}
+        </div>
+
+        <div class="grid gap-4">
+          <AppInput v-model="editDraft.code" :label="editLabels.code" readonly />
+          <AppInput v-model="editDraft.title" :label="editLabels.title" required />
+        </div>
+      </div>
+    </template>
+  </AppDialog>
+
+  <AppDialog
+    :title="deleteTarget?.kind === 'costCenter' ? 'Delete Cost Center' : 'Delete Account Code'"
+    :show="Boolean(deleteTarget)"
+    eyebrow="Destructive Action"
+    icon="!"
+    :disabled="saving"
+    :confirm-label="saving ? 'Deleting row...' : 'Delete Row'"
+    @close="closeDeleteModal"
+    @confirm="confirmDelete"
+  >
+    <template #dialog-content>
+      <div class="space-y-4">
+        <div
+          class="rounded-[1.5rem] border border-ruby/15 bg-[linear-gradient(135deg,#fff4f4_0%,#ffffff_100%)] p-5"
+        >
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-ruby">
+            Delete confirmation
+          </p>
+          <p class="mt-2 text-sm leading-6 text-slate">
+            This will permanently remove the selected row from the account libraries. This action
+            cannot be undone.
+          </p>
+        </div>
+
+        <div
+          v-if="deleteError"
+          class="rounded-2xl border border-ruby bg-ruby-light px-4 py-3 text-sm font-semibold text-ruby"
+        >
+          {{ deleteError }}
+        </div>
+
+        <div v-if="deleteTarget" class="rounded-2xl border border-pebble bg-cloud px-4 py-4">
+          <p class="text-sm font-bold text-onyx">{{ deleteTarget.title }}</p>
+          <p class="mt-1 text-xs uppercase tracking-[0.16em] text-slate">
+            {{ deleteTarget.code }}
+          </p>
+        </div>
+      </div>
+    </template>
+  </AppDialog>
+
   <div class="space-y-6">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div>
@@ -237,12 +370,12 @@ onMounted(async () => {
             class="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-slate"
           >
             <Icon icon="feather:edit-3" class="h-4 w-4" />
-            {{ isEditing ? 'Edit Row' : 'New Row' }}
+            New Row
           </div>
 
           <AppInput
-            v-model="formCode"
-            :label="formCodeLabel"
+            :model-value="''"
+            :label="`${activeLabels.code} (assigned on save)`"
             placeholder="Auto assigned on save"
             readonly
           />
@@ -267,7 +400,7 @@ onMounted(async () => {
                 class="h-4 w-4"
                 :class="{ 'animate-spin': saving }"
               />
-              {{ isEditing ? 'Update Row' : 'Add Row' }}
+              Add Row
             </AppButton>
             <AppButton btn-theme="outline" type="button" @click="resetDraft()">
               <Icon icon="feather:x" class="h-4 w-4" />
@@ -363,7 +496,7 @@ onMounted(async () => {
                       class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-pebble bg-white text-slate transition hover:border-tangerine hover:text-tangerine"
                       aria-label="Edit row"
                       title="Edit row"
-                      @click="editRow(row)"
+                      @click="openEditModal(row)"
                     >
                       <Icon icon="feather:edit-2" class="h-4 w-4" />
                     </button>
@@ -372,7 +505,7 @@ onMounted(async () => {
                       class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-pebble bg-white text-slate transition hover:border-ruby hover:text-ruby"
                       aria-label="Delete row"
                       title="Delete row"
-                      @click="removeRow(row)"
+                      @click="openDeleteModal(row)"
                     >
                       <Icon icon="feather:trash-2" class="h-4 w-4" />
                     </button>

@@ -23,6 +23,14 @@ const props = defineProps({
     type: String,
     default: 'Submit',
   },
+  eyebrow: {
+    type: String,
+    default: 'Create Flow',
+  },
+  icon: {
+    type: String,
+    default: '+',
+  },
 })
 defineEmits(['close', 'confirm'])
 </script>
@@ -74,11 +82,11 @@ defineEmits(['close', 'confirm'])
                   <div
                     class="flex h-12 w-12 items-center justify-center rounded-2xl bg-tangerine-light text-xl text-tangerine shadow-sm"
                   >
-                    +
+                    {{ props.icon }}
                   </div>
                   <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate">
-                      Create Flow
+                      {{ props.eyebrow }}
                     </p>
                     <DialogTitle as="h3" class="text-2xl font-black text-onyx sm:text-3xl">
                       {{ props.title }}
