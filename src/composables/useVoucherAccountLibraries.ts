@@ -23,6 +23,8 @@ type VoucherAccountLibrariesSetting = {
 
 type VoucherAccountLibraryKind = 'accountCode' | 'costCenter'
 
+export const VOUCHER_ACCOUNT_LIBRARY_PAGE_SIZE = 10
+
 type AccountCodeSearchParams = {
   accountCode?: string
   accountTitle?: string
@@ -134,6 +136,18 @@ export function useVoucherAccountLibraries() {
     costCenter: '',
     costCenterTitle: '',
   })
+  const currentPages = reactive<Record<VoucherAccountLibraryKind, number>>({
+    accountCode: 1,
+    costCenter: 1,
+  })
+  const totalEntries = reactive<Record<VoucherAccountLibraryKind, number>>({
+    accountCode: 0,
+    costCenter: 0,
+  })
+  const totalPages = reactive<Record<VoucherAccountLibraryKind, number>>({
+    accountCode: 1,
+    costCenter: 1,
+  })
 
   const accountCodeOptions = computed(() =>
     accountCodes.value.map((item) => ({
@@ -193,12 +207,16 @@ export function useVoucherAccountLibraries() {
         buildLibraryPath('/wellness/chequeAccountCodes', {
           accountCode: filters.accountCode,
           accountTitle: filters.accountTitle,
+          page: String(currentPages.accountCode),
+          perPage: String(VOUCHER_ACCOUNT_LIBRARY_PAGE_SIZE),
         }),
       ),
       request<ChequeCostCenterResponse[]>(
         buildLibraryPath('/wellness/chequeCostCenters', {
           costCenter: filters.costCenter,
           costCenterTitle: filters.costCenterTitle,
+          page: String(currentPages.costCenter),
+          perPage: String(VOUCHER_ACCOUNT_LIBRARY_PAGE_SIZE),
         }),
       ),
     ])
@@ -223,6 +241,39 @@ export function useVoucherAccountLibraries() {
       accountCodes: (accountCodesResult.data || []).map(mapAccountCode),
       costCenters: (costCentersResult.data || []).map(mapCostCenter),
     })
+
+    totalEntries.accountCode = Number(
+      accountCodesResult.metadata?.totalEntries ?? accountCodes.value.length,
+    )
+    totalEntries.costCenter = Number(
+      costCentersResult.metadata?.totalEntries ?? costCenters.value.length,
+    )
+    totalPages.accountCode = Math.max(
+      1,
+      Number(
+        accountCodesResult.metadata?.totalPages ??
+          Math.ceil(totalEntries.accountCode / VOUCHER_ACCOUNT_LIBRARY_PAGE_SIZE),
+      ),
+    )
+    totalPages.costCenter = Math.max(
+      1,
+      Number(
+        costCentersResult.metadata?.totalPages ??
+          Math.ceil(totalEntries.costCenter / VOUCHER_ACCOUNT_LIBRARY_PAGE_SIZE),
+      ),
+    )
+
+    const accountCodePage = Math.min(currentPages.accountCode, totalPages.accountCode)
+    const costCenterPage = Math.min(currentPages.costCenter, totalPages.costCenter)
+
+    if (
+      accountCodePage !== currentPages.accountCode ||
+      costCenterPage !== currentPages.costCenter
+    ) {
+      currentPages.accountCode = accountCodePage
+      currentPages.costCenter = costCenterPage
+      return loadLibraries()
+    }
 
     return { ok: true, error: '' }
   }
@@ -328,10 +379,13 @@ export function useVoucherAccountLibraries() {
     accountCodeOptions,
     costCenters,
     costCenterOptions,
+    currentPages,
     filters,
     loading,
     nextAccountCode,
     saving,
+    totalEntries,
+    totalPages,
     deleteItem,
     loadAccountCodes,
     loadLibraries,

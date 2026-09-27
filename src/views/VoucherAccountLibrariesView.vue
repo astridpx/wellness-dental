@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { AppButton, AppDialog, AppInput, AppPagination } from '@/components/app'
 import {
   useVoucherAccountLibraries,
+  VOUCHER_ACCOUNT_LIBRARY_PAGE_SIZE,
   type VoucherAccountCode,
   type VoucherCostCenter,
 } from '@/composables'
@@ -20,10 +21,19 @@ type LibraryActionTarget = {
   title: string
 }
 
-const PAGE_SIZE = 5
-
-const { accountCodes, costCenters, deleteItem, filters, loadLibraries, loading, saveItem, saving } =
-  useVoucherAccountLibraries()
+const {
+  accountCodes,
+  costCenters,
+  currentPages,
+  deleteItem,
+  filters,
+  loadLibraries,
+  loading,
+  saveItem,
+  saving,
+  totalEntries,
+  totalPages,
+} = useVoucherAccountLibraries()
 
 const activeKind = ref<LibraryKind>('accountCode')
 const message = ref('')
@@ -44,11 +54,6 @@ const drafts = reactive<Record<LibraryKind, LibraryDraft>>({
     title: '',
   },
 })
-const currentPages = reactive<Record<LibraryKind, number>>({
-  accountCode: 1,
-  costCenter: 1,
-})
-
 const activeDraft = computed(() => drafts[activeKind.value])
 const activeRows = computed(() =>
   activeKind.value === 'accountCode' ? accountCodes.value : costCenters.value,
@@ -76,11 +81,8 @@ const activePage = computed({
     currentPages[activeKind.value] = page
   },
 })
-const totalPages = computed(() => Math.ceil(activeRows.value.length / PAGE_SIZE))
-const paginatedRows = computed(() => {
-  const start = (activePage.value - 1) * PAGE_SIZE
-  return activeRows.value.slice(start, start + PAGE_SIZE)
-})
+const activeTotalEntries = computed(() => totalEntries[activeKind.value])
+const activeTotalPages = computed(() => totalPages[activeKind.value])
 const activeLabels = computed(() =>
   activeKind.value === 'accountCode'
     ? {
@@ -112,23 +114,19 @@ const editLabels = computed(() =>
       },
 )
 
-watch(
-  [() => accountCodes.value.length, () => costCenters.value.length],
-  ([accountCodeCount, costCenterCount]) => {
-    currentPages.accountCode = Math.min(
-      currentPages.accountCode,
-      Math.max(1, Math.ceil(accountCodeCount / PAGE_SIZE)),
-    )
-    currentPages.costCenter = Math.min(
-      currentPages.costCenter,
-      Math.max(1, Math.ceil(costCenterCount / PAGE_SIZE)),
-    )
-  },
-)
-
 async function applySearch() {
   resetFeedback()
   currentPages[activeKind.value] = 1
+
+  const result = await loadLibraries()
+  if (!result.ok) error.value = result.error
+}
+
+async function changePage(page: number) {
+  if (page === activePage.value) return
+
+  activePage.value = page
+  resetFeedback()
 
   const result = await loadLibraries()
   if (!result.ok) error.value = result.error
@@ -239,7 +237,6 @@ async function confirmDelete() {
 
 onMounted(async () => {
   const result = await loadLibraries()
-  console.log(result)
   if (!result.ok) error.value = result.error
 })
 </script>
@@ -419,7 +416,7 @@ onMounted(async () => {
               {{ activeLabels.eyebrow }}
             </p>
             <p class="mt-1 text-sm text-smoke">
-              {{ activeRows.length }} {{ hasActiveSearch ? 'matching' : 'saved' }} rows
+              {{ activeTotalEntries }} {{ hasActiveSearch ? 'matching' : 'saved' }} rows
             </p>
           </div>
         </div>
@@ -485,7 +482,7 @@ onMounted(async () => {
               </tr>
             </thead>
             <tbody class="divide-y divide-pebble">
-              <tr v-for="row in paginatedRows" :key="row.id" class="transition hover:bg-[#fffaf0]">
+              <tr v-for="row in activeRows" :key="row.id" class="transition hover:bg-[#fffaf0]">
                 <td class="px-5 py-4 font-bold text-onyx">{{ row.code }}</td>
                 <td class="px-5 py-4 text-onyx">{{ row.title }}</td>
                 <td class="px-5 py-4 text-slate">{{ formatDate(row.date) }}</td>
@@ -515,13 +512,13 @@ onMounted(async () => {
             </tbody>
           </table>
 
-          <div v-if="totalPages > 1" class="border-t border-pebble px-5 py-4">
+          <div v-if="activeTotalPages > 1" class="border-t border-pebble px-5 py-4">
             <AppPagination
-              :total-entries="activeRows.length"
-              :total-pages="totalPages"
+              :total-entries="activeTotalEntries"
+              :total-pages="activeTotalPages"
               :current-page="activePage"
-              :per-page="PAGE_SIZE"
-              @update-pg-num="activePage = $event"
+              :per-page="VOUCHER_ACCOUNT_LIBRARY_PAGE_SIZE"
+              @update-pg-num="changePage"
             />
           </div>
         </div>
