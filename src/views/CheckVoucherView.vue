@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { AppButton, AppInput, AppModal, AppSearchSelect } from '@/components/app'
 import {
   useApprovalNumberGenerator,
@@ -71,9 +71,11 @@ const { users, loading: loadingUsers } = useUsersList()
 const {
   accountCodes,
   costCenters,
+  loadAccountCodes,
   loadLibraries,
   loading: loadingAccountLibraries,
 } = useVoucherAccountLibraries()
+let accountTitleSearchTimeout: ReturnType<typeof setTimeout> | undefined
 
 const amount = computed(() =>
   rows.value.reduce((total, row) => total + parsePlainAmount(row.debit), 0),
@@ -170,6 +172,14 @@ function selectAccountCode(row: VoucherRow, value: string | number | null) {
   refreshAccountTitle(row)
 }
 
+function searchAccountTitles(value: string) {
+  if (accountTitleSearchTimeout) clearTimeout(accountTitleSearchTimeout)
+
+  accountTitleSearchTimeout = setTimeout(() => {
+    void loadAccountCodes({ accountTitle: value })
+  }, 300)
+}
+
 function selectCostCenter(row: VoucherRow, value: string | number | null) {
   row.costCenter = value == null ? '' : String(value)
 
@@ -233,6 +243,10 @@ onMounted(() => {
     void generateReferenceNo()
   }
 })
+
+onBeforeUnmount(() => {
+  if (accountTitleSearchTimeout) clearTimeout(accountTitleSearchTimeout)
+})
 </script>
 
 <template>
@@ -262,7 +276,10 @@ onMounted(() => {
             <span class="font-bold text-onyx">{{ formattedAmount }}</span>
           </div>
         </div>
-        <p v-if="printError" class="rounded-xl border border-ruby bg-ruby-light px-4 py-3 text-sm font-semibold text-ruby">
+        <p
+          v-if="printError"
+          class="rounded-xl border border-ruby bg-ruby-light px-4 py-3 text-sm font-semibold text-ruby"
+        >
           {{ printError }}
         </p>
       </div>
@@ -417,6 +434,7 @@ onMounted(() => {
                 empty-text="No account codes found."
                 :loading="loadingAccountLibraries"
                 @update:model-value="selectAccountCode(row, $event)"
+                @update:search="searchAccountTitles"
               />
               <AppSearchSelect
                 v-model="row.costCenter"

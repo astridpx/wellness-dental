@@ -23,6 +23,11 @@ type VoucherAccountLibrariesSetting = {
 
 type VoucherAccountLibraryKind = 'accountCode' | 'costCenter'
 
+type AccountCodeSearchParams = {
+  accountCode?: string
+  accountTitle?: string
+}
+
 type ChequeAccountCodeResponse = {
   accountCode: number
   accountTitle: string
@@ -145,11 +150,39 @@ export function useVoucherAccountLibraries() {
     })),
   )
   const nextAccountCode = computed(() => nextNumericCode(accountCodes.value))
+  let accountCodeRequestId = 0
 
   function applyLibraries(nextLibraries: VoucherAccountLibrariesSetting) {
     const normalized = normalizeLibraries(nextLibraries)
     accountCodes.value = normalized.accountCodes
     costCenters.value = normalized.costCenters
+  }
+
+  async function loadAccountCodes(searchParams: AccountCodeSearchParams = {}) {
+    const requestId = ++accountCodeRequestId
+    loading.value = true
+
+    const result = await request<ChequeAccountCodeResponse[]>(
+      buildLibraryPath('/wellness/chequeAccountCodes', {
+        accountCode: searchParams.accountCode || '',
+        accountTitle: searchParams.accountTitle || '',
+      }),
+    )
+
+    if (requestId === accountCodeRequestId) {
+      loading.value = false
+
+      if (result.ok) {
+        accountCodes.value = normalizeLibraries({
+          accountCodes: (result.data || []).map(mapAccountCode),
+        }).accountCodes
+      }
+    }
+
+    return {
+      ok: result.ok,
+      error: result.ok ? '' : result.error || 'Unable to load account codes.',
+    }
   }
 
   async function loadLibraries() {
@@ -300,6 +333,7 @@ export function useVoucherAccountLibraries() {
     nextAccountCode,
     saving,
     deleteItem,
+    loadAccountCodes,
     loadLibraries,
     saveItem,
   }
