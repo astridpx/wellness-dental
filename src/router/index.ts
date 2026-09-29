@@ -5,6 +5,7 @@ import DashboardView from '@/views/DashboardView.vue'
 import DentalAvailmentsView from '@/views/DentalAvailmentsView.vue'
 import DentalAvailmentHistoryView from '@/views/DentalAvailmentHistoryView.vue'
 import BillMarkingView from '@/views/BillMarkingView.vue'
+import BillingStatementView from '@/views/BillingStatementView.vue'
 import DentistPaymentMarkingView from '@/views/DentistPaymentMarkingView.vue'
 import LoginView from '@/views/LoginView.vue'
 import ReportsView from '@/views/ReportsView.vue'
@@ -398,6 +399,16 @@ const router = createRouter({
         title: 'Setup Library',
         icon: 'feather:sliders',
         navItem: [true, { visibleTo: ['superAdmin', 'admin', 'auditor', 'regUser'] }],
+      },
+    },
+    {
+      path: '/billing-statement',
+      name: 'billingStatement',
+      component: BillingStatementView,
+      meta: {
+        title: 'Billing Statement',
+        icon: 'feather:receipt',
+        navItem: [true, { visibleTo: ['superAdmin'] }],
       },
     },
     {

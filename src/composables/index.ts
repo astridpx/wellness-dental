@@ -1,5 +1,6 @@
 export * from './useAuth'
 export * from './useBusinessPartners'
+export * from './useBillingStatements'
 export * from './useFile'
 export * from './useNavigation'
 export * from './useBusinessPartnerUploads'

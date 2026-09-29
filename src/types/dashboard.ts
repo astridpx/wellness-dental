@@ -5,6 +5,10 @@ export type OverviewCard = {
   tone: string
   icon: string
   loading: boolean
+  alert?: boolean
+  route?: string
+  actionLabel?: string
+  valueClass?: string
 }
 
 export type ActivityItem = {

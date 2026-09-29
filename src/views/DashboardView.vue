@@ -4,12 +4,20 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { AppStatValue, AppTable } from '@/components/app'
 import { APP_PER_PAGE } from '@/constants/app'
-import { useAuth, useDentists, usePlans, useWellnessApi } from '@/composables'
+import { useAuth, useBillingStatements, useDentists, usePlans, useWellnessApi } from '@/composables'
 import type { ActivityItem, DirectoryRow, OverviewCard, SummaryEntityResponse } from '@/types'
+import {
+  MONTHLY_BILLING_TOTAL,
+  formatBillingPeriod,
+  getCurrentBillingPeriod,
+  type BillingStatement,
+} from '@/utils/billing'
+import { formatMoney } from '@/utils/format'
 
 const router = useRouter()
 const { getStoredRoles } = useAuth()
 const { request } = useWellnessApi()
+const { fetchBillingStatement, loadingBillingStatements } = useBillingStatements()
 
 const currentPage = ref(1)
 const perPage = ref(APP_PER_PAGE)
@@ -27,10 +35,13 @@ const canViewPartnerBatches = computed(() =>
 const canViewBusinessPartners = computed(() =>
   roles.value.some((role) => ['superAdmin', 'admin', 'regUser'].includes(role)),
 )
+const canViewBilling = computed(() => roles.value.includes('superAdmin'))
 
 const usersCount = ref(0)
 const partnerBatchCount = ref(0)
 const businessPartnerCount = ref(0)
+const currentBillingPeriod = ref(getCurrentBillingPeriod())
+const currentBillingStatement = ref<BillingStatement | null>(null)
 
 const loadingUsersCount = ref(false)
 const loadingPartnerBatchCount = ref(false)
@@ -41,6 +52,11 @@ function formatDashboardCount(value: number) {
   if (!Number.isFinite(normalized)) return '0'
   if (normalized < 10000) return String(normalized)
   return `${Math.floor(normalized / 1000)}K +`
+}
+
+function formatOverviewCardValue(value: number | string) {
+  if (typeof value === 'string') return value
+  return formatDashboardCount(Number(value || 0))
 }
 
 const accessibleModuleCount = computed(() => {
@@ -62,6 +78,29 @@ const trackedRecordTotal = computed(() => {
 
   return total
 })
+
+const billingPeriodLabel = computed(() => formatBillingPeriod(currentBillingPeriod.value))
+const currentBillingPaid = computed(() => Boolean(currentBillingStatement.value?.isPaid))
+const currentBillingTotal = computed(
+  () => currentBillingStatement.value?.totalAmount || MONTHLY_BILLING_TOTAL,
+)
+
+const billingOverviewCard = computed<OverviewCard>(() => ({
+  label: currentBillingPaid.value ? 'Server fee paid' : 'Server fee unpaid',
+  value: currentBillingPaid.value ? 'Paid' : formatMoney(currentBillingTotal.value),
+  note: currentBillingPaid.value
+    ? `${billingPeriodLabel.value} server and administrator fee is already settled.`
+    : `Missing ${billingPeriodLabel.value} billing payment. Includes server fee and administrator fee.`,
+  tone: currentBillingPaid.value ? 'bg-emerald-light text-emerald' : 'bg-ruby-light text-ruby',
+  icon: currentBillingPaid.value ? 'feather:check-circle' : 'feather:alert-triangle',
+  loading: loadingBillingStatements.value,
+  alert: !currentBillingPaid.value,
+  route: '/billing-statement',
+  actionLabel: currentBillingPaid.value ? 'View Statement' : 'Settle Billing',
+  valueClass: currentBillingPaid.value
+    ? 'mt-2 text-3xl font-black text-onyx'
+    : 'mt-2 text-3xl font-black text-ruby',
+}))
 
 const overviewCards = computed<OverviewCard[]>(() => {
   const cards: OverviewCard[] = [
@@ -105,6 +144,8 @@ const overviewCards = computed<OverviewCard[]>(() => {
       icon: 'feather:users',
       loading: loadingUsersCount.value,
     })
+  } else if (canViewBilling.value) {
+    if (currentBillingStatement.value) cards.push(billingOverviewCard.value)
   } else {
     cards.push({
       label: 'Workspace access',
@@ -154,6 +195,10 @@ const overviewCards = computed<OverviewCard[]>(() => {
       icon: 'feather:layout',
       loading: false,
     })
+  }
+
+  if (canViewBilling.value && canViewUsers.value && currentBillingStatement.value) {
+    cards.push(billingOverviewCard.value)
   }
 
   return cards
@@ -259,6 +304,16 @@ const actionRail = computed<ActivityItem[]>(() => {
     })
   }
 
+  if (canViewBilling.value && currentBillingStatement.value) {
+    items.push({
+      title: currentBillingPaid.value ? 'Server fee is paid' : 'Server fee is missing',
+      detail: currentBillingPaid.value
+        ? `${billingPeriodLabel.value} statement is settled.`
+        : `${billingPeriodLabel.value} still needs ${formatMoney(currentBillingTotal.value)}.`,
+      icon: currentBillingPaid.value ? 'feather:check-circle' : 'feather:alert-triangle',
+    })
+  }
+
   return items
 })
 
@@ -321,7 +376,15 @@ function openRoute(path: string) {
   void router.push(path)
 }
 
+async function loadCurrentBillingStatement() {
+  if (!canViewBilling.value) return
+
+  currentBillingPeriod.value = getCurrentBillingPeriod()
+  currentBillingStatement.value = await fetchBillingStatement(currentBillingPeriod.value)
+}
+
 onMounted(() => {
+  void loadCurrentBillingStatement()
   void fetchUsersCount()
   void fetchPartnerBatchCount()
   void fetchBusinessPartnerCount()
@@ -381,18 +444,46 @@ onMounted(() => {
             <article
               v-for="card in overviewCards"
               :key="card.label"
-              class="rounded-[1.5rem] border border-pebble bg-white p-5 shadow-sm"
+              class="rounded-[1.5rem] border p-5 shadow-sm"
+              :class="
+                card.alert
+                  ? 'border-ruby bg-[linear-gradient(180deg,#fff5f5_0%,#ffffff_100%)] ring-2 ring-ruby/20'
+                  : 'border-pebble bg-white'
+              "
             >
               <div class="flex items-center justify-between gap-3">
-                <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-smoke">
+                <p
+                  class="text-[11px] font-semibold uppercase tracking-[0.22em]"
+                  :class="card.alert ? 'text-ruby' : 'text-smoke'"
+                >
                   {{ card.label }}
                 </p>
                 <span :class="card.tone" class="rounded-2xl p-2">
                   <Icon :icon="card.icon" class="size-4" />
                 </span>
               </div>
-              <AppStatValue :loading="card.loading" :value="formatDashboardCount(Number(card.value || 0))" />
-              <p class="mt-3 text-sm leading-6 text-slate">{{ card.note }}</p>
+              <AppStatValue
+                :loading="card.loading"
+                :value="formatOverviewCardValue(card.value)"
+                :value-class="card.valueClass"
+              />
+              <p class="mt-3 text-sm leading-6" :class="card.alert ? 'text-ruby' : 'text-slate'">
+                {{ card.note }}
+              </p>
+              <button
+                v-if="card.route"
+                type="button"
+                class="mt-4 inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-semibold transition"
+                :class="
+                  card.alert
+                    ? 'border-ruby bg-ruby-light text-ruby hover:bg-white'
+                    : 'border-[#d8c5a0] bg-[linear-gradient(180deg,#f8eddc_0%,#efe1cb_100%)] text-[#8c6320] hover:border-[#c59a42] hover:bg-[linear-gradient(180deg,#fcf4e8_0%,#f3e5ce_100%)] hover:text-[#6f4a13]'
+                "
+                @click="openRoute(card.route)"
+              >
+                <Icon icon="feather:external-link" class="size-4" />
+                {{ card.actionLabel || 'Open' }}
+              </button>
             </article>
           </div>
         </div>
