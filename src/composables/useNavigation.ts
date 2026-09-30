@@ -5,6 +5,7 @@ type RouteNavMeta = {
   title?: string
   icon?: string
   navItem?: boolean | RouteNavItem
+  department?: string
   navGroup?: {
     name: string
     icon?: string
@@ -33,10 +34,17 @@ export function useNavigation() {
     return !!intersection.length
   }
 
-  function getNav(routes: readonly RouteRecordRaw[], userRoles: string[]) {
+  function isDepartmentVisible(routeDepartment: string | undefined, userDepartment: string) {
+    if (!routeDepartment) return true
+    return routeDepartment.trim().toLowerCase() === userDepartment.trim().toLowerCase()
+  }
+
+  function getNav(routes: readonly RouteRecordRaw[], userRoles: string[], userDepartment = '') {
     // Filter parent routes
     const filteredRoutes = routes.filter((route) => {
       const n = route.meta?.navItem as boolean | RouteNavItem | undefined
+      const routeDepartment = (route.meta as RouteNavMeta | undefined)?.department
+      if (!isDepartmentVisible(routeDepartment, userDepartment)) return false
       if (Array.isArray(n) && n[1]) return isVis(n[1].visibleTo, userRoles)
       return n
     })
@@ -46,7 +54,7 @@ export function useNavigation() {
 
       const { meta, name, path } = route
       const filteredChildren = route.children.filter((child) =>
-        isVis(((child.meta?.navItem as RouteNavItem)[1]).visibleTo, userRoles),
+        isVis((child.meta?.navItem as RouteNavItem)[1].visibleTo, userRoles),
       )
       return { meta, name, path, children: filteredChildren }
     })

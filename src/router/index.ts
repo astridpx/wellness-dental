@@ -38,6 +38,10 @@ function getVisibleRoles(metaNavItem: unknown): string[] {
   return metaNavItem[1].visibleTo
 }
 
+function getRouteDepartment(routeDepartment: unknown) {
+  return typeof routeDepartment === 'string' ? routeDepartment.trim().toLowerCase() : ''
+}
+
 function findFirstAccessiblePath(userRoles: string[]) {
   const accessibleRoute = router.options.routes.find((route) => {
     const visibleTo = getVisibleRoles(route.meta?.navItem)
@@ -407,7 +411,8 @@ const router = createRouter({
       component: BillingStatementView,
       meta: {
         title: 'Billing Statement',
-        icon: 'feather:receipt',
+        icon: 'feather:file-text',
+        department: 'system development',
         navItem: [true, { visibleTo: ['superAdmin'] }],
       },
     },
@@ -499,8 +504,11 @@ router.beforeEach(async (to) => {
   }
 
   const canAccess = visibleTo.some((role) => currentRoles.includes(role))
+  const routeDepartment = getRouteDepartment(to.meta?.department)
+  const canAccessDepartment =
+    !routeDepartment || getRouteDepartment(currentUser?.department) === routeDepartment
 
-  if (!canAccess) {
+  if (!canAccess || !canAccessDepartment) {
     const fallbackPath = findFirstAccessiblePath(currentRoles)
 
     if (fallbackPath && fallbackPath !== to.path) {

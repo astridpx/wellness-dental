@@ -15,7 +15,7 @@ import {
 import { formatMoney } from '@/utils/format'
 
 const router = useRouter()
-const { getStoredRoles } = useAuth()
+const { getStoredRoles, getStoredUser } = useAuth()
 const { request } = useWellnessApi()
 const { fetchBillingStatement, loadingBillingStatements } = useBillingStatements()
 
@@ -35,7 +35,13 @@ const canViewPartnerBatches = computed(() =>
 const canViewBusinessPartners = computed(() =>
   roles.value.some((role) => ['superAdmin', 'admin', 'regUser'].includes(role)),
 )
-const canViewBilling = computed(() => roles.value.includes('superAdmin'))
+const canViewBilling = computed(() => roles.value.length > 0)
+const canManageBilling = computed(() => {
+  const department = getStoredUser()?.department || ''
+  return (
+    roles.value.includes('superAdmin') && department.trim().toLowerCase() === 'system development'
+  )
+})
 
 const usersCount = ref(0)
 const partnerBatchCount = ref(0)
@@ -95,7 +101,7 @@ const billingOverviewCard = computed<OverviewCard>(() => ({
   icon: currentBillingPaid.value ? 'feather:check-circle' : 'feather:alert-triangle',
   loading: loadingBillingStatements.value,
   alert: !currentBillingPaid.value,
-  route: '/billing-statement',
+  route: canManageBilling.value ? '/billing-statement' : undefined,
   actionLabel: currentBillingPaid.value ? 'View Statement' : 'Settle Billing',
   valueClass: currentBillingPaid.value
     ? 'mt-2 text-3xl font-black text-onyx'
