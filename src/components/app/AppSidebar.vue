@@ -6,8 +6,11 @@ import { inject, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
-const isActiveLink = (href: string) =>
-  !!(href === '/' ? route.path === href : route.path.startsWith(href))
+const isActiveLink = (href: string) => {
+  if (href === '/') return route.path === href
+  if (href === '/partner-members') return route.path === href
+  return route.path === href || route.path.startsWith(`${href}/`)
+}
 const navigation = inject('navigation') as Array<any> //Array<INavItem>
 const sidebarOpen = inject('sidebarOpen') as boolean
 const appVer = inject('appVer') as string

@@ -29,14 +29,20 @@ const currentRoles = computed(() => {
   return getStoredRoles()
 })
 
-const navigation = computed<NavItem[]>(() => {
-  const filteredRoutes = routes.filter((n) => Array.isArray(n?.meta?.navItem) && n.meta.navItem[0])
-  return useNavigation().getNav(filteredRoutes, currentRoles.value) as NavItem[]
-})
-
 const currentUser = computed(() => {
   authStateVersion.value
   return getStoredUser()
+})
+
+const currentDepartment = computed(() => currentUser.value?.department || '')
+
+const navigation = computed<NavItem[]>(() => {
+  const filteredRoutes = routes.filter((n) => Array.isArray(n?.meta?.navItem) && n.meta.navItem[0])
+  return useNavigation().getNav(
+    filteredRoutes,
+    currentRoles.value,
+    currentDepartment.value,
+  ) as NavItem[]
 })
 
 const userEmail = computed(() => {
@@ -63,7 +69,9 @@ const todayLabel = computed(() =>
 )
 
 function isActiveLink(href: string) {
-  return href === '/' ? route.path === href : route.path.startsWith(href)
+  if (href === '/') return route.path === href
+  if (href === '/partner-members') return route.path === href
+  return route.path === href || route.path.startsWith(`${href}/`)
 }
 
 function isActiveItem(item: NavItem) {
