@@ -69,6 +69,8 @@ export function useBillingStatements() {
   const { request } = useWellnessApi()
 
   const billingStatements = ref<BillingStatement[]>([])
+  const billingStatementTotalEntries = ref(0)
+  const billingStatementTotalPages = ref(1)
   const loadingBillingStatements = ref(false)
   const savingBillingStatement = ref(false)
   const queueingBillingEmail = ref(false)
@@ -92,12 +94,12 @@ export function useBillingStatements() {
     return result.data ? mapBillingStatement(result.data) : null
   }
 
-  async function fetchBillingStatements() {
+  async function fetchBillingStatements(page = 1, perPage = 6) {
     loadingBillingStatements.value = true
     errorMessage.value = ''
 
     const result = await request<BillingStatementResponse[]>(
-      '/wellness/billingStatements?perPage=6',
+      `/wellness/billingStatements?page=${page}&perPage=${perPage}`,
     )
 
     loadingBillingStatements.value = false
@@ -105,13 +107,36 @@ export function useBillingStatements() {
     if (!result.ok) {
       errorMessage.value = result.error || 'Unable to load billing statements.'
       billingStatements.value = []
+      billingStatementTotalEntries.value = 0
+      billingStatementTotalPages.value = 1
       return false
     }
 
     billingStatements.value = (Array.isArray(result.data) ? result.data : []).map(
       mapBillingStatement,
     )
+    billingStatementTotalEntries.value = Number(result.metadata?.totalEntries || 0)
+    billingStatementTotalPages.value = Number(result.metadata?.totalPages || 1)
     return true
+  }
+
+  async function fetchLatestBillingStatement() {
+    loadingBillingStatements.value = true
+    errorMessage.value = ''
+
+    const result = await request<BillingStatementResponse[]>(
+      '/wellness/billingStatements?page=1&perPage=1',
+    )
+
+    loadingBillingStatements.value = false
+
+    if (!result.ok) {
+      errorMessage.value = result.error || 'Unable to load latest billing statement.'
+      return null
+    }
+
+    const [latestStatement] = Array.isArray(result.data) ? result.data : []
+    return latestStatement ? mapBillingStatement(latestStatement) : null
   }
 
   async function saveBillingStatement(payload: SaveBillingStatementInput) {
@@ -204,10 +229,13 @@ export function useBillingStatements() {
 
   return {
     billingStatements,
+    billingStatementTotalEntries,
+    billingStatementTotalPages,
     clearBillingStatementError,
     errorMessage,
     fetchBillingStatement,
     fetchBillingStatements,
+    fetchLatestBillingStatement,
     loadingBillingStatements,
     queueBillingStatementEmail,
     queueingBillingEmail,

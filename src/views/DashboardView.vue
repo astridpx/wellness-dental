@@ -17,7 +17,7 @@ import { formatMoney } from '@/utils/format'
 const router = useRouter()
 const { getStoredRoles, getStoredUser } = useAuth()
 const { request } = useWellnessApi()
-const { fetchBillingStatement, loadingBillingStatements } = useBillingStatements()
+const { fetchLatestBillingStatement, loadingBillingStatements } = useBillingStatements()
 
 const currentPage = ref(1)
 const perPage = ref(APP_PER_PAGE)
@@ -141,6 +141,10 @@ const overviewCards = computed<OverviewCard[]>(() => {
     },
   ]
 
+  if (canViewBilling.value && currentBillingStatement.value) {
+    cards.unshift(billingOverviewCard.value)
+  }
+
   if (canViewUsers.value) {
     cards.push({
       label: 'Staff accounts',
@@ -150,8 +154,6 @@ const overviewCards = computed<OverviewCard[]>(() => {
       icon: 'feather:users',
       loading: loadingUsersCount.value,
     })
-  } else if (canViewBilling.value) {
-    if (currentBillingStatement.value) cards.push(billingOverviewCard.value)
   } else {
     cards.push({
       label: 'Workspace access',
@@ -201,10 +203,6 @@ const overviewCards = computed<OverviewCard[]>(() => {
       icon: 'feather:layout',
       loading: false,
     })
-  }
-
-  if (canViewBilling.value && canViewUsers.value && currentBillingStatement.value) {
-    cards.push(billingOverviewCard.value)
   }
 
   return cards
@@ -385,8 +383,9 @@ function openRoute(path: string) {
 async function loadCurrentBillingStatement() {
   if (!canViewBilling.value) return
 
-  currentBillingPeriod.value = getCurrentBillingPeriod()
-  currentBillingStatement.value = await fetchBillingStatement(currentBillingPeriod.value)
+  const latestStatement = await fetchLatestBillingStatement()
+  currentBillingStatement.value = latestStatement
+  if (latestStatement?.period) currentBillingPeriod.value = latestStatement.period
 }
 
 onMounted(() => {

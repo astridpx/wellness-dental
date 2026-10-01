@@ -23,6 +23,8 @@ const selectedPeriod = ref(getCurrentBillingPeriod())
 const statement = ref<BillingStatement>(getDefaultBillingStatement(selectedPeriod.value))
 const {
   billingStatements,
+  billingStatementTotalEntries,
+  billingStatementTotalPages,
   errorMessage,
   fetchBillingStatement,
   fetchBillingStatements,
@@ -33,7 +35,9 @@ const {
   savingBillingStatement,
   updateBillingPayment,
 } = useBillingStatements()
-const recipientEmail = ref('')
+const billingPage = ref(1)
+const billingPerPage = ref(6)
+const recipientEmail = ref('iwcwellnesspci@gmail.com')
 const recipientName = ref('IWC Wellness and Preventive Consultancy, Inc.')
 const emailQueuedMessage = ref('')
 const showConfirmDialog = ref(false)
@@ -62,9 +66,7 @@ const createTotal = computed(() => MONTHLY_SERVER_FEE + MONTHLY_ADMINISTRATOR_FE
 const canCreateStatement = computed(
   () => !hasStatement.value && !savingBillingStatement.value && !loadingBillingStatements.value,
 )
-const recentStatements = computed(() =>
-  billingStatements.value.length ? billingStatements.value.slice(0, 6) : [],
-)
+const recentStatements = computed(() => billingStatements.value)
 const confirmTitle = computed(() => {
   if (pendingAction.value === 'paid') return 'Mark statement paid?'
   if (pendingAction.value === 'unpaid') return 'Mark statement unpaid?'
@@ -86,7 +88,7 @@ const confirmMessage = computed(() => {
 })
 
 async function refreshBillingStatements() {
-  await fetchBillingStatements()
+  await fetchBillingStatements(billingPage.value, billingPerPage.value)
 }
 
 async function loadStatement() {
@@ -107,6 +109,7 @@ async function createStatement() {
   })
 
   if (createdStatement) statement.value = createdStatement
+  billingPage.value = 1
   await refreshBillingStatements()
 }
 
@@ -139,6 +142,11 @@ async function updateNotes(event: Event) {
   })
 
   if (updatedStatement) statement.value = updatedStatement
+  await refreshBillingStatements()
+}
+
+async function handleBillingPageChange(page: number) {
+  billingPage.value = page
   await refreshBillingStatements()
 }
 
@@ -460,7 +468,10 @@ onMounted(async () => {
         <AppTable
           v-else
           :theads="['Period', 'Total', 'Status', 'Paid Date']"
-          :total-entries="recentStatements.length"
+          :total-entries="billingStatementTotalEntries"
+          :total-pages="billingStatementTotalPages"
+          :current-page="billingPage"
+          @update-pg-num="handleBillingPageChange"
         >
           <template #trs>
             <tr v-for="item in recentStatements" :key="item.period">
