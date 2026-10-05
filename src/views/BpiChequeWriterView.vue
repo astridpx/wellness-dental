@@ -350,6 +350,17 @@ function printCheque() {
   showPrintConfirmation.value = true
 }
 
+function clearChequeForm() {
+  cheque.accountName =
+    import.meta.env.VITE_APP_VOUCHER_COMPANY_NAME ||
+    'IWC Wellness and Preventive Consultancy, Inc.'
+  cheque.payee = ''
+  cheque.date = currentManilaDateInputValue()
+  cheque.amount = ''
+  cheque.amountWords = ''
+  printError.value = ''
+}
+
 async function confirmPrintCheque() {
   printError.value = ''
 
@@ -370,6 +381,7 @@ async function confirmPrintCheque() {
 
   showPrintConfirmation.value = false
   executePrintCheque()
+  clearChequeForm()
 }
 
 function executePrintCheque() {
@@ -591,6 +603,10 @@ onMounted(() => {
       </div>
 
       <div class="flex flex-wrap gap-3">
+        <AppButton btn-theme="outline" type="button" @click="clearChequeForm">
+          <Icon icon="feather:x-circle" class="h-4 w-4" />
+          Clear
+        </AppButton>
         <button
           type="button"
           class="inline-flex items-center justify-center gap-2 rounded-xl border border-pebble bg-white px-4 py-2.5 text-sm font-semibold text-onyx shadow-sm transition hover:border-tangerine hover:text-tangerine"

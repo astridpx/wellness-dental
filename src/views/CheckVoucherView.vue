@@ -27,6 +27,20 @@ type VoucherRow = {
   details: string
 }
 
+function createEmptyVoucherRow(id: number): VoucherRow {
+  return {
+    id,
+    accountCode: '',
+    costCenter: '',
+    accountTitleName: '',
+    accountTitle: '',
+    costCenterTitle: '',
+    debit: '',
+    credit: '',
+    details: '',
+  }
+}
+
 const defaultVoucherCompanyName =
   import.meta.env.VITE_APP_VOUCHER_COMPANY_NAME || 'MC Wellness and Preventive Consultancy, Inc.'
 
@@ -48,17 +62,7 @@ const voucher = reactive({
 })
 
 const rows = ref<VoucherRow[]>([
-  {
-    id: 1,
-    accountCode: '',
-    costCenter: '',
-    accountTitleName: '',
-    accountTitle: '',
-    costCenterTitle: '',
-    debit: '',
-    credit: '',
-    details: '',
-  },
+  createEmptyVoucherRow(1),
 ])
 const nextRowId = ref(2)
 const generatingReferenceNo = ref(false)
@@ -76,6 +80,7 @@ const {
   loading: loadingAccountLibraries,
 } = useVoucherAccountLibraries()
 let accountTitleSearchTimeout: ReturnType<typeof setTimeout> | undefined
+let printClearFallback: ReturnType<typeof setTimeout> | undefined
 
 const amount = computed(() =>
   rows.value.reduce((total, row) => total + parsePlainAmount(row.debit), 0),
@@ -125,17 +130,7 @@ function formatVoucherDate(value: string) {
 }
 
 function addRow() {
-  rows.value.push({
-    id: nextRowId.value,
-    accountCode: '',
-    costCenter: '',
-    accountTitleName: '',
-    accountTitle: '',
-    costCenterTitle: '',
-    debit: '',
-    credit: '',
-    details: '',
-  })
+  rows.value.push(createEmptyVoucherRow(nextRowId.value))
   nextRowId.value += 1
 }
 
@@ -212,6 +207,41 @@ function printVoucher() {
   showPrintConfirmation.value = true
 }
 
+function clearVoucherForm(refreshReferenceNo = true) {
+  voucher.companyName = defaultVoucherCompanyName
+  voucher.title = 'Check voucher'
+  voucher.paidTo = ''
+  voucher.particulars = ''
+  voucher.periodFrom = ''
+  voucher.periodTo = ''
+  voucher.referenceNo = ''
+  voucher.date = currentManilaDateInputValue()
+  voucher.checkNo = ''
+  voucher.preparedBy = ''
+  voucher.checkedBy = 'Juanita B. Zamonte'
+  voucher.approvedBy = 'Jomel Almanzor'
+  voucher.receivedBy = ''
+  voucher.receivedDate = ''
+  rows.value = [createEmptyVoucherRow(1)]
+  nextRowId.value = 2
+  printError.value = ''
+  referenceNoError.value = ''
+
+  if (refreshReferenceNo) void generateReferenceNo()
+}
+
+function clearVoucherAfterPrint() {
+  const clearOnce = () => {
+    window.removeEventListener('afterprint', clearOnce)
+    if (printClearFallback) window.clearTimeout(printClearFallback)
+    printClearFallback = undefined
+    clearVoucherForm()
+  }
+
+  window.addEventListener('afterprint', clearOnce, { once: true })
+  printClearFallback = window.setTimeout(clearOnce, 3000)
+}
+
 async function confirmPrintVoucher() {
   printError.value = ''
 
@@ -233,6 +263,7 @@ async function confirmPrintVoucher() {
   }
 
   showPrintConfirmation.value = false
+  clearVoucherAfterPrint()
   window.print()
 }
 
@@ -246,6 +277,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   if (accountTitleSearchTimeout) clearTimeout(accountTitleSearchTimeout)
+  if (printClearFallback) window.clearTimeout(printClearFallback)
 })
 </script>
 
@@ -320,6 +352,10 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="flex flex-wrap gap-3">
+        <AppButton btn-theme="outline" type="button" @click="clearVoucherForm">
+          <Icon icon="feather:x-circle" class="h-4 w-4" />
+          Clear
+        </AppButton>
         <AppButton btn-theme="outline" type="button" @click="copyDebitToCredit">
           <Icon icon="feather:copy" class="h-4 w-4" />
           Match Credit
