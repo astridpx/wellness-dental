@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { AppButton, AppInput, AppModal } from '@/components/app'
 import {
   DEFAULT_CHEQUE_DATE_PART_OFFSETS,
@@ -9,11 +10,20 @@ import {
   normalizeChequeBankKey,
   useChequeSummaryReports,
   useChequeTemplates,
+  useDentists,
   type ChequeDatePartKey,
   type ChequeTemplateField,
   type SavedChequeTemplate,
 } from '@/composables'
-import { amountToChequeWords, currentManilaDateInputValue, formatPlainAmount } from '@/utils'
+import type { Dentist } from '@/types'
+import {
+  amountToChequeWords,
+  currentManilaDateInputValue,
+  formatPlainAmount,
+  getChequeReprintSnapshot,
+  saveChequeReprintSnapshot,
+  type ChequeReprintSnapshot,
+} from '@/utils'
 
 type CalibrationAction = 'insert' | 'update' | 'delete' | 'reset'
 
@@ -81,9 +91,13 @@ const showGuides = ref(true)
 const saveMessage = ref('')
 const showPrintConfirmation = ref(false)
 const printError = ref('')
+const reprintModeRecordId = ref<number | null>(null)
+const reprintLoadError = ref('')
 const pendingCalibrationAction = ref<CalibrationAction | null>(null)
 const selectedBankKey = ref(normalizeChequeBankKey(DEFAULT_CHEQUE_BANK_NAME))
 const bankNameDraft = ref(DEFAULT_CHEQUE_BANK_NAME)
+const route = useRoute()
+const router = useRouter()
 const {
   rows: bankTemplateRows,
   saving: savingCalibration,
@@ -93,9 +107,34 @@ const {
   updateTemplate,
   deleteTemplate,
 } = useChequeTemplates(defaultBpiFields)
-const { recordChequeSummaryEvent, saving: savingSummaryRecord } = useChequeSummaryReports()
+const {
+  records: summaryRecords,
+  recordChequeSummaryEvent,
+  loadRecords: loadSummaryRecords,
+  saving: savingSummaryRecord,
+} = useChequeSummaryReports()
+const {
+  dentists,
+  fetchDentists,
+  filters: dentistFilters,
+  loading: loadingDentists,
+} = useDentists({ perPage: 50 })
+let dentistSearchTimeout: ReturnType<typeof setTimeout> | undefined
 
 const currentBankName = computed(() => bpiTemplate.bankName.trim() || DEFAULT_CHEQUE_BANK_NAME)
+const isReprintMode = computed(() => reprintModeRecordId.value !== null)
+const printConfirmationTitle = computed(() =>
+  isReprintMode.value ? 'Reprint Cheque?' : 'Print Cheque?',
+)
+const printConfirmationMessage = computed(() =>
+  isReprintMode.value
+    ? 'This will reprint the saved cheque without creating another cheque summary record.'
+    : 'This will save this cheque in the cheque summary, then open the print dialog.',
+)
+const printButtonLabel = computed(() => (isReprintMode.value ? 'Reprint Cheque' : 'Print Cheque'))
+const printConfirmButtonLabel = computed(() =>
+  savingSummaryRecord.value ? 'Saving' : isReprintMode.value ? 'Reprint' : 'Save & Print',
+)
 const calibrationConfirmationTitle = computed(() =>
   pendingCalibrationAction.value === 'insert'
     ? 'Insert Bank Row?'
@@ -132,6 +171,15 @@ const formattedAmount = computed(() => formatPlainAmount(cheque.amount))
 const generatedAmountWords = computed(() => amountToChequeWords(cheque.amount).toUpperCase())
 const chequeAmountWords = computed(() => cheque.amountWords.trim() || generatedAmountWords.value)
 const templateFields = computed(() => bpiTemplate.fields)
+const payeeDentistOptions = computed(() =>
+  Array.from(
+    new Set(
+      dentists.value
+        .map(formatDentistPayeeName)
+        .filter((name): name is string => Boolean(name)),
+    ),
+  ),
+)
 const selectedBankExists = computed(() => Boolean(savedBankTemplates.value[selectedBankKey.value]))
 const canInsertBankRow = computed(() => {
   const bankName = bankNameDraft.value.trim()
@@ -345,6 +393,100 @@ function datePartStyle(key: ChequeDatePartKey) {
   }
 }
 
+function formatDentistPayeeName(dentist: Dentist) {
+  const firstName = String(dentist.firstname || '').trim()
+  const middleName = String(dentist.middleinitial || '').trim().replace(/\.$/, '')
+  const lastName = String(dentist.lastname || '').trim()
+  const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ').trim()
+
+  return fullName || String(dentist.dentistname || dentist.acctname || '').trim()
+}
+
+function searchPayeeDentists(value: string) {
+  if (dentistSearchTimeout) clearTimeout(dentistSearchTimeout)
+
+  dentistSearchTimeout = setTimeout(() => {
+    dentistFilters.dentistName = value.trim()
+    void fetchDentists()
+  }, 300)
+}
+
+function buildChequeReprintSnapshot(summaryRecordId?: number): ChequeReprintSnapshot {
+  return {
+    ...(summaryRecordId ? { summaryRecordId } : {}),
+    savedAt: new Date().toISOString(),
+    cheque: {
+      accountName: cheque.accountName,
+      payee: cheque.payee,
+      date: cheque.date,
+      amount: cheque.amount,
+      amountWords: cheque.amountWords,
+    },
+    template: {
+      name: bpiTemplate.name,
+      bankName: currentBankName.value,
+      width: bpiTemplate.width,
+      height: bpiTemplate.height,
+      fields: bpiTemplate.fields.map((field) => ({ ...field })),
+      datePartOffsets: { ...bpiTemplate.datePartOffsets },
+    },
+  }
+}
+
+function applyChequeReprintSnapshot(snapshot: ChequeReprintSnapshot, fallbackRecordId?: number) {
+  cheque.accountName = snapshot.cheque.accountName
+  cheque.payee = snapshot.cheque.payee
+  cheque.date = snapshot.cheque.date
+  cheque.amount = snapshot.cheque.amount
+  cheque.amountWords = snapshot.cheque.amountWords
+
+  bpiTemplate.name = snapshot.template.name || 'Cheque'
+  bpiTemplate.bankName = snapshot.template.bankName || DEFAULT_CHEQUE_BANK_NAME
+  bpiTemplate.width = snapshot.template.width
+  bpiTemplate.height = snapshot.template.height
+  bpiTemplate.fields.splice(
+    0,
+    bpiTemplate.fields.length,
+    ...snapshot.template.fields.map((field) => ({ ...field, key: field.key as ChequeTemplateField['key'] })),
+  )
+  bpiTemplate.datePartOffsets = {
+    ...DEFAULT_CHEQUE_DATE_PART_OFFSETS,
+    ...snapshot.template.datePartOffsets,
+  }
+  bankNameDraft.value = bpiTemplate.bankName
+  selectedBankKey.value = normalizeChequeBankKey(bpiTemplate.bankName)
+  reprintModeRecordId.value = snapshot.summaryRecordId || fallbackRecordId || null
+  reprintLoadError.value = ''
+  printError.value = ''
+}
+
+async function loadChequeReprintFromRoute() {
+  const reprintId = Array.isArray(route.query.reprintId)
+    ? route.query.reprintId[0]
+    : route.query.reprintId
+
+  if (!reprintId) return false
+
+  const recordId = Number(reprintId)
+  const localSnapshot = getChequeReprintSnapshot(reprintId)
+  if (localSnapshot) {
+    applyChequeReprintSnapshot(localSnapshot, Number.isFinite(recordId) ? recordId : undefined)
+    return true
+  }
+
+  await loadSummaryRecords()
+  const record = summaryRecords.value.find((row) => row.id === recordId)
+  if (record?.chequePayload) {
+    applyChequeReprintSnapshot(record.chequePayload, record.id)
+    saveChequeReprintSnapshot({ ...record.chequePayload, summaryRecordId: record.id })
+    return true
+  }
+
+  reprintLoadError.value =
+    'This summary row does not have saved cheque details available for reprint.'
+  return false
+}
+
 function printCheque() {
   printError.value = ''
   showPrintConfirmation.value = true
@@ -358,11 +500,21 @@ function clearChequeForm() {
   cheque.date = currentManilaDateInputValue()
   cheque.amount = ''
   cheque.amountWords = ''
+  reprintModeRecordId.value = null
+  reprintLoadError.value = ''
   printError.value = ''
+  if (route.query.reprintId) void router.replace({ name: 'bpiChequeWriter', query: {} })
 }
 
 async function confirmPrintCheque() {
   printError.value = ''
+
+  if (isReprintMode.value) {
+    showPrintConfirmation.value = false
+    executePrintCheque()
+    clearChequeForm()
+    return
+  }
 
   const result = await recordChequeSummaryEvent({
     kind: 'cheque',
@@ -372,6 +524,7 @@ async function confirmPrintCheque() {
     amount: cheque.amount,
     bankName: currentBankName.value,
     accountName: cheque.accountName,
+    chequePayload: buildChequeReprintSnapshot(),
   })
 
   if (!result.ok) {
@@ -380,6 +533,9 @@ async function confirmPrintCheque() {
   }
 
   showPrintConfirmation.value = false
+  if (result.data?.id) {
+    saveChequeReprintSnapshot(buildChequeReprintSnapshot(result.data.id))
+  }
   executePrintCheque()
   clearChequeForm()
 }
@@ -485,8 +641,13 @@ function executePrintCheque() {
   }
 }
 
-onMounted(() => {
-  void loadSavedCalibration()
+onMounted(async () => {
+  await loadSavedCalibration()
+  await loadChequeReprintFromRoute()
+})
+
+onBeforeUnmount(() => {
+  if (dentistSearchTimeout) clearTimeout(dentistSearchTimeout)
 })
 </script>
 
@@ -536,14 +697,14 @@ onMounted(() => {
 
     <AppModal
       :show="showPrintConfirmation"
-      title="Print Cheque?"
+      :title="printConfirmationTitle"
       subtitle="Cheque Summary"
       max-width="sm:max-w-lg"
       @close="showPrintConfirmation = false"
     >
       <div class="space-y-4 px-6 py-5">
         <p class="text-sm leading-6 text-slate">
-          This will save this cheque in the cheque summary, then open the print dialog.
+          {{ printConfirmationMessage }}
         </p>
         <div class="grid gap-3 rounded-2xl border border-[#ded7cc] bg-[#fbf7ef] p-4 text-sm">
           <div class="flex justify-between gap-4">
@@ -590,7 +751,7 @@ onMounted(() => {
               class="h-4 w-4"
               :class="{ 'animate-spin': savingSummaryRecord }"
             />
-            {{ savingSummaryRecord ? 'Saving' : 'Save & Print' }}
+            {{ printConfirmButtonLabel }}
           </AppButton>
         </div>
       </template>
@@ -600,6 +761,9 @@ onMounted(() => {
       <div>
         <p class="text-[11px] font-semibold uppercase tracking-[0.28em] text-smoke">Cheque</p>
         <h1 class="mt-2 text-2xl font-black text-onyx">Cheque Writer</h1>
+        <p v-if="isReprintMode" class="mt-2 text-sm font-semibold text-sapphire">
+          Reprinting saved cheque #{{ reprintModeRecordId }}
+        </p>
       </div>
 
       <div class="flex flex-wrap gap-3">
@@ -617,9 +781,16 @@ onMounted(() => {
         </button>
         <AppButton btn-theme="primary" type="button" @click="printCheque">
           <Icon icon="feather:printer" class="h-4 w-4" />
-          Print Cheque
+          {{ printButtonLabel }}
         </AppButton>
       </div>
+    </div>
+
+    <div
+      v-if="reprintLoadError"
+      class="rounded-xl border border-ruby bg-ruby-light px-4 py-3 text-sm font-semibold text-ruby"
+    >
+      {{ reprintLoadError }}
     </div>
 
     <div class="grid gap-6 2xl:grid-cols-[minmax(360px,520px)_1fr]">
@@ -891,7 +1062,26 @@ onMounted(() => {
           <div class="grid gap-4 sm:grid-cols-2">
             <AppInput v-model="cheque.accountName" label="Account name" />
             <AppInput v-model="cheque.date" type="date" label="Date" />
-            <AppInput v-model="cheque.payee" label="Pay to the order of" />
+            <div>
+              <label class="mb-2 block text-sm font-medium text-onyx">Pay to the order of</label>
+              <div class="relative">
+                <Icon
+                  :icon="loadingDentists ? 'feather:loader' : 'feather:search'"
+                  class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate"
+                  :class="{ 'animate-spin': loadingDentists }"
+                />
+                <input
+                  v-model="cheque.payee"
+                  list="cheque-payee-dentist-options"
+                  class="w-full rounded-xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fafcff_100%)] py-3.5 pl-12 pr-4 text-onyx outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.92)] transition-all duration-200 placeholder:text-ash hover:border-slate focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+                  :placeholder="loadingDentists ? 'Loading dentists...' : 'Search dentist or type payee'"
+                  @input="searchPayeeDentists(($event.target as HTMLInputElement).value)"
+                />
+                <datalist id="cheque-payee-dentist-options">
+                  <option v-for="name in payeeDentistOptions" :key="name" :value="name" />
+                </datalist>
+              </div>
+            </div>
             <AppInput
               v-model="cheque.amount"
               decimal-only

@@ -1,6 +1,6 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useWellnessApi } from './useWellnessApi'
-import type { VoucherReprintSnapshot } from '@/utils'
+import type { ChequeReprintSnapshot, VoucherReprintSnapshot } from '@/utils'
 
 export type ChequeSummaryKind = 'voucher' | 'cheque'
 
@@ -18,14 +18,16 @@ export type ChequeSummaryRecord = {
   bankName: string
   accountName: string
   voucherPayload: VoucherReprintSnapshot | null
+  chequePayload: ChequeReprintSnapshot | null
 }
 
 type ChequeSummaryInput = Partial<
-  Omit<ChequeSummaryRecord, 'id' | 'kind' | 'createdAt' | 'amount' | 'voucherPayload'>
+  Omit<ChequeSummaryRecord, 'id' | 'kind' | 'createdAt' | 'amount' | 'voucherPayload' | 'chequePayload'>
 > & {
   kind: ChequeSummaryKind
   amount?: number | string
   voucherPayload?: VoucherReprintSnapshot | null
+  chequePayload?: ChequeReprintSnapshot | null
 }
 
 type ChequeSummaryApiRecord = Omit<ChequeSummaryRecord, 'kind' | 'amount'> & {
@@ -67,6 +69,7 @@ function mapApiRecord(record: ChequeSummaryApiRecord): ChequeSummaryRecord {
     bankName: normalizeText(record.bankName),
     accountName: normalizeText(record.accountName),
     voucherPayload: record.voucherPayload || null,
+    chequePayload: record.chequePayload || null,
   }
 }
 
@@ -146,6 +149,7 @@ export function useChequeSummaryReports(options: { autoLoad?: boolean } = {}) {
           bankName: input.bankName,
           accountName: input.accountName,
           voucherPayload: input.voucherPayload,
+          chequePayload: input.chequePayload,
         }),
       },
       { includeContentType: true },

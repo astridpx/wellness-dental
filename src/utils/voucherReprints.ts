@@ -1,4 +1,5 @@
 const VOUCHER_REPRINT_STORAGE_KEY = 'wellness:voucherReprints'
+const CHEQUE_REPRINT_STORAGE_KEY = 'wellness:chequeReprints'
 
 export type VoucherReprintRow = {
   id: number
@@ -34,11 +35,41 @@ export type VoucherReprintSnapshot = {
   rows: VoucherReprintRow[]
 }
 
-type VoucherReprintStore = Record<string, VoucherReprintSnapshot>
+export type ChequeReprintSnapshot = {
+  summaryRecordId?: number
+  savedAt: string
+  cheque: {
+    accountName: string
+    payee: string
+    date: string
+    amount: string
+    amountWords: string
+  }
+  template: {
+    name: string
+    bankName: string
+    width: number
+    height: number
+    fields: Array<{
+      key: string
+      label: string
+      x: number
+      y: number
+      width: number
+      height: number
+      fontSize: number
+      align?: 'left' | 'center' | 'right'
+    }>
+    datePartOffsets: Record<string, number>
+  }
+}
 
-function readVoucherReprintStore(): VoucherReprintStore {
+type VoucherReprintStore = Record<string, VoucherReprintSnapshot>
+type ChequeReprintStore = Record<string, ChequeReprintSnapshot>
+
+function readReprintStore<T>(storageKey: string): Record<string, T> {
   try {
-    const raw = localStorage.getItem(VOUCHER_REPRINT_STORAGE_KEY)
+    const raw = localStorage.getItem(storageKey)
     if (!raw) return {}
 
     const parsed = JSON.parse(raw)
@@ -48,23 +79,40 @@ function readVoucherReprintStore(): VoucherReprintStore {
   }
 }
 
-function writeVoucherReprintStore(store: VoucherReprintStore) {
-  localStorage.setItem(VOUCHER_REPRINT_STORAGE_KEY, JSON.stringify(store))
+function writeReprintStore<T>(storageKey: string, store: Record<string, T>) {
+  localStorage.setItem(storageKey, JSON.stringify(store))
 }
 
 export function saveVoucherReprintSnapshot(snapshot: VoucherReprintSnapshot) {
   if (!snapshot.summaryRecordId) return
 
-  const store = readVoucherReprintStore()
+  const store = readReprintStore<VoucherReprintSnapshot>(VOUCHER_REPRINT_STORAGE_KEY)
   store[String(snapshot.summaryRecordId)] = snapshot
-  writeVoucherReprintStore(store)
+  writeReprintStore(VOUCHER_REPRINT_STORAGE_KEY, store)
 }
 
 export function getVoucherReprintSnapshot(summaryRecordId: number | string) {
-  const store = readVoucherReprintStore()
+  const store = readReprintStore<VoucherReprintSnapshot>(VOUCHER_REPRINT_STORAGE_KEY)
   return store[String(summaryRecordId)] || null
 }
 
 export function hasVoucherReprintSnapshot(summaryRecordId: number | string) {
   return Boolean(getVoucherReprintSnapshot(summaryRecordId))
+}
+
+export function saveChequeReprintSnapshot(snapshot: ChequeReprintSnapshot) {
+  if (!snapshot.summaryRecordId) return
+
+  const store = readReprintStore<ChequeReprintSnapshot>(CHEQUE_REPRINT_STORAGE_KEY)
+  store[String(snapshot.summaryRecordId)] = snapshot
+  writeReprintStore(CHEQUE_REPRINT_STORAGE_KEY, store)
+}
+
+export function getChequeReprintSnapshot(summaryRecordId: number | string) {
+  const store = readReprintStore<ChequeReprintSnapshot>(CHEQUE_REPRINT_STORAGE_KEY)
+  return store[String(summaryRecordId)] || null
+}
+
+export function hasChequeReprintSnapshot(summaryRecordId: number | string) {
+  return Boolean(getChequeReprintSnapshot(summaryRecordId))
 }
