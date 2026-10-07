@@ -913,7 +913,7 @@ onMounted(() => {
       </form>
 
       <section
-        class="printable-cheque overflow-auto rounded-3xl border border-[#d8d1c5] bg-[linear-gradient(180deg,#fbf7ef_0%,#eef1ed_100%)] p-4 shadow-md"
+        class="printable-cheque overflow-auto rounded-3xl border border-[#d8d1c5] bg-[linear-gradient(180deg,#fbf7ef_0%,#eef1ed_100%)] p-4 shadow-md 2xl:sticky 2xl:top-6 2xl:max-h-[calc(100vh-3rem)] 2xl:self-start"
       >
         <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>

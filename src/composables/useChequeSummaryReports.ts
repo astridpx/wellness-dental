@@ -1,5 +1,6 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useWellnessApi } from './useWellnessApi'
+import type { VoucherReprintSnapshot } from '@/utils'
 
 export type ChequeSummaryKind = 'voucher' | 'cheque'
 
@@ -16,13 +17,15 @@ export type ChequeSummaryRecord = {
   preparedBy: string
   bankName: string
   accountName: string
+  voucherPayload: VoucherReprintSnapshot | null
 }
 
 type ChequeSummaryInput = Partial<
-  Omit<ChequeSummaryRecord, 'id' | 'kind' | 'createdAt' | 'amount'>
+  Omit<ChequeSummaryRecord, 'id' | 'kind' | 'createdAt' | 'amount' | 'voucherPayload'>
 > & {
   kind: ChequeSummaryKind
   amount?: number | string
+  voucherPayload?: VoucherReprintSnapshot | null
 }
 
 type ChequeSummaryApiRecord = Omit<ChequeSummaryRecord, 'kind' | 'amount'> & {
@@ -63,6 +66,7 @@ function mapApiRecord(record: ChequeSummaryApiRecord): ChequeSummaryRecord {
     preparedBy: normalizeText(record.preparedBy),
     bankName: normalizeText(record.bankName),
     accountName: normalizeText(record.accountName),
+    voucherPayload: record.voucherPayload || null,
   }
 }
 
@@ -141,6 +145,7 @@ export function useChequeSummaryReports(options: { autoLoad?: boolean } = {}) {
           preparedBy: input.preparedBy,
           bankName: input.bankName,
           accountName: input.accountName,
+          voucherPayload: input.voucherPayload,
         }),
       },
       { includeContentType: true },

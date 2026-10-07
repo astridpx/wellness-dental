@@ -1,18 +1,24 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { AppButton, AppInput, AppModal, AppSearchSelect } from '@/components/app'
 import {
   useApprovalNumberGenerator,
   useChequeSummaryReports,
+  useDentists,
   useUsersList,
   useVoucherAccountLibraries,
 } from '@/composables'
+import type { Dentist } from '@/types'
 import {
   amountToVoucherWords,
   currentManilaDateInputValue,
   formatPlainAmount,
+  getVoucherReprintSnapshot,
   parsePlainAmount,
+  saveVoucherReprintSnapshot,
+  type VoucherReprintSnapshot,
 } from '@/utils'
 
 type VoucherRow = {
@@ -69,9 +75,24 @@ const generatingReferenceNo = ref(false)
 const showPrintConfirmation = ref(false)
 const printError = ref('')
 const referenceNoError = ref('')
+const reprintModeRecordId = ref<number | null>(null)
+const reprintLoadError = ref('')
+const route = useRoute()
+const router = useRouter()
 const { generateApprovalNumber } = useApprovalNumberGenerator()
-const { recordChequeSummaryEvent, saving: savingSummaryRecord } = useChequeSummaryReports()
+const {
+  records: summaryRecords,
+  recordChequeSummaryEvent,
+  loadRecords: loadSummaryRecords,
+  saving: savingSummaryRecord,
+} = useChequeSummaryReports()
 const { users, loading: loadingUsers } = useUsersList()
+const {
+  dentists,
+  fetchDentists,
+  filters: dentistFilters,
+  loading: loadingDentists,
+} = useDentists({ perPage: 50 })
 const {
   accountCodes,
   costCenters,
@@ -80,6 +101,7 @@ const {
   loading: loadingAccountLibraries,
 } = useVoucherAccountLibraries()
 let accountTitleSearchTimeout: ReturnType<typeof setTimeout> | undefined
+let dentistSearchTimeout: ReturnType<typeof setTimeout> | undefined
 let printClearFallback: ReturnType<typeof setTimeout> | undefined
 
 const amount = computed(() =>
@@ -106,6 +128,15 @@ const preparedByOptions = computed(() =>
     ),
   ),
 )
+const paidToDentistOptions = computed(() =>
+  Array.from(
+    new Set(
+      dentists.value
+        .map(formatDentistPaidToName)
+        .filter((name): name is string => Boolean(name)),
+    ),
+  ),
+)
 const accountTitleOptions = computed(() =>
   accountCodes.value.map((account) => ({
     value: account.code,
@@ -120,6 +151,21 @@ const costCenterNameOptions = computed(() =>
     description: `Code: ${costCenter.code}`,
   })),
 )
+const isReprintMode = computed(() => reprintModeRecordId.value !== null)
+const printConfirmationTitle = computed(() =>
+  isReprintMode.value ? 'Reprint Voucher?' : 'Print Voucher?',
+)
+const printConfirmationMessage = computed(() =>
+  isReprintMode.value
+    ? 'This will reprint the saved voucher without creating another cheque summary record.'
+    : 'This will save this voucher in the cheque summary, then open the print dialog.',
+)
+const printButtonLabel = computed(() =>
+  isReprintMode.value ? 'Reprint Voucher' : 'Print Voucher',
+)
+const printConfirmButtonLabel = computed(() =>
+  savingSummaryRecord.value ? 'Saving' : isReprintMode.value ? 'Reprint' : 'Save & Print',
+)
 
 function formatVoucherDate(value: string) {
   if (!value) return ''
@@ -127,6 +173,15 @@ function formatVoucherDate(value: string) {
   if (!year || !month || !day) return value
 
   return `${month}/${day}/${year}`
+}
+
+function formatDentistPaidToName(dentist: Dentist) {
+  const firstName = String(dentist.firstname || '').trim()
+  const middleName = String(dentist.middleinitial || '').trim().replace(/\.$/, '')
+  const lastName = String(dentist.lastname || '').trim()
+  const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ').trim()
+
+  return fullName || String(dentist.dentistname || dentist.acctname || '').trim()
 }
 
 function addRow() {
@@ -175,6 +230,15 @@ function searchAccountTitles(value: string) {
   }, 300)
 }
 
+function searchPaidToDentists(value: string) {
+  if (dentistSearchTimeout) clearTimeout(dentistSearchTimeout)
+
+  dentistSearchTimeout = setTimeout(() => {
+    dentistFilters.dentistName = value.trim()
+    void fetchDentists()
+  }, 300)
+}
+
 function selectCostCenter(row: VoucherRow, value: string | number | null) {
   row.costCenter = value == null ? '' : String(value)
 
@@ -207,6 +271,58 @@ function printVoucher() {
   showPrintConfirmation.value = true
 }
 
+function buildVoucherReprintSnapshot(summaryRecordId?: number): VoucherReprintSnapshot {
+  return {
+    ...(summaryRecordId ? { summaryRecordId } : {}),
+    savedAt: new Date().toISOString(),
+    voucher: { ...voucher },
+    rows: rows.value.map((row) => ({ ...row })),
+  }
+}
+
+function applyVoucherReprintSnapshot(snapshot: VoucherReprintSnapshot, fallbackRecordId?: number) {
+  Object.assign(voucher, snapshot.voucher)
+  rows.value = snapshot.rows.length
+    ? snapshot.rows.map((row, index) => ({ ...row, id: Number(row.id) || index + 1 }))
+    : [createEmptyVoucherRow(1)]
+  nextRowId.value = Math.max(...rows.value.map((row) => row.id), 0) + 1
+  reprintModeRecordId.value = snapshot.summaryRecordId || fallbackRecordId || null
+  reprintLoadError.value = ''
+  printError.value = ''
+  referenceNoError.value = ''
+}
+
+async function loadVoucherReprintFromRoute() {
+  const reprintId = Array.isArray(route.query.reprintId)
+    ? route.query.reprintId[0]
+    : route.query.reprintId
+
+  if (!reprintId) return false
+
+  const recordId = Number(reprintId)
+  const localSnapshot = getVoucherReprintSnapshot(reprintId)
+  if (localSnapshot) {
+    applyVoucherReprintSnapshot(localSnapshot, Number.isFinite(recordId) ? recordId : undefined)
+    return true
+  }
+
+  await loadSummaryRecords()
+  const record = summaryRecords.value.find((row) => row.id === recordId)
+  if (record?.voucherPayload) {
+    applyVoucherReprintSnapshot(record.voucherPayload, record.id)
+    saveVoucherReprintSnapshot({ ...record.voucherPayload, summaryRecordId: record.id })
+    return true
+  }
+
+  if (!localSnapshot) {
+    reprintLoadError.value =
+      'This summary row does not have saved voucher details available for reprint.'
+    return false
+  }
+
+  return false
+}
+
 function clearVoucherForm(refreshReferenceNo = true) {
   voucher.companyName = defaultVoucherCompanyName
   voucher.title = 'Check voucher'
@@ -224,10 +340,13 @@ function clearVoucherForm(refreshReferenceNo = true) {
   voucher.receivedDate = ''
   rows.value = [createEmptyVoucherRow(1)]
   nextRowId.value = 2
+  reprintModeRecordId.value = null
+  reprintLoadError.value = ''
   printError.value = ''
   referenceNoError.value = ''
 
   if (refreshReferenceNo) void generateReferenceNo()
+  if (route.query.reprintId) void router.replace({ name: 'checkVouchers', query: {} })
 }
 
 function clearVoucherAfterPrint() {
@@ -245,6 +364,13 @@ function clearVoucherAfterPrint() {
 async function confirmPrintVoucher() {
   printError.value = ''
 
+  if (isReprintMode.value) {
+    showPrintConfirmation.value = false
+    clearVoucherAfterPrint()
+    window.print()
+    return
+  }
+
   const result = await recordChequeSummaryEvent({
     kind: 'voucher',
     title: voucher.title,
@@ -255,6 +381,7 @@ async function confirmPrintVoucher() {
     amount: amount.value,
     preparedBy: voucher.preparedBy,
     accountName: voucher.companyName,
+    voucherPayload: buildVoucherReprintSnapshot(),
   })
 
   if (!result.ok) {
@@ -263,20 +390,26 @@ async function confirmPrintVoucher() {
   }
 
   showPrintConfirmation.value = false
+  if (result.data?.id) {
+    saveVoucherReprintSnapshot(buildVoucherReprintSnapshot(result.data.id))
+  }
   clearVoucherAfterPrint()
   window.print()
 }
 
-onMounted(() => {
+onMounted(async () => {
   void loadLibraries()
 
-  if (!voucher.referenceNo.trim()) {
+  const loadedReprint = await loadVoucherReprintFromRoute()
+
+  if (!loadedReprint && !voucher.referenceNo.trim()) {
     void generateReferenceNo()
   }
 })
 
 onBeforeUnmount(() => {
   if (accountTitleSearchTimeout) clearTimeout(accountTitleSearchTimeout)
+  if (dentistSearchTimeout) clearTimeout(dentistSearchTimeout)
   if (printClearFallback) window.clearTimeout(printClearFallback)
 })
 </script>
@@ -285,14 +418,14 @@ onBeforeUnmount(() => {
   <div class="space-y-6">
     <AppModal
       :show="showPrintConfirmation"
-      title="Print Voucher?"
+      :title="printConfirmationTitle"
       subtitle="Cheque Summary"
       max-width="sm:max-w-lg"
       @close="showPrintConfirmation = false"
     >
       <div class="space-y-4 px-6 py-5">
         <p class="text-sm leading-6 text-slate">
-          This will save this voucher in the cheque summary, then open the print dialog.
+          {{ printConfirmationMessage }}
         </p>
         <div class="grid gap-3 rounded-2xl border border-[#ded7cc] bg-[#fbf7ef] p-4 text-sm">
           <div class="flex justify-between gap-4">
@@ -339,7 +472,7 @@ onBeforeUnmount(() => {
               class="h-4 w-4"
               :class="{ 'animate-spin': savingSummaryRecord }"
             />
-            {{ savingSummaryRecord ? 'Saving' : 'Save & Print' }}
+            {{ printConfirmButtonLabel }}
           </AppButton>
         </div>
       </template>
@@ -349,6 +482,9 @@ onBeforeUnmount(() => {
       <div>
         <p class="text-[11px] font-semibold uppercase tracking-[0.28em] text-smoke">Payables</p>
         <h1 class="mt-2 text-2xl font-black text-onyx">Check Voucher Generator</h1>
+        <p v-if="isReprintMode" class="mt-2 text-sm font-semibold text-sapphire">
+          Reprinting saved voucher #{{ reprintModeRecordId }}
+        </p>
       </div>
 
       <div class="flex flex-wrap gap-3">
@@ -362,9 +498,16 @@ onBeforeUnmount(() => {
         </AppButton>
         <AppButton btn-theme="primary" type="button" @click="printVoucher">
           <Icon icon="feather:printer" class="h-4 w-4" />
-          Print Voucher
+          {{ printButtonLabel }}
         </AppButton>
       </div>
+    </div>
+
+    <div
+      v-if="reprintLoadError"
+      class="rounded-xl border border-ruby bg-ruby-light px-4 py-3 text-sm font-semibold text-ruby"
+    >
+      {{ reprintLoadError }}
     </div>
 
     <div class="grid gap-6 2xl:grid-cols-[minmax(360px,520px)_1fr]">
@@ -383,7 +526,26 @@ onBeforeUnmount(() => {
           <div class="grid gap-4 sm:grid-cols-2">
             <AppInput v-model="voucher.companyName" label="Company name" />
             <AppInput v-model="voucher.title" label="Voucher title" />
-            <AppInput v-model="voucher.paidTo" label="Paid to" />
+            <div>
+              <label class="mb-2 block text-sm font-medium text-onyx">Paid to</label>
+              <div class="relative">
+                <Icon
+                  :icon="loadingDentists ? 'feather:loader' : 'feather:search'"
+                  class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate"
+                  :class="{ 'animate-spin': loadingDentists }"
+                />
+                <input
+                  v-model="voucher.paidTo"
+                  list="voucher-paid-to-dentist-options"
+                  class="w-full rounded-xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fafcff_100%)] py-3.5 pl-12 pr-4 text-onyx outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.92)] transition-all duration-200 placeholder:text-ash hover:border-slate focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
+                  :placeholder="loadingDentists ? 'Loading dentists...' : 'Search dentist or type payee'"
+                  @input="searchPaidToDentists(($event.target as HTMLInputElement).value)"
+                />
+                <datalist id="voucher-paid-to-dentist-options">
+                  <option v-for="name in paidToDentistOptions" :key="name" :value="name" />
+                </datalist>
+              </div>
+            </div>
             <div>
               <label class="mb-2 block text-sm font-medium text-onyx">Reference no.</label>
               <div class="flex gap-2">
@@ -542,7 +704,7 @@ onBeforeUnmount(() => {
       </form>
 
       <section
-        class="printable-voucher overflow-auto rounded-3xl border border-[#d8d1c5] bg-[#f7f2e8] p-4 shadow-md"
+        class="printable-voucher overflow-auto rounded-3xl border border-[#d8d1c5] bg-[#f7f2e8] p-4 shadow-md 2xl:sticky 2xl:top-6 2xl:max-h-[calc(100vh-3rem)] 2xl:self-start"
       >
         <div class="voucher-sheet mx-auto bg-[#f3eddf] text-[#222] shadow-sm">
           <div class="grid grid-cols-[1fr_165px] gap-6">

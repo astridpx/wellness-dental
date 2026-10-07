@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { AppButton, AppInput, AppModal } from '@/components/app'
 import { useChequeSummaryReports, type ChequeSummaryRecord } from '@/composables'
-import { formatDateTime, formatMoney } from '@/utils'
+import { formatDateTime, formatMoney, hasVoucherReprintSnapshot } from '@/utils'
 
 const {
   deleteRecord,
@@ -17,6 +18,7 @@ const {
   summary,
 } = useChequeSummaryReports({ autoLoad: true })
 const recordToDelete = ref<ChequeSummaryRecord | null>(null)
+const router = useRouter()
 
 const typeOptions = [
   { value: 'all', label: 'All documents' },
@@ -54,6 +56,18 @@ function documentLabel(record: ChequeSummaryRecord) {
 function secondaryDetail(record: ChequeSummaryRecord) {
   if (record.kind === 'voucher') return record.preparedBy || record.accountName || 'N/A'
   return record.bankName || record.accountName || 'N/A'
+}
+
+function canReprintVoucher(record: ChequeSummaryRecord) {
+  return (
+    record.kind === 'voucher' &&
+    (Boolean(record.voucherPayload) || hasVoucherReprintSnapshot(record.id))
+  )
+}
+
+function reprintVoucher(record: ChequeSummaryRecord) {
+  if (!canReprintVoucher(record)) return
+  void router.push({ name: 'checkVouchers', query: { reprintId: String(record.id) } })
 }
 
 async function confirmDeleteRecord() {
@@ -245,7 +259,26 @@ async function confirmDeleteRecord() {
               </td>
               <td class="px-5 py-4 text-slate">{{ secondaryDetail(record) }}</td>
               <td class="px-5 py-4">
-                <div class="flex justify-end">
+                <div class="flex justify-end gap-2">
+                  <button
+                    v-if="record.kind === 'voucher'"
+                    type="button"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-pebble bg-white text-slate transition hover:border-sapphire hover:text-sapphire disabled:cursor-not-allowed disabled:bg-fog disabled:text-smoke"
+                    :disabled="!canReprintVoucher(record)"
+                    :aria-label="
+                      canReprintVoucher(record)
+                        ? 'Reprint saved voucher'
+                        : 'Voucher details unavailable for reprint'
+                    "
+                    :title="
+                      canReprintVoucher(record)
+                        ? 'Reprint saved voucher'
+                        : 'Voucher details unavailable for reprint'
+                    "
+                    @click="reprintVoucher(record)"
+                  >
+                    <Icon icon="feather:repeat" class="h-4 w-4" />
+                  </button>
                   <button
                     type="button"
                     class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-pebble bg-white text-slate transition hover:border-ruby hover:text-ruby"
