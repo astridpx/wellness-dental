@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import * as XLSX from 'xlsx'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { AppButton, AppInput, AppModal } from '@/components/app'
 import { useChequeSummaryReports, type ChequeSummaryRecord } from '@/composables'
 import {
+  autoFitWorksheetColumns,
   formatDateTime,
   formatMoney,
   hasChequeReprintSnapshot,
@@ -53,6 +55,146 @@ const statCards = computed(() => [
     icon: 'feather:dollar-sign',
   },
 ])
+
+function parseRecordDate(record: ChequeSummaryRecord) {
+  const value = record.documentDate || record.createdAt
+  const date = value ? new Date(value) : null
+  return date && !Number.isNaN(date.getTime()) ? date : null
+}
+
+function formatLedgerDate(record: ChequeSummaryRecord) {
+  const date = parseRecordDate(record)
+  if (!date) return record.documentDate || ''
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'numeric',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'Asia/Manila',
+  }).format(date)
+}
+
+function formatVoucherPeriodRange(periodFrom: string, periodTo: string) {
+  const fromDate = parseDateInput(periodFrom)
+  const toDate = parseDateInput(periodTo)
+
+  if (!fromDate || !toDate) {
+    return [periodFrom, periodTo].filter(Boolean).join(' to ')
+  }
+
+  const fromYear = fromDate.getFullYear()
+  const toYear = toDate.getFullYear()
+
+  if (fromYear === toYear) {
+    const monthDayFormatter = new Intl.DateTimeFormat('en-US', {
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'Asia/Manila',
+    })
+
+    return `${monthDayFormatter.format(fromDate)} to ${monthDayFormatter.format(toDate)}, ${toYear}`
+  }
+
+  const fullFormatter = new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'Asia/Manila',
+  })
+
+  return `${fullFormatter.format(fromDate)} to ${fullFormatter.format(toDate)}`
+}
+
+function parseDateInput(value: string) {
+  if (!value) return null
+
+  const date = new Date(`${value}T00:00:00+08:00`)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function formatMonthTitle(date: Date) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    timeZone: 'Asia/Manila',
+  })
+    .format(date)
+    .toUpperCase()
+}
+
+function exportMonthTitle(records: ChequeSummaryRecord[]) {
+  const dateFrom = parseDateInput(filters.dateFrom)
+  const dateTo = parseDateInput(filters.dateTo)
+
+  if (dateFrom && dateTo) {
+    const fromMonth = formatMonthTitle(dateFrom)
+    const toMonth = formatMonthTitle(dateTo)
+    return fromMonth === toMonth ? fromMonth : `${fromMonth} - ${toMonth}`
+  }
+
+  const date = dateFrom || dateTo || records.map(parseRecordDate).find((recordDate) => recordDate !== null)
+  if (!date) return 'CHEQUE SUMMARY'
+
+  return formatMonthTitle(date)
+}
+
+function exportParticulars(record: ChequeSummaryRecord) {
+  if (record.kind === 'voucher' && record.voucherPayload) {
+    const voucher = record.voucherPayload.voucher
+    const period =
+      voucher.periodFrom || voucher.periodTo
+        ? ` FOR THE PERIOD OF ${formatVoucherPeriodRange(voucher.periodFrom, voucher.periodTo)}`
+        : ''
+    return `${voucher.particulars || record.title || 'CHECK VOUCHER'}${period}`.trim()
+  }
+
+  if (record.kind === 'cheque' && record.chequePayload?.template?.bankName) {
+    return `${record.chequePayload.template.bankName} CHEQUE`
+  }
+
+  return record.title || documentLabel(record)
+}
+
+function exportChequeVouchersToExcel() {
+  const records = [...filteredRecords.value].sort((a, b) => {
+    const first = new Date(a.createdAt).getTime() || 0
+    const second = new Date(b.createdAt).getTime() || 0
+    return first - second
+  })
+
+  const title = exportMonthTitle(records)
+  const rows = [
+    ['', '', title, '', ''],
+    ['Date', 'Payee', 'Particulars', 'Check / Ref No.', 'Credit'],
+    ...records.map((record) => [
+      formatLedgerDate(record),
+      record.payee,
+      exportParticulars(record),
+      record.checkNo || record.referenceNo,
+      record.amount,
+    ]),
+  ]
+
+  const worksheet = XLSX.utils.aoa_to_sheet(rows)
+  worksheet['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }]
+  worksheet['!cols'] = [
+    { wch: 14 },
+    { wch: 34 },
+    { wch: 70 },
+    { wch: 18 },
+    { wch: 16 },
+  ]
+
+  records.forEach((_, index) => {
+    const amountCell = XLSX.utils.encode_cell({ r: index + 2, c: 4 })
+    if (worksheet[amountCell]) worksheet[amountCell].z = '#,##0.00'
+  })
+
+  autoFitWorksheetColumns(worksheet, { minWidth: 12, maxWidth: 70, padding: 3 })
+
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Cheque Vouchers')
+  XLSX.writeFile(workbook, `cheque-vouchers-${title.toLowerCase().replace(/\s+/g, '-')}.xlsx`)
+}
 
 function documentLabel(record: ChequeSummaryRecord) {
   return record.kind === 'voucher' ? 'Voucher' : 'Cheque'
@@ -157,6 +299,15 @@ async function confirmDeleteRecord() {
       </div>
 
       <div class="flex flex-wrap gap-3">
+        <AppButton
+          btn-theme="outline"
+          type="button"
+          :disabled="loading || !filteredRecords.length"
+          @click="exportChequeVouchersToExcel"
+        >
+          <Icon icon="feather:download" class="h-4 w-4" />
+          Export Excel
+        </AppButton>
         <AppButton btn-theme="outline" type="button" @click="loadRecords">
           <Icon icon="feather:refresh-cw" class="h-4 w-4" />
           Refresh

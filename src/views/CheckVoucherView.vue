@@ -116,10 +116,10 @@ const formattedCreditTotal = computed(() => formatPlainAmount(creditTotal.value)
 const periodLabel = computed(() => {
   if (!voucher.periodFrom && !voucher.periodTo) return ''
   if (voucher.periodFrom && voucher.periodTo) {
-    return `${formatVoucherDate(voucher.periodFrom)} TO ${formatVoucherDate(voucher.periodTo)}`
+    return formatVoucherPeriodRange(voucher.periodFrom, voucher.periodTo)
   }
 
-  return formatVoucherDate(voucher.periodFrom || voucher.periodTo)
+  return formatVoucherLongDate(voucher.periodFrom || voucher.periodTo)
 })
 const preparedByOptions = computed(() =>
   Array.from(
@@ -173,6 +173,43 @@ function formatVoucherDate(value: string) {
   if (!year || !month || !day) return value
 
   return `${month}/${day}/${year}`
+}
+
+function parseVoucherDateInput(value: string) {
+  if (!value) return null
+
+  const [year, month, day] = value.split('-').map(Number)
+  if (!year || !month || !day) return null
+
+  const date = new Date(year, month - 1, day)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function formatVoucherLongDate(value: string, includeYear = true) {
+  const date = parseVoucherDateInput(value)
+  if (!date) return value
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    ...(includeYear ? { year: 'numeric' } : {}),
+  }).format(date)
+}
+
+function formatVoucherPeriodRange(periodFrom: string, periodTo: string) {
+  const fromDate = parseVoucherDateInput(periodFrom)
+  const toDate = parseVoucherDateInput(periodTo)
+
+  if (!fromDate || !toDate) return [periodFrom, periodTo].filter(Boolean).join(' to ')
+
+  const fromYear = fromDate.getFullYear()
+  const toYear = toDate.getFullYear()
+
+  if (fromYear === toYear) {
+    return `${formatVoucherLongDate(periodFrom, false)} to ${formatVoucherLongDate(periodTo, false)}, ${toYear}`
+  }
+
+  return `${formatVoucherLongDate(periodFrom)} to ${formatVoucherLongDate(periodTo)}`
 }
 
 function formatDentistPaidToName(dentist: Dentist) {
