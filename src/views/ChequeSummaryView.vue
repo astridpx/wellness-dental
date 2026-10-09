@@ -163,7 +163,7 @@ function exportChequeVouchersToExcel() {
 
   const title = exportMonthTitle(records)
   const rows = [
-    ['', '', title, '', ''],
+    [title, '', '', '', ''],
     ['Date', 'Payee', 'Particulars', 'Check / Ref No.', 'Credit'],
     ...records.map((record) => [
       formatLedgerDate(record),
@@ -176,6 +176,17 @@ function exportChequeVouchersToExcel() {
 
   const worksheet = XLSX.utils.aoa_to_sheet(rows)
   worksheet['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }]
+  worksheet.A1.s = {
+    alignment: { horizontal: 'center', vertical: 'center' },
+    font: { bold: true },
+  }
+  ;['A2', 'B2', 'C2', 'D2', 'E2'].forEach((cellAddress) => {
+    if (!worksheet[cellAddress]) return
+    worksheet[cellAddress].s = {
+      alignment: { horizontal: 'center', vertical: 'center' },
+      font: { bold: true },
+    }
+  })
   worksheet['!cols'] = [
     { wch: 14 },
     { wch: 34 },
