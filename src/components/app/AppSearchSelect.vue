@@ -25,6 +25,7 @@ const props = withDefaults(
     emptyText?: string
     loading?: boolean
     disabled?: boolean
+    allowCustomValue?: boolean
   }>(),
   {
     label: '',
@@ -32,6 +33,7 @@ const props = withDefaults(
     emptyText: 'No matching options found.',
     loading: false,
     disabled: false,
+    allowCustomValue: false,
   },
 )
 
@@ -75,8 +77,16 @@ function displayValue(value: unknown) {
     props.options.find((option) => String(option.value) === normalizedValue)?.label ||
     (retainedOption.value && String(retainedOption.value.value) === normalizedValue
       ? retainedOption.value.label
-      : '')
+      : props.allowCustomValue
+        ? normalizedValue
+        : '')
   )
+}
+
+function handleInput(event: Event) {
+  const value = (event.target as HTMLInputElement).value
+  search.value = value
+  if (props.allowCustomValue) model.value = value
 }
 </script>
 
@@ -93,7 +103,7 @@ function displayValue(value: unknown) {
         <ComboboxInput
           class="w-full rounded-xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fafcff_100%)] py-3.5 pr-12 pl-12 text-onyx shadow-[inset_0_1px_0_rgba(255,255,255,0.92)] outline-none transition-all duration-200 placeholder:text-ash hover:border-slate focus:border-tangerine focus:ring-4 focus:ring-focus-ring disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
           :display-value="displayValue" :placeholder="loading ? 'Loading options...' : placeholder"
-          @change="search = ($event.target as HTMLInputElement).value" />
+          @input="handleInput" />
         <ComboboxButton
           class="absolute inset-y-0 right-0 flex items-center pr-4 text-slate transition hover:text-tangerine">
           <Icon :icon="loading ? 'feather:loader' : 'feather:chevron-down'" class="h-5 w-5"

@@ -7,6 +7,7 @@ export const CLINICS_ENDPOINT = '/wellness/clinics'
 
 type UseClinicsOptions = {
   immediate?: boolean
+  perPage?: number
 }
 
 export function useClinics(options: UseClinicsOptions = {}) {
@@ -17,7 +18,7 @@ export function useClinics(options: UseClinicsOptions = {}) {
   const loading = ref(immediate)
   const errorMessage = ref('')
   const currentPage = ref(1)
-  const perPage = ref(APP_PER_PAGE)
+  const perPage = ref(options.perPage ?? APP_PER_PAGE)
   const totalEntries = ref(0)
   const totalPages = ref(1)
   const filters = reactive({

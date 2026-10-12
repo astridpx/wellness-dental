@@ -3,7 +3,11 @@ import { APP_PER_PAGE } from '@/constants/app'
 import type { RoleOption, UserRow } from '@/types'
 import { useWellnessApi } from './useWellnessApi'
 
-export function useUsersList() {
+type UseUsersListOptions = {
+  perPage?: number
+}
+
+export function useUsersList(options: UseUsersListOptions = {}) {
   const { request } = useWellnessApi()
 
   const loading = ref(true)
@@ -11,7 +15,7 @@ export function useUsersList() {
   const users = ref<UserRow[]>([])
   const roles = ref<RoleOption[]>([])
   const currentPage = ref(1)
-  const perPage = ref(APP_PER_PAGE)
+  const perPage = ref(options.perPage ?? APP_PER_PAGE)
   const totalEntries = ref(0)
   const totalPages = ref(1)
 
@@ -82,6 +86,7 @@ export function useUsersList() {
     applyFilters,
     currentPage,
     errorMessage,
+    fetchUsers,
     filters,
     loading,
     roles,

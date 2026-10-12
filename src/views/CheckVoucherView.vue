@@ -6,11 +6,12 @@ import { AppButton, AppInput, AppModal, AppSearchSelect } from '@/components/app
 import {
   useApprovalNumberGenerator,
   useChequeSummaryReports,
+  useClinics,
   useDentists,
   useUsersList,
   useVoucherAccountLibraries,
 } from '@/composables'
-import type { Dentist } from '@/types'
+import type { Clinic, Dentist } from '@/types'
 import {
   amountToVoucherWords,
   currentManilaDateInputValue,
@@ -86,13 +87,24 @@ const {
   loadRecords: loadSummaryRecords,
   saving: savingSummaryRecord,
 } = useChequeSummaryReports()
-const { users, loading: loadingUsers } = useUsersList()
+const {
+  users,
+  fetchUsers,
+  filters: userFilters,
+  loading: loadingUsers,
+} = useUsersList({ perPage: 50 })
 const {
   dentists,
   fetchDentists,
   filters: dentistFilters,
   loading: loadingDentists,
 } = useDentists({ perPage: 50 })
+const {
+  clinics,
+  fetchClinics,
+  filters: clinicFilters,
+  loading: loadingClinics,
+} = useClinics({ perPage: 50 })
 const {
   accountCodes,
   costCenters,
@@ -101,7 +113,8 @@ const {
   loading: loadingAccountLibraries,
 } = useVoucherAccountLibraries()
 let accountTitleSearchTimeout: ReturnType<typeof setTimeout> | undefined
-let dentistSearchTimeout: ReturnType<typeof setTimeout> | undefined
+let paidToSearchTimeout: ReturnType<typeof setTimeout> | undefined
+let preparedBySearchTimeout: ReturnType<typeof setTimeout> | undefined
 let printClearFallback: ReturnType<typeof setTimeout> | undefined
 
 const amount = computed(() =>
@@ -126,17 +139,41 @@ const preparedByOptions = computed(() =>
     new Set(
       users.value.map((user) => user.name?.trim()).filter((name): name is string => Boolean(name)),
     ),
-  ),
+  ).map((name) => ({
+    value: name,
+    label: name,
+    description: 'User',
+  })),
 )
-const paidToDentistOptions = computed(() =>
-  Array.from(
-    new Set(
-      dentists.value
-        .map(formatDentistPaidToName)
-        .filter((name): name is string => Boolean(name)),
-    ),
-  ),
-)
+const paidToOptions = computed(() => {
+  const options = [
+    ...dentists.value
+      .map(formatDentistPaidToName)
+      .filter((name): name is string => Boolean(name))
+      .map((name) => ({
+        value: name,
+        label: name,
+        description: 'Dentist',
+      })),
+    ...clinics.value
+      .map(formatClinicPaidToName)
+      .filter((name): name is string => Boolean(name))
+      .map((name) => ({
+        value: name,
+        label: name,
+        description: 'Clinic',
+      })),
+  ]
+  const seen = new Set<string>()
+
+  return options.filter((option) => {
+    const key = option.value.toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+})
+const loadingPaidToOptions = computed(() => loadingDentists.value || loadingClinics.value)
 const accountTitleOptions = computed(() =>
   accountCodes.value.map((account) => ({
     value: account.code,
@@ -221,6 +258,10 @@ function formatDentistPaidToName(dentist: Dentist) {
   return fullName || String(dentist.dentistname || dentist.acctname || '').trim()
 }
 
+function formatClinicPaidToName(clinic: Clinic) {
+  return String(clinic.clinicname || clinic.cliniccode || '').trim()
+}
+
 function addRow() {
   rows.value.push(createEmptyVoucherRow(nextRowId.value))
   nextRowId.value += 1
@@ -267,12 +308,24 @@ function searchAccountTitles(value: string) {
   }, 300)
 }
 
-function searchPaidToDentists(value: string) {
-  if (dentistSearchTimeout) clearTimeout(dentistSearchTimeout)
+function searchPaidToOptions(value: string) {
+  if (paidToSearchTimeout) clearTimeout(paidToSearchTimeout)
 
-  dentistSearchTimeout = setTimeout(() => {
-    dentistFilters.dentistName = value.trim()
+  paidToSearchTimeout = setTimeout(() => {
+    const search = value.trim()
+    dentistFilters.dentistName = search
+    clinicFilters.clinicName = search
     void fetchDentists()
+    void fetchClinics()
+  }, 300)
+}
+
+function searchPreparedByOptions(value: string) {
+  if (preparedBySearchTimeout) clearTimeout(preparedBySearchTimeout)
+
+  preparedBySearchTimeout = setTimeout(() => {
+    userFilters.name = value.trim()
+    void fetchUsers()
   }, 300)
 }
 
@@ -439,7 +492,8 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   if (accountTitleSearchTimeout) clearTimeout(accountTitleSearchTimeout)
-  if (dentistSearchTimeout) clearTimeout(dentistSearchTimeout)
+  if (paidToSearchTimeout) clearTimeout(paidToSearchTimeout)
+  if (preparedBySearchTimeout) clearTimeout(preparedBySearchTimeout)
   if (printClearFallback) window.clearTimeout(printClearFallback)
 })
 </script>
@@ -556,27 +610,18 @@ onBeforeUnmount(() => {
           <div class="grid gap-4 sm:grid-cols-2">
             <AppInput v-model="voucher.companyName" label="Company name" />
             <AppInput v-model="voucher.title" label="Voucher title" />
-            <div>
-              <label class="mb-2 block text-sm font-medium text-onyx">Paid to</label>
-              <div class="relative">
-                <Icon
-                  :icon="loadingDentists ? 'feather:loader' : 'feather:search'"
-                  class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate"
-                  :class="{ 'animate-spin': loadingDentists }"
-                />
-                <input
-                  v-model="voucher.paidTo"
-                  list="voucher-paid-to-dentist-options"
-                  class="w-full rounded-xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fafcff_100%)] py-3.5 pl-12 pr-4 text-onyx outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.92)] transition-all duration-200 placeholder:text-ash hover:border-slate focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
-                  :placeholder="loadingDentists ? 'Loading dentists...' : 'Search dentist or type payee'"
-                  @input="searchPaidToDentists(($event.target as HTMLInputElement).value)"
-                />
-                <datalist id="voucher-paid-to-dentist-options">
-                  <option v-for="name in paidToDentistOptions" :key="name" :value="name" />
-                </datalist>
-              </div>
-            </div>
-            <div>
+            <AppSearchSelect
+              v-model="voucher.paidTo"
+              :options="paidToOptions"
+              class="sm:col-span-2"
+              label="Paid to"
+              placeholder="Select or type payee"
+              empty-text="No dentists or clinics found."
+              allow-custom-value
+              :loading="loadingPaidToOptions"
+              @update:search="searchPaidToOptions"
+            />
+            <div class="sm:col-span-2">
               <label class="mb-2 block text-sm font-medium text-onyx">Reference no.</label>
               <div class="flex gap-2">
                 <input
@@ -706,25 +751,16 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label class="mb-2 block text-sm font-medium text-onyx">Prepared by</label>
-              <div class="relative">
-                <Icon
-                  :icon="loadingUsers ? 'feather:loader' : 'feather:user'"
-                  class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate"
-                  :class="{ 'animate-spin': loadingUsers }"
-                />
-                <input
-                  v-model="voucher.preparedBy"
-                  list="voucher-prepared-by-options"
-                  class="w-full rounded-xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fafcff_100%)] py-3.5 pl-12 pr-4 text-onyx outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.92)] transition-all duration-200 placeholder:text-ash hover:border-slate focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
-                  :placeholder="loadingUsers ? 'Loading users...' : 'Select or type a name'"
-                />
-                <datalist id="voucher-prepared-by-options">
-                  <option v-for="name in preparedByOptions" :key="name" :value="name" />
-                </datalist>
-              </div>
-            </div>
+            <AppSearchSelect
+              v-model="voucher.preparedBy"
+              :options="preparedByOptions"
+              label="Prepared by"
+              placeholder="Select or type a name"
+              empty-text="No users found."
+              allow-custom-value
+              :loading="loadingUsers"
+              @update:search="searchPreparedByOptions"
+            />
             <AppInput v-model="voucher.checkedBy" label="Checked by" />
             <AppInput v-model="voucher.approvedBy" label="Approved by" />
             <AppInput v-model="voucher.receivedBy" label="Received by" />
