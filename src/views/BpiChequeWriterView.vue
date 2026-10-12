@@ -2,12 +2,13 @@
 import { Icon } from '@iconify/vue'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { AppButton, AppInput, AppModal } from '@/components/app'
+import { AppButton, AppInput, AppModal, AppSearchSelect } from '@/components/app'
 import {
   DEFAULT_CHEQUE_DATE_PART_OFFSETS,
   DEFAULT_CHEQUE_BANK_NAME,
   createDefaultChequeTemplate,
   normalizeChequeBankKey,
+  useClinics,
   useChequeSummaryReports,
   useChequeTemplates,
   useDentists,
@@ -15,7 +16,7 @@ import {
   type ChequeTemplateField,
   type SavedChequeTemplate,
 } from '@/composables'
-import type { Dentist } from '@/types'
+import type { Clinic, Dentist } from '@/types'
 import {
   amountToChequeWords,
   currentManilaDateInputValue,
@@ -88,6 +89,7 @@ const cheque = reactive({
   amountWords: '',
 })
 const showGuides = ref(true)
+const showChequeSetup = ref(false)
 const saveMessage = ref('')
 const showPrintConfirmation = ref(false)
 const printError = ref('')
@@ -119,7 +121,13 @@ const {
   filters: dentistFilters,
   loading: loadingDentists,
 } = useDentists({ perPage: 50 })
-let dentistSearchTimeout: ReturnType<typeof setTimeout> | undefined
+const {
+  clinics,
+  fetchClinics,
+  filters: clinicFilters,
+  loading: loadingClinics,
+} = useClinics({ perPage: 50 })
+let payeeSearchTimeout: ReturnType<typeof setTimeout> | undefined
 
 const currentBankName = computed(() => bpiTemplate.bankName.trim() || DEFAULT_CHEQUE_BANK_NAME)
 const isReprintMode = computed(() => reprintModeRecordId.value !== null)
@@ -171,15 +179,35 @@ const formattedAmount = computed(() => formatPlainAmount(cheque.amount))
 const generatedAmountWords = computed(() => amountToChequeWords(cheque.amount).toUpperCase())
 const chequeAmountWords = computed(() => cheque.amountWords.trim() || generatedAmountWords.value)
 const templateFields = computed(() => bpiTemplate.fields)
-const payeeDentistOptions = computed(() =>
-  Array.from(
-    new Set(
-      dentists.value
-        .map(formatDentistPayeeName)
-        .filter((name): name is string => Boolean(name)),
-    ),
-  ),
-)
+const payeeOptions = computed(() => {
+  const options = [
+    ...dentists.value
+      .map(formatDentistPayeeName)
+      .filter((name): name is string => Boolean(name))
+      .map((name) => ({
+        value: name,
+        label: name,
+        description: 'Dentist',
+      })),
+    ...clinics.value
+      .map(formatClinicPayeeName)
+      .filter((name): name is string => Boolean(name))
+      .map((name) => ({
+        value: name,
+        label: name,
+        description: 'Clinic',
+      })),
+  ]
+  const seen = new Set<string>()
+
+  return options.filter((option) => {
+    const key = option.value.toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+})
+const loadingPayeeOptions = computed(() => loadingDentists.value || loadingClinics.value)
 const selectedBankExists = computed(() => Boolean(savedBankTemplates.value[selectedBankKey.value]))
 const canInsertBankRow = computed(() => {
   const bankName = bankNameDraft.value.trim()
@@ -402,12 +430,19 @@ function formatDentistPayeeName(dentist: Dentist) {
   return fullName || String(dentist.dentistname || dentist.acctname || '').trim()
 }
 
-function searchPayeeDentists(value: string) {
-  if (dentistSearchTimeout) clearTimeout(dentistSearchTimeout)
+function formatClinicPayeeName(clinic: Clinic) {
+  return String(clinic.clinicname || clinic.cliniccode || '').trim()
+}
 
-  dentistSearchTimeout = setTimeout(() => {
-    dentistFilters.dentistName = value.trim()
+function searchPayeeOptions(value: string) {
+  if (payeeSearchTimeout) clearTimeout(payeeSearchTimeout)
+
+  payeeSearchTimeout = setTimeout(() => {
+    const search = value.trim()
+    dentistFilters.dentistName = search
+    clinicFilters.clinicName = search
     void fetchDentists()
+    void fetchClinics()
   }, 300)
 }
 
@@ -647,7 +682,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-  if (dentistSearchTimeout) clearTimeout(dentistSearchTimeout)
+  if (payeeSearchTimeout) clearTimeout(payeeSearchTimeout)
 })
 </script>
 
@@ -779,6 +814,14 @@ onBeforeUnmount(() => {
           <Icon :icon="showGuides ? 'feather:eye' : 'feather:eye-off'" class="h-4 w-4" />
           {{ showGuides ? 'Guides On' : 'Guides Off' }}
         </button>
+        <button
+          type="button"
+          class="inline-flex items-center justify-center gap-2 rounded-xl border border-pebble bg-white px-4 py-2.5 text-sm font-semibold text-onyx shadow-sm transition hover:border-tangerine hover:text-tangerine"
+          @click="showChequeSetup = !showChequeSetup"
+        >
+          <Icon :icon="showChequeSetup ? 'feather:chevron-up' : 'feather:sliders'" class="h-4 w-4" />
+          {{ showChequeSetup ? 'Hide Setup' : 'Setup' }}
+        </button>
         <AppButton btn-theme="primary" type="button" @click="printCheque">
           <Icon icon="feather:printer" class="h-4 w-4" />
           {{ printButtonLabel }}
@@ -798,7 +841,7 @@ onBeforeUnmount(() => {
         class="no-print space-y-5 rounded-3xl border border-[#d8d1c5] bg-[linear-gradient(180deg,#fbf6ee_0%,#eef1ed_100%)] p-5 shadow-sm"
         @submit.prevent="printCheque"
       >
-        <section class="space-y-4">
+        <section v-if="showChequeSetup" class="space-y-4">
           <div
             class="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-slate"
           >
@@ -877,7 +920,7 @@ onBeforeUnmount(() => {
           </div>
         </section>
 
-        <section class="space-y-4">
+        <section v-if="showChequeSetup" class="space-y-4">
           <div class="flex items-center justify-between gap-3">
             <div
               class="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-slate"
@@ -1060,30 +1103,21 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="grid gap-4 sm:grid-cols-2">
-            <AppInput v-model="cheque.accountName" label="Account name" />
-            <AppInput v-model="cheque.date" type="date" label="Date" />
-            <div>
-              <label class="mb-2 block text-sm font-medium text-onyx">Pay to the order of</label>
-              <div class="relative">
-                <Icon
-                  :icon="loadingDentists ? 'feather:loader' : 'feather:search'"
-                  class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate"
-                  :class="{ 'animate-spin': loadingDentists }"
-                />
-                <input
-                  v-model="cheque.payee"
-                  list="cheque-payee-dentist-options"
-                  class="w-full rounded-xl border border-pebble bg-[linear-gradient(180deg,#ffffff_0%,#fafcff_100%)] py-3.5 pl-12 pr-4 text-onyx outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.92)] transition-all duration-200 placeholder:text-ash hover:border-slate focus:border-tangerine focus:ring-4 focus:ring-focus-ring"
-                  :placeholder="loadingDentists ? 'Loading dentists...' : 'Search dentist or type payee'"
-                  @input="searchPayeeDentists(($event.target as HTMLInputElement).value)"
-                />
-                <datalist id="cheque-payee-dentist-options">
-                  <option v-for="name in payeeDentistOptions" :key="name" :value="name" />
-                </datalist>
-              </div>
-            </div>
+            <AppInput v-model="cheque.date" class="sm:col-span-2" type="date" label="Date" />
+            <AppSearchSelect
+              v-model="cheque.payee"
+              :options="payeeOptions"
+              class="sm:col-span-2"
+              label="Pay to the order of"
+              placeholder="Select or type payee"
+              empty-text="No dentists or clinics found."
+              allow-custom-value
+              :loading="loadingPayeeOptions"
+              @update:search="searchPayeeOptions"
+            />
             <AppInput
               v-model="cheque.amount"
+              class="sm:col-span-2"
               decimal-only
               inputmode="decimal"
               label="Amount"
