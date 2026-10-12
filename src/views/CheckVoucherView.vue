@@ -157,7 +157,7 @@ const printConfirmationTitle = computed(() =>
 )
 const printConfirmationMessage = computed(() =>
   isReprintMode.value
-    ? 'This will reprint the saved voucher without creating another cheque summary record.'
+    ? 'This will update the cheque summary record with the same reference number, then reprint the voucher.'
     : 'This will save this voucher in the cheque summary, then open the print dialog.',
 )
 const printButtonLabel = computed(() =>
@@ -400,13 +400,6 @@ function clearVoucherAfterPrint() {
 
 async function confirmPrintVoucher() {
   printError.value = ''
-
-  if (isReprintMode.value) {
-    showPrintConfirmation.value = false
-    clearVoucherAfterPrint()
-    window.print()
-    return
-  }
 
   const result = await recordChequeSummaryEvent({
     kind: 'voucher',
