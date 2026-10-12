@@ -7,10 +7,11 @@ import {
   VOUCHER_ACCOUNT_LIBRARY_PAGE_SIZE,
   type VoucherAccountCode,
   type VoucherCostCenter,
+  type VoucherPayee,
 } from '@/composables'
 import { formatDate } from '@/utils'
 
-type LibraryKind = 'accountCode' | 'costCenter'
+type LibraryKind = 'accountCode' | 'costCenter' | 'payee'
 type LibraryDraft = {
   title: string
 }
@@ -24,6 +25,7 @@ type LibraryActionTarget = {
 const {
   accountCodes,
   costCenters,
+  payees,
   currentPages,
   deleteItem,
   filters,
@@ -53,27 +55,46 @@ const drafts = reactive<Record<LibraryKind, LibraryDraft>>({
   costCenter: {
     title: '',
   },
+  payee: {
+    title: '',
+  },
 })
 const activeDraft = computed(() => drafts[activeKind.value])
 const activeRows = computed(() =>
-  activeKind.value === 'accountCode' ? accountCodes.value : costCenters.value,
+  activeKind.value === 'accountCode'
+    ? accountCodes.value
+    : activeKind.value === 'costCenter'
+      ? costCenters.value
+      : payees.value,
 )
 const activeSearchCode = computed({
-  get: () => (activeKind.value === 'accountCode' ? filters.accountCode : filters.costCenter),
+  get: () =>
+    activeKind.value === 'accountCode'
+      ? filters.accountCode
+      : activeKind.value === 'costCenter'
+        ? filters.costCenter
+        : '',
   set: (value: string) => {
     if (activeKind.value === 'accountCode') filters.accountCode = value
-    else filters.costCenter = value
+    else if (activeKind.value === 'costCenter') filters.costCenter = value
   },
 })
 const activeSearchTitle = computed({
-  get: () => (activeKind.value === 'accountCode' ? filters.accountTitle : filters.costCenterTitle),
+  get: () =>
+    activeKind.value === 'accountCode'
+      ? filters.accountTitle
+      : activeKind.value === 'costCenter'
+        ? filters.costCenterTitle
+        : filters.payeeName,
   set: (value: string) => {
     if (activeKind.value === 'accountCode') filters.accountTitle = value
-    else filters.costCenterTitle = value
+    else if (activeKind.value === 'costCenter') filters.costCenterTitle = value
+    else filters.payeeName = value
   },
 })
 const hasActiveSearch = computed(() =>
-  Boolean(activeSearchCode.value.trim() || activeSearchTitle.value.trim()),
+  Boolean(activeKind.value !== 'payee' && activeSearchCode.value.trim()) ||
+  Boolean(activeSearchTitle.value.trim()),
 )
 const activePage = computed({
   get: () => currentPages[activeKind.value],
@@ -92,12 +113,20 @@ const activeLabels = computed(() =>
         empty: 'No account codes yet.',
         emptySearch: 'No matching account codes found.',
       }
-    : {
+    : activeKind.value === 'costCenter'
+      ? {
         eyebrow: 'Cost Centers',
         code: 'Cost center',
         title: 'Cost center title',
         empty: 'No cost centers yet.',
         emptySearch: 'No matching cost centers found.',
+        }
+      : {
+        eyebrow: 'Payees',
+        code: 'Payee ID',
+        title: 'Payee name',
+        empty: 'No payees yet.',
+        emptySearch: 'No matching payees found.',
       },
 )
 const editLabels = computed(() =>
@@ -107,6 +136,12 @@ const editLabels = computed(() =>
         code: 'Cost center',
         title: 'Cost center title',
       }
+    : editTarget.value?.kind === 'payee'
+      ? {
+          dialogTitle: 'Edit Payee',
+          code: 'Payee ID',
+          title: 'Payee name',
+        }
     : {
         dialogTitle: 'Edit Account Code',
         code: 'Account code',
@@ -147,7 +182,7 @@ function resetDraft(kind: LibraryKind = activeKind.value) {
   drafts[kind].title = ''
 }
 
-function createActionTarget(row: VoucherAccountCode | VoucherCostCenter): LibraryActionTarget {
+function createActionTarget(row: VoucherAccountCode | VoucherCostCenter | VoucherPayee): LibraryActionTarget {
   return {
     kind: activeKind.value,
     id: row.id,
@@ -156,7 +191,7 @@ function createActionTarget(row: VoucherAccountCode | VoucherCostCenter): Librar
   }
 }
 
-function openEditModal(row: VoucherAccountCode | VoucherCostCenter) {
+function openEditModal(row: VoucherAccountCode | VoucherCostCenter | VoucherPayee) {
   resetFeedback()
   editError.value = ''
   editTarget.value = createActionTarget(row)
@@ -207,7 +242,7 @@ async function submitForm() {
   resetDraft()
 }
 
-function openDeleteModal(row: VoucherAccountCode | VoucherCostCenter) {
+function openDeleteModal(row: VoucherAccountCode | VoucherCostCenter | VoucherPayee) {
   resetFeedback()
   deleteError.value = ''
   deleteTarget.value = createActionTarget(row)
@@ -282,7 +317,13 @@ onMounted(async () => {
   </AppDialog>
 
   <AppDialog
-    :title="deleteTarget?.kind === 'costCenter' ? 'Delete Cost Center' : 'Delete Account Code'"
+    :title="
+      deleteTarget?.kind === 'costCenter'
+        ? 'Delete Cost Center'
+        : deleteTarget?.kind === 'payee'
+          ? 'Delete Payee'
+          : 'Delete Account Code'
+    "
     :show="Boolean(deleteTarget)"
     eyebrow="Destructive Action"
     icon="!"
@@ -335,7 +376,7 @@ onMounted(async () => {
         class="space-y-5 rounded-3xl border border-[#d8d1c5] bg-[linear-gradient(180deg,#fbf6ee_0%,#eef1ed_100%)] p-5 shadow-sm"
         @submit.prevent="submitForm"
       >
-        <div class="grid grid-cols-2 gap-2 rounded-2xl border border-pebble bg-white p-1">
+        <div class="grid grid-cols-3 gap-2 rounded-2xl border border-pebble bg-white p-1">
           <button
             type="button"
             class="rounded-xl px-3 py-2 text-sm font-bold transition"
@@ -360,6 +401,18 @@ onMounted(async () => {
           >
             Cost Centers
           </button>
+          <button
+            type="button"
+            class="rounded-xl px-3 py-2 text-sm font-bold transition"
+            :class="
+              activeKind === 'payee'
+                ? 'bg-tangerine text-white shadow-sm'
+                : 'text-slate hover:bg-tangerine-light hover:text-tangerine'
+            "
+            @click="activeKind = 'payee'"
+          >
+            Payees
+          </button>
         </div>
 
         <section class="space-y-4">
@@ -371,6 +424,7 @@ onMounted(async () => {
           </div>
 
           <AppInput
+            v-if="activeKind !== 'payee'"
             :model-value="''"
             :label="`${activeLabels.code} (assigned on save)`"
             placeholder="Auto assigned on save"
@@ -426,6 +480,7 @@ onMounted(async () => {
           @submit.prevent="applySearch"
         >
           <AppInput
+            v-if="activeKind !== 'payee'"
             v-model="activeSearchCode"
             :label="activeLabels.code"
             :placeholder="`Search ${activeLabels.code.toLowerCase()}`"
@@ -475,7 +530,7 @@ onMounted(async () => {
           <table class="w-full min-w-[680px] text-left text-sm">
             <thead class="bg-[#fbf8f1] text-xs uppercase tracking-[0.16em] text-slate">
               <tr>
-                <th class="px-5 py-3">{{ activeLabels.code }}</th>
+                <th v-if="activeKind !== 'payee'" class="px-5 py-3">{{ activeLabels.code }}</th>
                 <th class="px-5 py-3">{{ activeLabels.title }}</th>
                 <th class="px-5 py-3">Date</th>
                 <th class="px-5 py-3 text-right">Actions</th>
@@ -483,7 +538,9 @@ onMounted(async () => {
             </thead>
             <tbody class="divide-y divide-pebble">
               <tr v-for="row in activeRows" :key="row.id" class="transition hover:bg-[#fffaf0]">
-                <td class="px-5 py-4 font-bold text-onyx">{{ row.code }}</td>
+                <td v-if="activeKind !== 'payee'" class="px-5 py-4 font-bold text-onyx">
+                  {{ row.code }}
+                </td>
                 <td class="px-5 py-4 text-onyx">{{ row.title }}</td>
                 <td class="px-5 py-4 text-slate">{{ formatDate(row.date) }}</td>
                 <td class="px-5 py-4">

@@ -12,6 +12,7 @@ import {
   useChequeSummaryReports,
   useChequeTemplates,
   useDentists,
+  useVoucherAccountLibraries,
   type ChequeDatePartKey,
   type ChequeTemplateField,
   type SavedChequeTemplate,
@@ -127,6 +128,10 @@ const {
   filters: clinicFilters,
   loading: loadingClinics,
 } = useClinics({ perPage: 50 })
+const {
+  payees,
+  loadPayees,
+} = useVoucherAccountLibraries()
 let payeeSearchTimeout: ReturnType<typeof setTimeout> | undefined
 
 const currentBankName = computed(() => bpiTemplate.bankName.trim() || DEFAULT_CHEQUE_BANK_NAME)
@@ -197,6 +202,11 @@ const payeeOptions = computed(() => {
         label: name,
         description: 'Clinic',
       })),
+    ...payees.value.map((payee) => ({
+      value: payee.title,
+      label: payee.title,
+      description: 'Payee library',
+    })),
   ]
   const seen = new Set<string>()
 
@@ -443,6 +453,7 @@ function searchPayeeOptions(value: string) {
     clinicFilters.clinicName = search
     void fetchDentists()
     void fetchClinics()
+    void loadPayees({ payeeName: search })
   }, 300)
 }
 
@@ -677,6 +688,7 @@ function executePrintCheque() {
 }
 
 onMounted(async () => {
+  void loadPayees()
   await loadSavedCalibration()
   await loadChequeReprintFromRoute()
 })

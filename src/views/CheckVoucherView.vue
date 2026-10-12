@@ -108,8 +108,10 @@ const {
 const {
   accountCodes,
   costCenters,
+  payees,
   loadAccountCodes,
   loadLibraries,
+  loadPayees,
   loading: loadingAccountLibraries,
 } = useVoucherAccountLibraries()
 let accountTitleSearchTimeout: ReturnType<typeof setTimeout> | undefined
@@ -163,6 +165,11 @@ const paidToOptions = computed(() => {
         label: name,
         description: 'Clinic',
       })),
+    ...payees.value.map((payee) => ({
+      value: payee.title,
+      label: payee.title,
+      description: 'Payee library',
+    })),
   ]
   const seen = new Set<string>()
 
@@ -317,6 +324,7 @@ function searchPaidToOptions(value: string) {
     clinicFilters.clinicName = search
     void fetchDentists()
     void fetchClinics()
+    void loadPayees({ payeeName: search })
   }, 300)
 }
 
@@ -482,6 +490,7 @@ async function confirmPrintVoucher() {
 
 onMounted(async () => {
   void loadLibraries()
+  void loadPayees()
 
   const loadedReprint = await loadVoucherReprintFromRoute()
 

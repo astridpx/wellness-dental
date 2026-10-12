@@ -16,12 +16,20 @@ export type VoucherCostCenter = {
   date: string
 }
 
+export type VoucherPayee = {
+  id: string
+  code: string
+  title: string
+  date: string
+}
+
 type VoucherAccountLibrariesSetting = {
   accountCodes?: VoucherAccountCode[]
   costCenters?: VoucherCostCenter[]
+  payees?: VoucherPayee[]
 }
 
-type VoucherAccountLibraryKind = 'accountCode' | 'costCenter'
+type VoucherAccountLibraryKind = 'accountCode' | 'costCenter' | 'payee'
 
 export const VOUCHER_ACCOUNT_LIBRARY_PAGE_SIZE = 10
 
@@ -40,6 +48,12 @@ type ChequeCostCenterResponse = {
   id: number
   costCenter: string
   costCenterTitle: string
+  createdAt?: string | null
+}
+
+type ChequePayeeResponse = {
+  id: number
+  payeeName: string
   createdAt?: string | null
 }
 
@@ -91,6 +105,10 @@ function normalizeLibraries(value: VoucherAccountLibrariesSetting | null | undef
       .map((item) => normalizeLibraryItem<VoucherCostCenter>(item, 'cost-center'))
       .filter((item): item is VoucherCostCenter => Boolean(item))
       .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true })),
+    payees: (value?.payees || [])
+      .map((item) => normalizeLibraryItem<VoucherPayee>(item, 'payee'))
+      .filter((item): item is VoucherPayee => Boolean(item))
+      .sort((a, b) => a.title.localeCompare(b.title)),
   }
 }
 
@@ -108,6 +126,15 @@ function mapCostCenter(row: ChequeCostCenterResponse): VoucherCostCenter {
     id: String(row.id),
     code: normalizeText(row.costCenter || ''),
     title: normalizeText(row.costCenterTitle || ''),
+    date: row.createdAt || currentManilaDateInputValue(),
+  }
+}
+
+function mapPayee(row: ChequePayeeResponse): VoucherPayee {
+  return {
+    id: String(row.id),
+    code: String(row.id),
+    title: normalizeText(row.payeeName || ''),
     date: row.createdAt || currentManilaDateInputValue(),
   }
 }
@@ -130,23 +157,28 @@ export function useVoucherAccountLibraries() {
   const saving = ref(false)
   const accountCodes = ref<VoucherAccountCode[]>([])
   const costCenters = ref<VoucherCostCenter[]>([])
+  const payees = ref<VoucherPayee[]>([])
   const filters = reactive({
     accountCode: '',
     accountTitle: '',
     costCenter: '',
     costCenterTitle: '',
+    payeeName: '',
   })
   const currentPages = reactive<Record<VoucherAccountLibraryKind, number>>({
     accountCode: 1,
     costCenter: 1,
+    payee: 1,
   })
   const totalEntries = reactive<Record<VoucherAccountLibraryKind, number>>({
     accountCode: 0,
     costCenter: 0,
+    payee: 0,
   })
   const totalPages = reactive<Record<VoucherAccountLibraryKind, number>>({
     accountCode: 1,
     costCenter: 1,
+    payee: 1,
   })
 
   const accountCodeOptions = computed(() =>
@@ -163,13 +195,22 @@ export function useVoucherAccountLibraries() {
       description: item.title,
     })),
   )
+  const payeeOptions = computed(() =>
+    payees.value.map((item) => ({
+      value: item.title,
+      label: item.title,
+      description: 'Payee library',
+    })),
+  )
   const nextAccountCode = computed(() => nextNumericCode(accountCodes.value))
   let accountCodeRequestId = 0
+  let payeeRequestId = 0
 
   function applyLibraries(nextLibraries: VoucherAccountLibrariesSetting) {
     const normalized = normalizeLibraries(nextLibraries)
     accountCodes.value = normalized.accountCodes
     costCenters.value = normalized.costCenters
+    payees.value = normalized.payees
   }
 
   async function loadAccountCodes(searchParams: AccountCodeSearchParams = {}) {
@@ -199,10 +240,37 @@ export function useVoucherAccountLibraries() {
     }
   }
 
+  async function loadPayees(searchParams: { payeeName?: string } = {}) {
+    const requestId = ++payeeRequestId
+    loading.value = true
+
+    const result = await request<ChequePayeeResponse[]>(
+      buildLibraryPath('/wellness/chequePayees', {
+        payeeName: searchParams.payeeName || '',
+        perPage: '50',
+      }),
+    )
+
+    if (requestId === payeeRequestId) {
+      loading.value = false
+
+      if (result.ok) {
+        payees.value = normalizeLibraries({
+          payees: (result.data || []).map(mapPayee),
+        }).payees
+      }
+    }
+
+    return {
+      ok: result.ok,
+      error: result.ok ? '' : result.error || 'Unable to load payees.',
+    }
+  }
+
   async function loadLibraries() {
     loading.value = true
 
-    const [accountCodesResult, costCentersResult] = await Promise.all([
+    const [accountCodesResult, costCentersResult, payeesResult] = await Promise.all([
       request<ChequeAccountCodeResponse[]>(
         buildLibraryPath('/wellness/chequeAccountCodes', {
           accountCode: filters.accountCode,
@@ -216,6 +284,13 @@ export function useVoucherAccountLibraries() {
           costCenter: filters.costCenter,
           costCenterTitle: filters.costCenterTitle,
           page: String(currentPages.costCenter),
+          perPage: String(VOUCHER_ACCOUNT_LIBRARY_PAGE_SIZE),
+        }),
+      ),
+      request<ChequePayeeResponse[]>(
+        buildLibraryPath('/wellness/chequePayees', {
+          payeeName: filters.payeeName,
+          page: String(currentPages.payee),
           perPage: String(VOUCHER_ACCOUNT_LIBRARY_PAGE_SIZE),
         }),
       ),
@@ -237,9 +312,17 @@ export function useVoucherAccountLibraries() {
       }
     }
 
+    if (!payeesResult.ok) {
+      return {
+        ok: false,
+        error: payeesResult.error || 'Unable to load payees.',
+      }
+    }
+
     applyLibraries({
       accountCodes: (accountCodesResult.data || []).map(mapAccountCode),
       costCenters: (costCentersResult.data || []).map(mapCostCenter),
+      payees: (payeesResult.data || []).map(mapPayee),
     })
 
     totalEntries.accountCode = Number(
@@ -248,6 +331,7 @@ export function useVoucherAccountLibraries() {
     totalEntries.costCenter = Number(
       costCentersResult.metadata?.totalEntries ?? costCenters.value.length,
     )
+    totalEntries.payee = Number(payeesResult.metadata?.totalEntries ?? payees.value.length)
     totalPages.accountCode = Math.max(
       1,
       Number(
@@ -262,16 +346,26 @@ export function useVoucherAccountLibraries() {
           Math.ceil(totalEntries.costCenter / VOUCHER_ACCOUNT_LIBRARY_PAGE_SIZE),
       ),
     )
+    totalPages.payee = Math.max(
+      1,
+      Number(
+        payeesResult.metadata?.totalPages ??
+          Math.ceil(totalEntries.payee / VOUCHER_ACCOUNT_LIBRARY_PAGE_SIZE),
+      ),
+    )
 
     const accountCodePage = Math.min(currentPages.accountCode, totalPages.accountCode)
     const costCenterPage = Math.min(currentPages.costCenter, totalPages.costCenter)
+    const payeePage = Math.min(currentPages.payee, totalPages.payee)
 
     if (
       accountCodePage !== currentPages.accountCode ||
-      costCenterPage !== currentPages.costCenter
+      costCenterPage !== currentPages.costCenter ||
+      payeePage !== currentPages.payee
     ) {
       currentPages.accountCode = accountCodePage
       currentPages.costCenter = costCenterPage
+      currentPages.payee = payeePage
       return loadLibraries()
     }
 
@@ -325,6 +419,27 @@ export function useVoucherAccountLibraries() {
     }
   }
 
+  async function savePayee(item: { id?: string; title: string }) {
+    saving.value = true
+
+    const result = await request(
+      item.id ? `/wellness/chequePayees/${item.id}` : '/wellness/chequePayees',
+      {
+        method: item.id ? 'PUT' : 'POST',
+        body: JSON.stringify({ payeeName: item.title }),
+      },
+      { includeContentType: true },
+    )
+
+    if (result.ok) await loadLibraries()
+    saving.value = false
+
+    return {
+      ok: result.ok,
+      error: result.ok ? '' : result.error || 'Unable to save payee.',
+    }
+  }
+
   async function saveItem(
     kind: VoucherAccountLibraryKind,
     item: { id?: string; code: string; title: string },
@@ -342,6 +457,7 @@ export function useVoucherAccountLibraries() {
     }
 
     if (kind === 'accountCode') return saveAccountCode({ id: item.id, title })
+    if (kind === 'payee') return savePayee({ id: item.id, title })
 
     const existingDuplicate = costCenters.value.find(
       (current) =>
@@ -361,7 +477,9 @@ export function useVoucherAccountLibraries() {
     const result = await request(
       kind === 'accountCode'
         ? `/wellness/chequeAccountCodes/${id}`
-        : `/wellness/chequeCostCenters/${id}`,
+        : kind === 'costCenter'
+          ? `/wellness/chequeCostCenters/${id}`
+          : `/wellness/chequePayees/${id}`,
       { method: 'DELETE' },
     )
 
@@ -379,6 +497,8 @@ export function useVoucherAccountLibraries() {
     accountCodeOptions,
     costCenters,
     costCenterOptions,
+    payees,
+    payeeOptions,
     currentPages,
     filters,
     loading,
@@ -388,6 +508,7 @@ export function useVoucherAccountLibraries() {
     totalPages,
     deleteItem,
     loadAccountCodes,
+    loadPayees,
     loadLibraries,
     saveItem,
   }
