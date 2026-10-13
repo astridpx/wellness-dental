@@ -91,11 +91,37 @@ export function useChequeSummaryReports(options: { autoLoad?: boolean } = {}) {
     dateTo: '',
     search: '',
   })
+  let recordsRequestId = 0
 
-  const filteredRecords = computed(() => records.value)
+  const filteredRecords = computed(() => {
+    const search = filters.search.trim().toLowerCase()
+    const dateFrom = filters.dateFrom
+    const dateTo = filters.dateTo
+
+    return records.value.filter((record) => {
+      if (filters.kind !== 'all' && record.kind !== filters.kind) return false
+
+      const recordDate = record.documentDate || record.createdAt.slice(0, 10)
+      if (dateFrom && recordDate < dateFrom) return false
+      if (dateTo && recordDate > dateTo) return false
+
+      if (!search) return true
+
+      return [
+        record.referenceNo,
+        record.checkNo,
+        record.payee,
+        record.title,
+        record.preparedBy,
+        record.bankName,
+        record.accountName,
+      ].some((value) => value.toLowerCase().includes(search))
+    })
+  })
   const summary = computed(() => serverSummary.value)
 
   async function loadRecords() {
+    const requestId = ++recordsRequestId
     loading.value = true
     errorMessage.value = ''
 
@@ -113,10 +139,13 @@ export function useChequeSummaryReports(options: { autoLoad?: boolean } = {}) {
       `/wellness/chequeSummaryRecords?${params.toString()}`,
     )
 
+    if (requestId !== recordsRequestId) return false
+
     loading.value = false
 
     if (!result.ok) {
       errorMessage.value = result.error || 'Unable to load cheque summary records.'
+      records.value = []
       return false
     }
 
